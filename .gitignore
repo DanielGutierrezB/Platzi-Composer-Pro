@@ -1,0 +1,6 @@
+.DS_Store
+META-INF/
+mimetype
+dist/
+node_modules/
+*.zxp
