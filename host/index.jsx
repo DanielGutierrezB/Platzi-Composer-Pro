@@ -392,9 +392,9 @@ function pcCreateLineHighlighter(style, enableGlow) {
         // Style-specific controls
         if (style === "chalk") {
             var chalkBorderCtrl = fxs.addProperty("ADBE Slider Control"); chalkBorderCtrl.name = "Chalk Border";
-            chalkBorderCtrl.property("Slider").setValue(8);
+            chalkBorderCtrl.property("Slider").setValue(12);
             var chalkScaleCtrl = fxs.addProperty("ADBE Slider Control"); chalkScaleCtrl.name = "Chalk Scale";
-            chalkScaleCtrl.property("Slider").setValue(50);
+            chalkScaleCtrl.property("Slider").setValue(30);
         } else if (style === "thunder") {
             var thunAmtCtrl = fxs.addProperty("ADBE Slider Control"); thunAmtCtrl.name = "Thunder Amount";
             thunAmtCtrl.property("Slider").setValue(3);
@@ -470,17 +470,29 @@ function pcCreateLineHighlighter(style, enableGlow) {
             try { glow.property("Glow Intensity").setValue(1.5); } catch(ex) {}
         }
 
-        // Chalk style: Roughen Edges effect for real chalk/tiza texture
+        // Chalk style: Roughen Edges + Noise for real chalk/tiza texture
         if (style === "chalk") {
-            // Thicker stroke for chalk look
-            thkCtrl.property("Slider").setValue(12);
+            // Thicker stroke for chalk look (tiza es gruesa)
+            thkCtrl.property("Slider").setValue(14);
+            // Round cap for organic chalk ends
+            try { stroke.property("Line Cap").setValue(2); } catch(ex) {} // Round Cap
+
+            // Roughen Edges: erodes borders like chalk on rough surface
             var re = fxs.addProperty("ADBE Roughen Edges");
             re.name = "Chalk Texture";
-            try { re.property("ADBE Roughen Edges-0001").setValue(2); } catch(ex) {} // Edge Type: Roughen
+            try { re.property("ADBE Roughen Edges-0001").setValue(4); } catch(ex) {} // Edge Type: Spiky
             try { re.property("ADBE Roughen Edges-0002").expression = "effect(\"Chalk Border\")(\"Slider\")"; } catch(ex) {} // Border
-            try { re.property("ADBE Roughen Edges-0004").expression = "effect(\"Chalk Scale\")(\"Slider\")"; } catch(ex) {} // Fractal Influence / Scale
-            try { re.property("ADBE Roughen Edges-0005").setValue(1); } catch(ex) {} // Stretch Width
-            try { re.property("ADBE Roughen Edges-0007").setValue(0.7); } catch(ex) {} // Complexity
+            try { re.property("ADBE Roughen Edges-0003").setValue(1); } catch(ex) {} // Edge Sharpness
+            try { re.property("ADBE Roughen Edges-0004").expression = "effect(\"Chalk Scale\")(\"Slider\")"; } catch(ex) {} // Fractal Influence
+            try { re.property("ADBE Roughen Edges-0005").setValue(2); } catch(ex) {} // Stretch Width/Height
+            try { re.property("ADBE Roughen Edges-0007").setValue(2); } catch(ex) {} // Complexity
+
+            // Add Noise: creates internal speckle/grain like chalk pores
+            var noise = fxs.addProperty("ADBE Noise");
+            noise.name = "Chalk Grain";
+            try { noise.property("ADBE Noise-0001").setValue(40); } catch(ex) {} // Amount of Noise
+            // Use Noise Alpha Only is not a std param; we clip noise via checkbox
+            try { noise.property("ADBE Noise-0004").setValue(1); } catch(ex) {} // Clip Result Values
         }
 
         app.endUndoGroup();
