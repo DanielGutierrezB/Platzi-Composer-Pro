@@ -482,6 +482,12 @@ function pcCreateLineHighlighter(style, enableGlow) {
         // Trim Paths (MUST be last operator for animation to work)
         var trim = grpContents.addProperty("ADBE Vector Filter - Trim");
         trim.property("End").setValue(100);
+        // Flip direction via Offset expression (0=normal, check=180°)
+        try {
+            var flipCtrl = fxs.addProperty("ADBE Checkbox Control"); flipCtrl.name = "Flip Direction";
+            flipCtrl.property("Checkbox").setValue(0);
+            trim.property("Offset").expression = "effect(\"Flip Direction\")(\"Checkbox\") ? 180 : 0";
+        } catch(ex) {}
 
         // Always add Glow effect (disabled if checkbox not checked)
         var glow = fxs.addProperty("ADBE Glo2");
@@ -814,6 +820,12 @@ function pcCreateHighlightBox(mode, easeOut, easeIn, enableGlow) {
 
             var trim = grpContents.addProperty("ADBE Vector Filter - Trim");
             trim.property("End").setValue(100);
+            // Flip direction via Offset expression
+            try {
+                var flipCtrl = fxs.addProperty("ADBE Checkbox Control"); flipCtrl.name = "Flip Direction";
+                flipCtrl.property("Checkbox").setValue(0);
+                trim.property("Offset").expression = "effect(\"Flip Direction\")(\"Checkbox\") ? 180 : 0";
+            } catch(ex) {}
 
             var glow = fxs.addProperty("ADBE Glo2");
             glow.name = "Box Glow";

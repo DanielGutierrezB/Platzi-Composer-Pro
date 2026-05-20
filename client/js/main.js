@@ -1078,7 +1078,6 @@
         on("btn-hl-in",    "click", function() { animateHighlighter("in"); });
         on("btn-hl-out",   "click", function() { animateHighlighter("out"); });
         on("btn-hl-inout", "click", function() { animateHighlighter("inout"); });
-        on("btn-hl-flip-anim", "click", function() { callHost("pcFlipTrimAnimation()"); });
 
         // Quick Scale
         [5, 10, 20, 30].forEach(function(pct) {
