@@ -559,12 +559,13 @@ function pcCreateZoomFocus(blurAmount, scaleFactor, easeOut, easeIn) {
         blurProp.setValueAtTime(inPt + dur, ba);
         blurProp.setValueAtTime(outPt - dur, ba);
         blurProp.setValueAtTime(outPt, 0);
-        var kIn = new KeyframeEase(0, ei), kOut = new KeyframeEase(0, eo);
-        for (var k = 1; k <= 4; k++) {
-            try { posProp.setTemporalEaseAtKey(k, [kIn, kIn], [kOut, kOut]); } catch(ex) {}
-            try { scaleProp.setTemporalEaseAtKey(k, [kIn, kIn], [kOut, kOut]); } catch(ex) {}
-            try { blurProp.setTemporalEaseAtKey(k, [kIn], [kOut]); } catch(ex) {}
-        }
+        // Apply ease using proven helper functions
+        _pcApplyEaseArray(posProp, 1, 2, eo, ei);
+        _pcApplyEaseArray(posProp, 3, 4, eo, ei);
+        _pcApplyEaseArray(scaleProp, 1, 2, eo, ei);
+        _pcApplyEaseArray(scaleProp, 3, 4, eo, ei);
+        _pcApplyEaseScalar(blurProp, 1, 2, eo, ei);
+        _pcApplyEaseScalar(blurProp, 3, 4, eo, ei);
         app.endUndoGroup();
         return JSON.stringify({ success: true });
     } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
