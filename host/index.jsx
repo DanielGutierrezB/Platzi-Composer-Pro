@@ -1640,11 +1640,9 @@ function pcTextHelper(animType, delayPerChar, enableGlow, easeOut, easeIn) {
         var textProp = textLayer.property("ADBE Text Properties");
         var animators = textProp.property("ADBE Text Animators");
 
-        // Remove existing animators if applying to selected
-        if (applyToSelected) {
-            for (var a = animators.numProperties; a >= 1; a--) {
-                animators.property(a).remove();
-            }
+        // Remove existing animators
+        for (var a = animators.numProperties; a >= 1; a--) {
+            animators.property(a).remove();
         }
 
         // Add animator based on type
