@@ -588,114 +588,177 @@ function pcLineHighlighterAnimate(mode, easeOut, easeIn) {
 
 function pcCreateHighlightBox(mode, easeOut, easeIn, enableGlow) {
     var comp = _pcRequireComp();
-    if (!comp) return JSON.stringify({ error: "No hay composición activa." });
+    if (!comp) return JSON.stringify({ error: "No hay composici\u00f3n activa." });
     var s = _pcRequireSelected();
-    if (!s) return JSON.stringify({ error: "Selecciona una capa con máscara." });
+    if (!s) return JSON.stringify({ error: "Selecciona una capa con m\u00e1scara o shape layer con paths." });
     try {
         app.beginUndoGroup("Create Highlight Box");
         var srcLayer = s.layers[0];
+        var boxes = []; // Array of {centerX, centerY, boxW, boxH}
 
-        // Get mask from source layer
-        var masks = srcLayer.property("Masks");
-        if (!masks || masks.numProperties < 1) {
-            app.endUndoGroup();
-            return JSON.stringify({ error: "La capa no tiene máscara. Dibuja una primero." });
+        // MODE 1: Shape layer with paths — extract bounds from each group
+        var srcContents = null;
+        try { srcContents = srcLayer.property("Contents"); } catch(ex) {}
+        if (srcContents && srcContents.numProperties > 0 && !srcLayer.property("Masks").numProperties) {
+            for (var g = 1; g <= srcContents.numProperties; g++) {
+                var grpItem = srcContents.property(g);
+                var gc = null;
+                try { gc = grpItem.property("Contents"); } catch(ex) { continue; }
+                if (!gc) continue;
+                // Find path in this group
+                for (var p = 1; p <= gc.numProperties; p++) {
+                    var prop = gc.property(p);
+                    if (prop.matchName === "ADBE Vector Shape - Group" || prop.matchName === "ADBE Vector Shape - Rect" || prop.matchName === "ADBE Vector Shape - Ellipse") {
+                        var pathData = null;
+                        if (prop.matchName === "ADBE Vector Shape - Rect") {
+                            // Rectangle: get size and position
+                            var rSize = prop.property("ADBE Vector Rect Size").value;
+                            var rPos = prop.property("ADBE Vector Rect Position").value;
+                            // Factor in group transform
+                            var gPos = [0, 0];
+                            try { gPos = grpItem.property("Transform").property("Position").value; } catch(ex) {}
+                            boxes.push({ centerX: rPos[0] + gPos[0], centerY: rPos[1] + gPos[1], boxW: rSize[0], boxH: rSize[1] });
+                        } else if (prop.matchName === "ADBE Vector Shape - Group") {
+                            // Freeform path: calc bounding box
+                            try { pathData = prop.property("Path").value; } catch(ex) { continue; }
+                            var verts = pathData.vertices;
+                            if (!verts || verts.length < 2) continue;
+                            var minX = verts[0][0], maxX = verts[0][0];
+                            var minY = verts[0][1], maxY = verts[0][1];
+                            for (var v = 1; v < verts.length; v++) {
+                                if (verts[v][0] < minX) minX = verts[v][0];
+                                if (verts[v][0] > maxX) maxX = verts[v][0];
+                                if (verts[v][1] < minY) minY = verts[v][1];
+                                if (verts[v][1] > maxY) maxY = verts[v][1];
+                            }
+                            var gPos2 = [0, 0];
+                            try { gPos2 = grpItem.property("Transform").property("Position").value; } catch(ex) {}
+                            boxes.push({ centerX: (minX + maxX) / 2 + gPos2[0], centerY: (minY + maxY) / 2 + gPos2[1], boxW: maxX - minX, boxH: maxY - minY });
+                        }
+                        break; // one path per group
+                    }
+                }
+            }
+            if (boxes.length === 0) {
+                app.endUndoGroup();
+                return JSON.stringify({ error: "No se encontraron paths en el shape layer." });
+            }
         }
-        var mask = masks.property(1);
-        var maskPath = mask.property("maskPath").value;
-        var verts = maskPath.vertices;
-
-        // Calculate bounding box from mask vertices
-        var minX = verts[0][0], maxX = verts[0][0];
-        var minY = verts[0][1], maxY = verts[0][1];
-        for (var i = 1; i < verts.length; i++) {
-            if (verts[i][0] < minX) minX = verts[i][0];
-            if (verts[i][0] > maxX) maxX = verts[i][0];
-            if (verts[i][1] < minY) minY = verts[i][1];
-            if (verts[i][1] > maxY) maxY = verts[i][1];
-        }
-        var boxW = maxX - minX;
-        var boxH = maxY - minY;
-        var centerX = minX + boxW / 2;
-        var centerY = minY + boxH / 2;
-
-        // Create shape layer (match source layer duration)
-        var layer = comp.layers.addShape();
-        layer.name = "Highlight Box";
-        layer.inPoint = srcLayer.inPoint;
-        layer.outPoint = srcLayer.outPoint;
-
-        // Effect controls
-        var fxs = layer.property("Effects");
-        var thkCtrl = fxs.addProperty("ADBE Slider Control"); thkCtrl.name = "Thickness";
-        thkCtrl.property("Slider").setValue(15);
-        var colorCtrl = fxs.addProperty("ADBE Color Control"); colorCtrl.name = "Color";
-        colorCtrl.property("Color").setValue([0.039, 0.914, 0.541]);
-        var padCtrl = fxs.addProperty("ADBE Slider Control"); padCtrl.name = "Padding";
-        padCtrl.property("Slider").setValue(10);
-
-        // Position layer at mask center, parent to source
-        layer.property("Transform").property("Position").setValue([centerX, centerY]);
-        layer.property("Transform").property("Anchor Point").setValue([0, 0]);
-        layer.parent = srcLayer;
-
-        // Build rectangle shape from mask bounds
-        var contents = layer.property("Contents");
-        var grp = contents.addProperty("ADBE Vector Group"); grp.name = "BoxGroup";
-        var grpContents = grp.property("Contents");
-
-        // Rectangle path with padding expression
-        var rect = grpContents.addProperty("ADBE Vector Shape - Rect");
-        try {
-            rect.property("ADBE Vector Rect Size").expression =
-                "var pad = thisComp.layer(\"" + layer.name + "\").effect(\"Padding\")(\"Slider\");" +
-                "[" + boxW + " + pad*2, " + boxH + " + pad*2]";
-        } catch(ex) {
-            rect.property("ADBE Vector Rect Size").setValue([boxW + 20, boxH + 20]);
-        }
-
-        // Stroke
-        var stroke = grpContents.addProperty("ADBE Vector Graphic - Stroke");
-        stroke.property("Color").setValue([0.039, 0.914, 0.541]);
-        try { stroke.property("Stroke Width").expression = "effect(\"Thickness\")(\"Slider\")"; } catch(ex) {}
-        try { stroke.property("Color").expression = "effect(\"Color\")(\"Color\")"; } catch(ex) {}
-
-        // Trim Paths for animation
-        var trim = grpContents.addProperty("ADBE Vector Filter - Trim");
-        trim.property("End").setValue(100);
-
-        // Glow (always present)
-        var glow = fxs.addProperty("ADBE Glo2");
-        glow.name = "Box Glow";
-        try { glow.property("Glow Threshold").setValue(158); } catch(ex) {}
-        try { glow.property("Glow Radius").setValue(20); } catch(ex) {}
-        try { glow.property("Glow Intensity").setValue(1); } catch(ex) {}
-        glow.enabled = !!enableGlow;
-
-        // Animate based on mode
-        var fps = comp.frameRate;
-        var dur = 20 / fps;
-        if (mode === "in" || mode === "inout") {
-            var t0 = comp.time, t1 = t0 + dur;
-            trim.property("End").setValueAtTime(t0, 0);
-            trim.property("End").setValueAtTime(t1, 100);
-            _pcApplyEaseScalar(trim.property("End"), 1, 2, easeOut, easeIn);
-        }
-        if (mode === "out" || mode === "inout") {
-            var tOut0 = (mode === "inout") ? layer.outPoint - dur : comp.time;
-            var tOut1 = tOut0 + dur;
-            trim.property("End").setValueAtTime(tOut0, 100);
-            trim.property("End").setValueAtTime(tOut1, 0);
-            var kCount = trim.property("End").numKeys;
-            _pcApplyEaseScalar(trim.property("End"), kCount - 1, kCount, easeOut, easeIn);
+        // MODE 2: Layer with masks
+        else {
+            var masks = srcLayer.property("Masks");
+            if (!masks || masks.numProperties < 1) {
+                app.endUndoGroup();
+                return JSON.stringify({ error: "La capa no tiene m\u00e1scara ni shapes. Dibuja una primero." });
+            }
+            for (var m = 1; m <= masks.numProperties; m++) {
+                var maskPath = masks.property(m).property("maskPath").value;
+                var mverts = maskPath.vertices;
+                var mMinX = mverts[0][0], mMaxX = mverts[0][0];
+                var mMinY = mverts[0][1], mMaxY = mverts[0][1];
+                for (var mv = 1; mv < mverts.length; mv++) {
+                    if (mverts[mv][0] < mMinX) mMinX = mverts[mv][0];
+                    if (mverts[mv][0] > mMaxX) mMaxX = mverts[mv][0];
+                    if (mverts[mv][1] < mMinY) mMinY = mverts[mv][1];
+                    if (mverts[mv][1] > mMaxY) mMaxY = mverts[mv][1];
+                }
+                boxes.push({ centerX: (mMinX + mMaxX) / 2, centerY: (mMinY + mMaxY) / 2, boxW: mMaxX - mMinX, boxH: mMaxY - mMinY });
+            }
+            // Remove masks after extraction
+            for (var rm = masks.numProperties; rm >= 1; rm--) {
+                try { masks.property(rm).remove(); } catch(ex) {}
+            }
         }
 
-        // Remove mask from source (already used)
-        try { masks.property(1).remove(); } catch(ex) {}
+        // Get source layer transform for position offset
+        var srcPos = [0, 0];
+        try { srcPos = srcLayer.property("Transform").property("Position").value; } catch(ex) {}
 
-        layer.selected = true;
+        // Create one Highlight Box per extracted path
+        var createdLayers = [];
+        for (var b = 0; b < boxes.length; b++) {
+            var box = boxes[b];
+            var layer = comp.layers.addShape();
+            layer.name = "Highlight Box " + (b + 1);
+            layer.inPoint = srcLayer.inPoint;
+            layer.outPoint = srcLayer.outPoint;
+
+            var fxs = layer.property("Effects");
+            var thkCtrl = fxs.addProperty("ADBE Slider Control"); thkCtrl.name = "Thickness";
+            thkCtrl.property("Slider").setValue(15);
+            var colorCtrl = fxs.addProperty("ADBE Color Control"); colorCtrl.name = "Color";
+            colorCtrl.property("Color").setValue([0.039, 0.914, 0.541]);
+            var padCtrl = fxs.addProperty("ADBE Slider Control"); padCtrl.name = "Padding";
+            padCtrl.property("Slider").setValue(10);
+
+            // Position at box center
+            layer.property("Transform").property("Position").setValue([srcPos[0] + box.centerX, srcPos[1] + box.centerY]);
+            layer.property("Transform").property("Anchor Point").setValue([0, 0]);
+            // Parent to srcLayer's parent if it has one, otherwise don't parent to the ref shape
+            if (srcLayer.parent) {
+                layer.parent = srcLayer.parent;
+            }
+
+            var contents = layer.property("Contents");
+            var grp = contents.addProperty("ADBE Vector Group"); grp.name = "BoxGroup";
+            var grpContents = grp.property("Contents");
+
+            var rect = grpContents.addProperty("ADBE Vector Shape - Rect");
+            try {
+                rect.property("ADBE Vector Rect Size").expression =
+                    "var pad = thisLayer.effect(\"Padding\")(\"Slider\");" +
+                    "[" + box.boxW + " + pad*2, " + box.boxH + " + pad*2]";
+            } catch(ex) {
+                rect.property("ADBE Vector Rect Size").setValue([box.boxW + 20, box.boxH + 20]);
+            }
+
+            var stroke = grpContents.addProperty("ADBE Vector Graphic - Stroke");
+            stroke.property("Color").setValue([0.039, 0.914, 0.541]);
+            try { stroke.property("Stroke Width").expression = "effect(\"Thickness\")(\"Slider\")"; } catch(ex) {}
+            try { stroke.property("Color").expression = "effect(\"Color\")(\"Color\")"; } catch(ex) {}
+
+            var trim = grpContents.addProperty("ADBE Vector Filter - Trim");
+            trim.property("End").setValue(100);
+
+            var glow = fxs.addProperty("ADBE Glo2");
+            glow.name = "Box Glow";
+            try { glow.property("Glow Threshold").setValue(158); } catch(ex) {}
+            try { glow.property("Glow Radius").setValue(20); } catch(ex) {}
+            try { glow.property("Glow Intensity").setValue(1); } catch(ex) {}
+            glow.enabled = !!enableGlow;
+
+            // Animate
+            var fps = comp.frameRate;
+            var dur = 20 / fps;
+            if (mode === "in" || mode === "inout") {
+                var t0 = comp.time, t1 = t0 + dur;
+                trim.property("End").setValueAtTime(t0, 0);
+                trim.property("End").setValueAtTime(t1, 100);
+                _pcApplyEaseScalar(trim.property("End"), 1, 2, easeOut, easeIn);
+            }
+            if (mode === "out" || mode === "inout") {
+                var tOut0 = (mode === "inout") ? layer.outPoint - dur : comp.time;
+                var tOut1 = tOut0 + dur;
+                trim.property("End").setValueAtTime(tOut0, 100);
+                trim.property("End").setValueAtTime(tOut1, 0);
+                var kCount = trim.property("End").numKeys;
+                _pcApplyEaseScalar(trim.property("End"), kCount - 1, kCount, easeOut, easeIn);
+            }
+            createdLayers.push(layer);
+        }
+
+        // Remove the reference shape layer (it was just for positioning)
+        if (srcContents && boxes.length > 0) {
+            try { srcLayer.remove(); } catch(ex) {}
+        }
+
+        // Select all created layers
+        for (var cl = 0; cl < createdLayers.length; cl++) {
+            createdLayers[cl].selected = true;
+        }
+
         app.endUndoGroup();
-        return JSON.stringify({ success: true });
+        return JSON.stringify({ success: true, count: boxes.length });
     } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
 }
 
