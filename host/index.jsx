@@ -334,7 +334,8 @@ function pcCreateLineHighlighter(style, enableGlow) {
     try {
         app.beginUndoGroup("Create Line Highlight");
         var layer = comp.layers.addShape();
-        layer.name = "Line Highlight - " + style.charAt(0).toUpperCase() + style.slice(1);
+        var styleNames = {"solid":"Solid","chalk":"Chalk","chalk-static":"Chalk Static","dashed":"Dashed"};
+        layer.name = "Line Highlight - " + (styleNames[style] || style);
         layer.inPoint = comp.time;
         layer.outPoint = comp.time + 10;
 
@@ -348,16 +349,18 @@ function pcCreateLineHighlighter(style, enableGlow) {
         colorCtrl.property("Color").setValue([1, 1, 0]);
 
         // Style-specific controls
-        if (style === "wiggle") {
-            var wigAmtCtrl = fxs.addProperty("ADBE Slider Control"); wigAmtCtrl.name = "Wiggle Amount";
-            wigAmtCtrl.property("Slider").setValue(10);
-            var wigSpdCtrl = fxs.addProperty("ADBE Slider Control"); wigSpdCtrl.name = "Wiggle Speed";
-            wigSpdCtrl.property("Slider").setValue(3);
-        } else if (style === "rough") {
-            var roughAmtCtrl = fxs.addProperty("ADBE Slider Control"); roughAmtCtrl.name = "Rough Amount";
-            roughAmtCtrl.property("Slider").setValue(5);
-            var roughDetCtrl = fxs.addProperty("ADBE Slider Control"); roughDetCtrl.name = "Rough Detail";
-            roughDetCtrl.property("Slider").setValue(3);
+        if (style === "chalk") {
+            var chalkAmtCtrl = fxs.addProperty("ADBE Slider Control"); chalkAmtCtrl.name = "Chalk Roughness";
+            chalkAmtCtrl.property("Slider").setValue(3);
+            var chalkDetCtrl = fxs.addProperty("ADBE Slider Control"); chalkDetCtrl.name = "Chalk Detail";
+            chalkDetCtrl.property("Slider").setValue(8);
+            var chalkSpdCtrl = fxs.addProperty("ADBE Slider Control"); chalkSpdCtrl.name = "Chalk Vibration";
+            chalkSpdCtrl.property("Slider").setValue(0.5);
+        } else if (style === "chalk-static") {
+            var csAmtCtrl = fxs.addProperty("ADBE Slider Control"); csAmtCtrl.name = "Chalk Roughness";
+            csAmtCtrl.property("Slider").setValue(3);
+            var csDetCtrl = fxs.addProperty("ADBE Slider Control"); csDetCtrl.name = "Chalk Detail";
+            csDetCtrl.property("Slider").setValue(8);
         } else if (style === "dashed") {
             var dashLenCtrl = fxs.addProperty("ADBE Slider Control"); dashLenCtrl.name = "Dash Length";
             dashLenCtrl.property("Slider").setValue(20);
@@ -406,20 +409,20 @@ function pcCreateLineHighlighter(style, enableGlow) {
             }
         }
 
-        // Wiggle style: Wiggle Paths operator (animated organic movement)
-        if (style === "wiggle") {
-            var wigglePaths = grpContents.addProperty("ADBE Vector Filter - Roughen");
-            try { wigglePaths.property("ADBE Vector Roughen Size").expression = "effect(\"Wiggle Amount\")(\"Slider\")"; } catch(ex) {}
-            try { wigglePaths.property("ADBE Vector Roughen Detail").setValue(3); } catch(ex) {}
-            try { wigglePaths.property("ADBE Vector Temporal Freq").expression = "effect(\"Wiggle Speed\")(\"Slider\")"; } catch(ex) {}
+        // Chalk style: high detail + low amplitude + subtle vibration = chalk/tiza texture
+        if (style === "chalk") {
+            var chalkPaths = grpContents.addProperty("ADBE Vector Filter - Roughen");
+            try { chalkPaths.property("ADBE Vector Roughen Size").expression = "effect(\"Chalk Roughness\")(\"Slider\")"; } catch(ex) {}
+            try { chalkPaths.property("ADBE Vector Roughen Detail").expression = "effect(\"Chalk Detail\")(\"Slider\")"; } catch(ex) {}
+            try { chalkPaths.property("ADBE Vector Temporal Freq").expression = "effect(\"Chalk Vibration\")(\"Slider\")"; } catch(ex) {}
         }
 
-        // Rough style: Wiggle Paths with 0 temporal freq (static hand-drawn look)
-        if (style === "rough") {
-            var roughPaths = grpContents.addProperty("ADBE Vector Filter - Roughen");
-            try { roughPaths.property("ADBE Vector Roughen Size").expression = "effect(\"Rough Amount\")(\"Slider\")"; } catch(ex) {}
-            try { roughPaths.property("ADBE Vector Roughen Detail").expression = "effect(\"Rough Detail\")(\"Slider\")"; } catch(ex) {}
-            try { roughPaths.property("ADBE Vector Temporal Freq").setValue(0); } catch(ex) {}
+        // Chalk Static: same chalk texture but frozen (no animation)
+        if (style === "chalk-static") {
+            var csPaths = grpContents.addProperty("ADBE Vector Filter - Roughen");
+            try { csPaths.property("ADBE Vector Roughen Size").expression = "effect(\"Chalk Roughness\")(\"Slider\")"; } catch(ex) {}
+            try { csPaths.property("ADBE Vector Roughen Detail").expression = "effect(\"Chalk Detail\")(\"Slider\")"; } catch(ex) {}
+            try { csPaths.property("ADBE Vector Temporal Freq").setValue(0); } catch(ex) {}
         }
 
         // Trim Paths
