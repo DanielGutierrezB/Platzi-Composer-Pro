@@ -14,7 +14,7 @@
             <div class="header-spacer"></div>
             <span id="comp-name" class="comp-name">Sin composición activa</span>
             <span id="layer-count" class="layer-count"></span>
-            <span id="version-badge" class="version-label">v1.0.5</span>
+            <span id="version-badge" class="version-label">v1.0.6</span>
             <button id="btn-update" class="icon-btn" title="Verificar actualización / Recargar panel">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
@@ -270,45 +270,46 @@
             </div>
         </div>
 
-        <!-- 5. MINI PROFESOR -->
+        <!-- 5. PROFESOR VIEWS -->
         <div class="tool-card">
-            <div class="tool-card-header" data-tool="mini-prof">
-                <span class="tool-card-title">👤 Mini Profesor</span>
+            <div class="tool-card-header" data-tool="profesor-views">
+                <span class="tool-card-title">🎥 Profesor Views</span>
                 <span class="toggle-icon">▸</span>
             </div>
             <div class="tool-card-body hidden">
-                <div class="tool-inline-row">
-                    <label>X%</label><input type="number" id="mp-x" class="tool-input" value="35">
-                    <label>Y%</label><input type="number" id="mp-y" class="tool-input" value="0">
+                <!-- Mini Profesor sub-section -->
+                <div class="hl-type">
+                    <div class="hl-type-label">👤 Mini Profesor</div>
+                    <div class="hl-type-desc">Mueve la cámara del profesor a los lados</div>
+                    <div class="tool-inline-row">
+                        <label>X%</label><input type="number" id="mp-x" class="tool-input" value="35">
+                        <label>Y%</label><input type="number" id="mp-y" class="tool-input" value="0">
+                        <button id="btn-mp-left" class="btn btn-tool" title="Shift+Clic anima">◀ Left</button>
+                        <button id="btn-mp-right" class="btn btn-tool" title="Shift+Clic anima">Right ▶</button>
+                        <label class="toggle-label"><input type="checkbox" id="mp-animate"> Animate</label>
+                    </div>
                 </div>
-                <div class="tool-row">
-                    <button id="btn-mp-left"  class="btn btn-tool" title="Shift+Clic anima">◀ Left</button>
-                    <button id="btn-mp-right" class="btn btn-tool" title="Shift+Clic anima">Right ▶</button>
-                </div>
-                <label class="tool-checkbox"><input type="checkbox" id="mp-animate"> Animate</label>
-            </div>
-        </div>
 
-        <!-- 6. CORNER PROFESOR -->
-        <div class="tool-card">
-            <div class="tool-card-header" data-tool="corner-prof">
-                <span class="tool-card-title">📐 Corner Profesor</span>
-                <span class="toggle-icon">▸</span>
-            </div>
-            <div class="tool-card-body hidden">
-                <label class="tool-checkbox"><input type="checkbox" id="cp-circular"> Circular</label>
-                <div class="tool-grid-2x2">
-                    <button id="btn-cp-tl" class="btn btn-tool" title="Shift+Clic anima">↖ TL</button>
-                    <button id="btn-cp-tr" class="btn btn-tool" title="Shift+Clic anima">TR ↗</button>
-                    <button id="btn-cp-bl" class="btn btn-tool" title="Shift+Clic anima">↙ BL</button>
-                    <button id="btn-cp-br" class="btn btn-tool" title="Shift+Clic anima">BR ↘</button>
+                <div class="hl-divider"></div>
+
+                <!-- Corner Profesor sub-section -->
+                <div class="hl-type">
+                    <div class="hl-type-label">📐 Corner Profesor</div>
+                    <div class="hl-type-desc">Mueve la cámara del profesor a una esquina con zoom</div>
+                    <div class="tool-inline-row">
+                        <label class="toggle-label"><input type="checkbox" id="cp-circular"> Circular</label>
+                        <button id="btn-cp-tl" class="btn btn-tool" title="Shift+Clic anima">↖ TL</button>
+                        <button id="btn-cp-tr" class="btn btn-tool" title="Shift+Clic anima">TR ↗</button>
+                        <button id="btn-cp-bl" class="btn btn-tool" title="Shift+Clic anima">↙ BL</button>
+                        <button id="btn-cp-br" class="btn btn-tool" title="Shift+Clic anima">BR ↘</button>
+                    </div>
+                    <div class="tool-inline-row">
+                        <label>Dur</label><input type="number" id="cp-dur" class="tool-input" value="20">
+                        <label>Size</label><input type="number" id="cp-size" class="tool-input" value="600">
+                        <label>px</label>
+                        <label class="toggle-label"><input type="checkbox" id="cp-animate"> Animate</label>
+                    </div>
                 </div>
-                <div class="tool-inline-row">
-                    <label>Dur</label><input type="number" id="cp-dur"  class="tool-input" value="20">
-                    <label>Size</label><input type="number" id="cp-size" class="tool-input" value="600">
-                    <label>px</label>
-                </div>
-                <label class="tool-checkbox"><input type="checkbox" id="cp-animate"> Animate</label>
             </div>
         </div>
 
