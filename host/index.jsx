@@ -536,6 +536,64 @@ function pcLineHighlighterToggleGlow(enable) {
     } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
 }
 
+function pcFlipTrimAnimation() {
+    var s = _pcRequireSelected();
+    if (!s) return JSON.stringify({ error: "Selecciona una o más capas." });
+    try {
+        app.beginUndoGroup("Flip Trim Animation");
+        var flipped = 0;
+        for (var layIdx = 0; layIdx < s.layers.length; layIdx++) {
+            var layer = s.layers[layIdx];
+            var contents = null;
+            try { contents = layer.property("Contents"); } catch(ex) { continue; }
+            if (!contents) continue;
+            // Find Trim Paths in any group
+            for (var i = 1; i <= contents.numProperties; i++) {
+                var g = contents.property(i);
+                var gc = null;
+                try { gc = g.property("Contents"); } catch(ex) { continue; }
+                if (!gc) continue;
+                for (var j = 1; j <= gc.numProperties; j++) {
+                    if (gc.property(j).matchName === "ADBE Vector Filter - Trim") {
+                        var trimGrp = gc.property(j);
+                        var endProp = trimGrp.property("End");
+                        var startProp = trimGrp.property("Start");
+                        // If End has keyframes, move them to Start (flipped)
+                        if (endProp.numKeys > 0) {
+                            for (var k = 1; k <= endProp.numKeys; k++) {
+                                var t = endProp.keyTime(k);
+                                var v = endProp.keyValue(k);
+                                startProp.setValueAtTime(t, 100 - v);
+                            }
+                            // Remove End keyframes and set to 100
+                            while (endProp.numKeys > 0) endProp.removeKey(1);
+                            endProp.setValue(100);
+                            startProp.setValue(startProp.keyValue(1));
+                            flipped++;
+                        }
+                        // If Start has keyframes, move them to End (flip back)
+                        else if (startProp.numKeys > 0) {
+                            for (var k2 = 1; k2 <= startProp.numKeys; k2++) {
+                                var t2 = startProp.keyTime(k2);
+                                var v2 = startProp.keyValue(k2);
+                                endProp.setValueAtTime(t2, 100 - v2);
+                            }
+                            while (startProp.numKeys > 0) startProp.removeKey(1);
+                            startProp.setValue(0);
+                            endProp.setValue(endProp.keyValue(1));
+                            flipped++;
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+        app.endUndoGroup();
+        if (flipped === 0) return JSON.stringify({ error: "No se encontr\u00f3 animaci\u00f3n de Trim Paths." });
+        return JSON.stringify({ success: true, flipped: flipped });
+    } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
+}
+
 function pcLineHighlighterAnimate(mode, easeOut, easeIn) {
     var s = _pcRequireSelected();
     if (!s) return JSON.stringify({ error: "Selecciona una capa Line Highlight." });
