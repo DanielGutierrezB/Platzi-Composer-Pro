@@ -692,7 +692,7 @@ function pcCreateHighlightBox(mode, easeOut, easeIn, enableGlow) {
             var box = boxes[b];
             var layer = comp.layers.addShape();
             layer.name = "Highlight Box " + (b + 1);
-            layer.inPoint = srcLayer.inPoint;
+            layer.inPoint = comp.time;
             layer.outPoint = srcLayer.outPoint;
 
             var fxs = layer.property("Effects");
