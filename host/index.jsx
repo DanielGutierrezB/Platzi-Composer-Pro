@@ -628,7 +628,7 @@ function pcCreateHighlightBox(mode, easeOut, easeIn, enableGlow) {
         // Effect controls
         var fxs = layer.property("Effects");
         var thkCtrl = fxs.addProperty("ADBE Slider Control"); thkCtrl.name = "Thickness";
-        thkCtrl.property("Slider").setValue(4);
+        thkCtrl.property("Slider").setValue(15);
         var colorCtrl = fxs.addProperty("ADBE Color Control"); colorCtrl.name = "Color";
         colorCtrl.property("Color").setValue([0.039, 0.914, 0.541]);
         var padCtrl = fxs.addProperty("ADBE Slider Control"); padCtrl.name = "Padding";
