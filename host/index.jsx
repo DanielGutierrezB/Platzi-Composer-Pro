@@ -711,7 +711,9 @@ function pcCornerProfesor(corner, circular, durationFrames, sizePx, animate, eas
 // ─── Save Log ────────────────────────────────────────────────────
 function saveLogToFile(jsonString) {
     try {
-        var homeFolder = Folder("~/Desktop/PlatziComposerPro_logs");
+        var downloads = Folder("~/Downloads");
+        var base = downloads.exists ? downloads : Folder.desktop;
+        var homeFolder = Folder(base.fsName + "/PlatziComposerPro_logs");
         if (!homeFolder.exists) homeFolder.create();
 
         var now = new Date();
