@@ -34,7 +34,7 @@ Platzi Composer Pro is a CEP panel for After Effects used in Platzi video course
 - `CSXS/manifest.xml` has its own version (sync on major releases).
 - Git push to `main` = deploy (panel pulls from GitHub directly).
 
-## Current State (v1.1.0)
+## Current State (v1.1.4)
 
 ### Working ✅
 - SpellCheck IA (Ollama, OpenAI, Anthropic, Google)
@@ -59,6 +59,16 @@ Platzi Composer Pro is a CEP panel for After Effects used in Platzi video course
 - The `pcHighlighterAnimate` function finds Trim Paths by searching nested groups — fragile if layer structure changes.
 - Focus Mask / Zoom Focus: if user has multiple masks, only the first one is used.
 - Manifest still uses `com.codigo.aespellcheck` bundle ID (legacy from original SpellCheck-only extension).
+- Daniel wants IN/OUT tied to clip duration (trim clip → OUT moves). Explored expression-based approach but Daniel preferred keyframes. Need to find a hybrid solution.
+- Focus Mask animation (pcFocusMaskAnimate) works but animates Darkness slider.
+- Blur on Zoom Focus: keyframes go directly on Blurriness (not via slider/expression — that approach failed silently).
+
+### Key Design Decisions (v1.1.4)
+- **Keyframes > Expressions**: Daniel prefers editable keyframes over expression-based automation.
+- **Playhead = start**: All tools create effects starting at the current playhead position.
+- **No indirect slider linking for animated props**: If a property needs keyframes, animate it directly (don't use expression→slider indirection).
+- **Ctrl doesn't work on Mac CEP**: Use Alt/Option as modifier instead.
+- **CEP doesn't show native title tooltips**: Use CSS [data-tooltip]:hover::after.
 
 ### File Sizes
 - host/index.jsx: ~1090 lines
