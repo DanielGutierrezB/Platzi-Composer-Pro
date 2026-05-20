@@ -228,6 +228,14 @@ function pcCreateHighlighter() {
         layer.property("Transform").property("Opacity").setValue(50);
         layer.property("Transform").property("Anchor Point").setValue([0, 0]);
 
+        var fxs = layer.property("Effects");
+        var lenCtrl = fxs.addProperty("ADBE Slider Control"); lenCtrl.name = "Length";
+        lenCtrl.property("Slider").setValue(400);
+        var thkCtrl = fxs.addProperty("ADBE Slider Control"); thkCtrl.name = "Thickness";
+        thkCtrl.property("Slider").setValue(30);
+        var colorCtrl = fxs.addProperty("ADBE Color Control"); colorCtrl.name = "Color";
+        colorCtrl.property("Color").setValue([1, 1, 0]);
+
         var contents = layer.property("Contents");
         var rg = contents.addProperty("ADBE Vector Group"); rg.name = "HighlightLine";
         var rc = rg.property("Contents");
@@ -237,10 +245,15 @@ function pcCreateHighlighter() {
         lineShape.vertices = [[0, 0], [400, 0]];
         lineShape.closed = false;
         pathGrp.property("Path").setValue(lineShape);
+        try {
+            pathGrp.property("Path").expression = "createPath([[0,0],[effect(\"Length\")(\"Slider\"),0]], [], [], false)";
+        } catch(ex) {}
 
         var stroke = rc.addProperty("ADBE Vector Graphic - Stroke");
         stroke.property("Color").setValue([1, 1, 0]);
         stroke.property("Stroke Width").setValue(30);
+        try { stroke.property("Stroke Width").expression = "effect(\"Thickness\")(\"Slider\")"; } catch(ex) {}
+        try { stroke.property("Color").expression = "effect(\"Color\")(\"Color\")"; } catch(ex) {}
 
         var trim = rc.addProperty("ADBE Vector Filter - Trim");
         trim.property("End").setValue(100);
@@ -329,6 +342,8 @@ function pcCreateLineHighlighter() {
         lenCtrl.property("Slider").setValue(400);
         var thkCtrl = fxs.addProperty("ADBE Slider Control"); thkCtrl.name = "Thickness";
         thkCtrl.property("Slider").setValue(8);
+        var colorCtrl = fxs.addProperty("ADBE Color Control"); colorCtrl.name = "Color";
+        colorCtrl.property("Color").setValue([1, 1, 0]);
 
         layer.property("Transform").property("Anchor Point").setValue([0, 0]);
 
@@ -343,14 +358,15 @@ function pcCreateLineHighlighter() {
         pathGrp.property("Path").setValue(lineShape);
         try {
             pathGrp.property("Path").expression =
-                "var len = effect(\"Length\")(\"Slider\"); createPath([[0,0],[len,0]], [], [], false)";
+                "createPath([[0,0],[effect(\"Length\")(\"Slider\"),0]], [], [], false)";
         } catch(ex) {
             // createPath not available in this AE version, keep static path
         }
 
         var stroke = grpContents.addProperty("ADBE Vector Graphic - Stroke");
         stroke.property("Color").setValue([1, 1, 0]);
-        stroke.property("Stroke Width").expression = "effect('Thickness')('Slider')";
+        try { stroke.property("Stroke Width").expression = "effect(\"Thickness\")(\"Slider\")"; } catch(ex) {}
+        try { stroke.property("Color").expression = "effect(\"Color\")(\"Color\")"; } catch(ex) {}
 
         var trim = grpContents.addProperty("ADBE Vector Filter - Trim");
         trim.property("End").setValue(100);
@@ -438,28 +454,46 @@ function pcLineHighlighterAnimate(mode, easeOut, easeIn) {
 
 // ─── FOCUS MASK ──────────────────────────────────────────────
 
-function pcCreateFocusMask() {
-    var comp = _pcRequireComp();
-    if (!comp) return JSON.stringify({ error: "No hay composición activa." });
+function pcCreateFocusMask(opacityVal, featherVal) {
+    var s = _pcRequireSelected();
+    if (!s) return JSON.stringify({ error: "Selecciona una capa con máscara." });
     try {
         app.beginUndoGroup("Create Focus Mask");
-        var dark = comp.layers.addSolid([0, 0, 0], "Focus Mask", comp.width, comp.height, 1);
-        dark.inPoint = comp.time;
-        dark.outPoint = comp.time + 10;
-        dark.property("Transform").property("Opacity").setValue(70);
+        var comp = s.comp, original = s.layers[0];
+        var opa = opacityVal || 70;
+        var fth = featherVal || 20;
 
-        dark.moveToBeginning();
+        var masks = original.property("Masks");
+        if (!masks || masks.numProperties === 0) {
+            app.endUndoGroup();
+            return JSON.stringify({ error: "Dibuja una máscara sobre el área a enfocar." });
+        }
+
+        var maskShapeVal = masks.property(1).property("maskShape").value;
+
+        masks.property(1).remove();
+
+        var dark = comp.layers.addSolid([0, 0, 0], "Focus Mask", comp.width, comp.height, 1);
+        dark.moveBefore(original);
+        dark.inPoint = original.inPoint;
+        dark.outPoint = original.outPoint;
+
+        var fxs = dark.property("Effects");
+        var opaCtrl = fxs.addProperty("ADBE Slider Control"); opaCtrl.name = "Darkness";
+        opaCtrl.property("Slider").setValue(opa);
+        var fthCtrl = fxs.addProperty("ADBE Slider Control"); fthCtrl.name = "Feather";
+        fthCtrl.property("Slider").setValue(fth);
+
+        try { dark.property("Transform").property("Opacity").expression = "effect(\"Darkness\")(\"Slider\")"; } catch(ex) {}
 
         var maskProp = dark.property("Masks").addProperty("Mask");
+        maskProp.property("maskShape").setValue(maskShapeVal);
         maskProp.maskMode = MaskMode.SUBTRACT;
-
-        var cx = comp.width / 2, cy = comp.height / 2;
-        var hw = 200, hh = 150;
-        var maskShape = new Shape();
-        maskShape.vertices = [[cx - hw, cy - hh], [cx + hw, cy - hh], [cx + hw, cy + hh], [cx - hw, cy + hh]];
-        maskShape.closed = true;
-        maskProp.property("maskShape").setValue(maskShape);
-        maskProp.property("maskFeather").setValue([20, 20]);
+        try {
+            maskProp.property("maskFeather").expression = "var f = effect(\"Feather\")(\"Slider\"); [f, f]";
+        } catch(ex) {
+            maskProp.property("maskFeather").setValue([fth, fth]);
+        }
 
         app.endUndoGroup();
         return JSON.stringify({ success: true });
@@ -531,9 +565,18 @@ function pcCreateZoomFocus(blurAmount, scaleFactor, easeOut, easeIn) {
         var dup = original.duplicate();
         dup.name = "ZoomFocus_" + original.name;
         original.property("Masks").property(1).remove();
-        var blur = original.property("Effects").addProperty("ADBE Gaussian Blur 2");
+        var fxsOrig = original.property("Effects");
+        var blurCtrl = fxsOrig.addProperty("ADBE Slider Control"); blurCtrl.name = "Blur Amount";
+        blurCtrl.property("Slider").setValue(ba);
+        var blur = fxsOrig.addProperty("ADBE Gaussian Blur 2");
         blur.property("Blurriness").setValue(ba);
+        try { blur.property("Blurriness").expression = "effect(\"Blur Amount\")(\"Slider\")"; } catch(ex) {}
         try { blur.property("Repeat Edge Pixels").setValue(1); } catch(e) {}
+        // Add Mask Feather control to duplicate
+        var fxsDup = dup.property("Effects");
+        var mfCtrl = fxsDup.addProperty("ADBE Slider Control"); mfCtrl.name = "Mask Feather";
+        mfCtrl.property("Slider").setValue(0);
+        try { dup.property("Masks").property(1).property("maskFeather").expression = "var f = effect(\"Mask Feather\")(\"Slider\"); [f, f]"; } catch(ex) {}
         var posVal = dup.property("Transform").property("Position").value;
         var anchorVal = dup.property("Transform").property("Anchor Point").value;
         var maskCompX = posVal[0] - anchorVal[0] + maskCenterX;
