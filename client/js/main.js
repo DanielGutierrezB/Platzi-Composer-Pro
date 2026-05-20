@@ -943,28 +943,28 @@
             return (evt && evt.shiftKey) || (cb && cb.checked);
         }
 
-        // Highlighter — Stroke
-        on("btn-hl-create", "click", function() { callHost("pcCreateHighlighter()"); });
-        on("btn-hl-flip",   "click", function() { callHost("pcFlipHorizontal()"); });
-        on("btn-hl-in",     "click", function() { callHost("pcHighlighterAnimate('in', " + easeOut() + ", " + easeIn() + ")"); });
-        on("btn-hl-out",    "click", function() { callHost("pcHighlighterAnimate('out', " + easeOut() + ", " + easeIn() + ")"); });
-        on("btn-hl-inout",  "click", function() { callHost("pcHighlighterAnimate('inout', " + easeOut() + ", " + easeIn() + ")"); });
-
-        // Highlighter — Line
-        on("btn-line-create", "click", function() { callHost("pcCreateLineHighlighter()"); });
-        on("chk-line-glow",   "change", function() { callHost("pcLineHighlighterToggleGlow(" + this.checked + ")"); });
-        on("btn-line-in",     "click", function() { callHost("pcHighlighterAnimate('in', " + easeOut() + ", " + easeIn() + ")"); });
-        on("btn-line-out",    "click", function() { callHost("pcHighlighterAnimate('out', " + easeOut() + ", " + easeIn() + ")"); });
-        on("btn-line-inout",  "click", function() { callHost("pcHighlighterAnimate('inout', " + easeOut() + ", " + easeIn() + ")"); });
-
-        // Highlighter — Focus Mask
-        on("btn-focus-create", "click", function() { callHost("pcCreateFocusMask()"); });
-        on("btn-focus-in",     "click", function() { callHost("pcFocusMaskAnimate('in', " + easeOut() + ", " + easeIn() + ")"); });
-        on("btn-focus-out",    "click", function() { callHost("pcFocusMaskAnimate('out', " + easeOut() + ", " + easeIn() + ")"); });
-        on("btn-focus-inout",  "click", function() { callHost("pcFocusMaskAnimate('inout', " + easeOut() + ", " + easeIn() + ")"); });
-
-        // Highlighter — Zoom Focus
+        // Highlighter — Create per type
+        on("btn-hl-create",         "click", function() { callHost("pcCreateHighlighter()"); });
+        on("btn-hl-flip",           "click", function() { callHost("pcFlipHorizontal()"); });
+        on("btn-line-create",       "click", function() { callHost("pcCreateLineHighlighter()"); });
+        on("chk-line-glow",         "change", function() { callHost("pcLineHighlighterToggleGlow(" + this.checked + ")"); });
+        on("btn-focus-create",      "click", function() { callHost("pcCreateFocusMask()"); });
         on("btn-zoom-focus-create", "click", function() { callHost("pcCreateZoomFocus(15, 120)"); });
+
+        // Universal animate — routes based on selected layer name
+        function animateHighlighter(mode) {
+            csInterface.evalScript("pcGetSelectedLayerName()", function(result) {
+                var name = "";
+                try { name = (JSON.parse(result) || {}).name || ""; } catch(_) {}
+                var fn = "pcHighlighterAnimate";
+                if (name.indexOf("Line Highlight") !== -1) fn = "pcLineHighlighterAnimate";
+                else if (name.indexOf("Focus Mask") !== -1) fn = "pcFocusMaskAnimate";
+                callHost(fn + "('" + mode + "', " + easeOut() + ", " + easeIn() + ")");
+            });
+        }
+        on("btn-hl-in",    "click", function() { animateHighlighter("in"); });
+        on("btn-hl-out",   "click", function() { animateHighlighter("out"); });
+        on("btn-hl-inout", "click", function() { animateHighlighter("inout"); });
 
         // Quick Scale
         [5, 10, 20, 30].forEach(function(pct) {

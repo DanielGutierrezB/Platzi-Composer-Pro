@@ -518,6 +518,26 @@ html, body {
     gap: 5px;
 }
 
+.hl-type-compact {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 8px;
+    padding: 4px 0;
+}
+
+.hl-type-head {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 130px;
+    min-width: 0;
+}
+
+.hl-type-actions {
+    flex: 0 0 auto;
+    margin-left: auto;
+}
+
 .hl-type-label {
     font-size: 10px;
     font-weight: 700;
@@ -531,6 +551,8 @@ html, body {
     line-height: 1.4;
     margin-bottom: 2px;
 }
+
+.hl-type-compact .hl-type-desc { margin-bottom: 0; }
 
 .hl-divider {
     height: 1px;

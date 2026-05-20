@@ -14,7 +14,7 @@
             <div class="header-spacer"></div>
             <span id="comp-name" class="comp-name">Sin composición activa</span>
             <span id="layer-count" class="layer-count"></span>
-            <span id="version-badge" class="version-label">v1.0.4</span>
+            <span id="version-badge" class="version-label">v1.0.5</span>
             <button id="btn-update" class="icon-btn" title="Verificar actualización / Recargar panel">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
@@ -188,61 +188,61 @@
             </div>
             <div class="tool-card-body hidden">
                 <!-- Type 1: Stroke -->
-                <div class="hl-type">
-                    <div class="hl-type-label">━━ Stroke Highlight</div>
-                    <div class="hl-type-desc">Marcador rectangular que dibuja sobre el texto</div>
-                    <div class="tool-row">
+                <div class="hl-type hl-type-compact">
+                    <div class="hl-type-head">
+                        <div class="hl-type-label">━━ Stroke</div>
+                        <div class="hl-type-desc">Marcador rectangular sobre el texto</div>
+                    </div>
+                    <div class="tool-row hl-type-actions">
                         <button id="btn-hl-create" class="btn btn-tool">Create</button>
                         <button id="btn-hl-flip" class="btn btn-tool">↔ Flip</button>
                     </div>
+                </div>
+
+                <!-- Type 2: Line -->
+                <div class="hl-type hl-type-compact">
+                    <div class="hl-type-head">
+                        <div class="hl-type-label">── Line</div>
+                        <div class="hl-type-desc">Línea subrayado con trim animado</div>
+                    </div>
+                    <div class="tool-row hl-type-actions">
+                        <button id="btn-line-create" class="btn btn-tool">Create</button>
+                        <label class="tool-checkbox"><input type="checkbox" id="chk-line-glow"> Glow</label>
+                    </div>
+                </div>
+
+                <!-- Type 3: Focus Mask -->
+                <div class="hl-type hl-type-compact">
+                    <div class="hl-type-head">
+                        <div class="hl-type-label">◼ Focus Mask</div>
+                        <div class="hl-type-desc">Oscurece todo excepto la zona enfocada</div>
+                    </div>
+                    <div class="tool-row hl-type-actions">
+                        <button id="btn-focus-create" class="btn btn-tool">Create</button>
+                    </div>
+                </div>
+
+                <!-- Type 4: Zoom Focus -->
+                <div class="hl-type hl-type-compact">
+                    <div class="hl-type-head">
+                        <div class="hl-type-label">🔍 Zoom Focus</div>
+                        <div class="hl-type-desc">Zoom al frente + blur en el fondo</div>
+                    </div>
+                    <div class="tool-row hl-type-actions">
+                        <button id="btn-zoom-focus-create" class="btn btn-tool">Create</button>
+                    </div>
+                </div>
+
+                <div class="hl-divider"></div>
+
+                <!-- Universal animate -->
+                <div class="hl-type">
+                    <div class="hl-type-label">🎬 Animate</div>
+                    <div class="hl-type-desc">Funciona con cualquier highlighter seleccionado</div>
                     <div class="tool-row">
                         <button id="btn-hl-in" class="btn btn-tool">▶ In</button>
                         <button id="btn-hl-out" class="btn btn-tool">◀ Out</button>
                         <button id="btn-hl-inout" class="btn btn-tool">◀▶ In/Out</button>
-                    </div>
-                </div>
-
-                <div class="hl-divider"></div>
-
-                <!-- Type 2: Line -->
-                <div class="hl-type">
-                    <div class="hl-type-label">── Line Highlight</div>
-                    <div class="hl-type-desc">Línea subrayado con glow opcional</div>
-                    <div class="tool-row">
-                        <button id="btn-line-create" class="btn btn-tool">Create</button>
-                        <label class="toggle-label"><input type="checkbox" id="chk-line-glow"> Glow</label>
-                    </div>
-                    <div class="tool-row">
-                        <button id="btn-line-in" class="btn btn-tool">▶ In</button>
-                        <button id="btn-line-out" class="btn btn-tool">◀ Out</button>
-                        <button id="btn-line-inout" class="btn btn-tool">◀▶ In/Out</button>
-                    </div>
-                </div>
-
-                <div class="hl-divider"></div>
-
-                <!-- Type 3: Focus Mask -->
-                <div class="hl-type">
-                    <div class="hl-type-label">◼ Focus Mask</div>
-                    <div class="hl-type-desc">Oscurece todo excepto la zona enfocada</div>
-                    <div class="tool-row">
-                        <button id="btn-focus-create" class="btn btn-tool">Create</button>
-                    </div>
-                    <div class="tool-row">
-                        <button id="btn-focus-in" class="btn btn-tool">▶ In</button>
-                        <button id="btn-focus-out" class="btn btn-tool">◀ Out</button>
-                        <button id="btn-focus-inout" class="btn btn-tool">◀▶ In/Out</button>
-                    </div>
-                </div>
-
-                <div class="hl-divider"></div>
-
-                <!-- Type 4: Zoom Focus -->
-                <div class="hl-type">
-                    <div class="hl-type-label">🔍 Zoom Focus</div>
-                    <div class="hl-type-desc">Zoom al frente + blur en el fondo</div>
-                    <div class="tool-row">
-                        <button id="btn-zoom-focus-create" class="btn btn-tool">Create</button>
                     </div>
                 </div>
             </div>
