@@ -1021,7 +1021,9 @@
         document.getElementById("btn-line-create").addEventListener("click", function(e) {
             var eo = document.getElementById("ease-out").value;
             var ei = document.getElementById("ease-in").value;
-            csInterface.evalScript("pcCreateLineHighlighter()", function(res) {
+            var style = document.getElementById("sel-line-style").value;
+            var glow = document.getElementById("chk-line-glow").checked;
+            csInterface.evalScript("pcCreateLineHighlighter('" + style + "', " + glow + ")", function(res) {
                 try { if (JSON.parse(res).error) { showToast(JSON.parse(res).error,"error"); return; } } catch(x){}
                 if (e.shiftKey && (e.altKey)) { callHost("pcLineHighlighterAnimate(\"out\","+eo+","+ei+")"); }
                 else if (e.altKey) { callHost("pcLineHighlighterAnimate(\"in\","+eo+","+ei+")"); }

@@ -496,6 +496,23 @@ html, body {
     border-color: var(--accent);
     box-shadow: 0 0 0 2px var(--accent-dim);
 }
+.tool-select {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    padding: 4px 6px;
+    border-radius: var(--radius-sm);
+    font-size: 11px;
+    font-family: var(--font);
+    outline: none;
+    cursor: pointer;
+    transition: border-color var(--transition);
+    max-width: 90px;
+}
+.tool-select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent-dim);
+}
 
 .tool-checkbox {
     font-size: 10px;

@@ -327,23 +327,43 @@ function pcHighlighterAnimate(mode, easeOut, easeIn) {
 
 // ─── LINE HIGHLIGHTER ────────────────────────────────────────
 
-function pcCreateLineHighlighter() {
+function pcCreateLineHighlighter(style, enableGlow) {
     var comp = _pcRequireComp();
     if (!comp) return JSON.stringify({ error: "No hay composición activa." });
+    if (!style) style = "solid";
     try {
         app.beginUndoGroup("Create Line Highlight");
         var layer = comp.layers.addShape();
-        layer.name = "Line Highlight";
+        layer.name = "Line Highlight - " + style.charAt(0).toUpperCase() + style.slice(1);
         layer.inPoint = comp.time;
         layer.outPoint = comp.time + 10;
 
         var fxs = layer.property("Effects");
+        // Common controls
         var lenCtrl = fxs.addProperty("ADBE Slider Control"); lenCtrl.name = "Length";
         lenCtrl.property("Slider").setValue(400);
         var thkCtrl = fxs.addProperty("ADBE Slider Control"); thkCtrl.name = "Thickness";
         thkCtrl.property("Slider").setValue(8);
         var colorCtrl = fxs.addProperty("ADBE Color Control"); colorCtrl.name = "Color";
         colorCtrl.property("Color").setValue([1, 1, 0]);
+
+        // Style-specific controls
+        if (style === "wiggle") {
+            var wigAmtCtrl = fxs.addProperty("ADBE Slider Control"); wigAmtCtrl.name = "Wiggle Amount";
+            wigAmtCtrl.property("Slider").setValue(10);
+            var wigSpdCtrl = fxs.addProperty("ADBE Slider Control"); wigSpdCtrl.name = "Wiggle Speed";
+            wigSpdCtrl.property("Slider").setValue(3);
+        } else if (style === "rough") {
+            var roughAmtCtrl = fxs.addProperty("ADBE Slider Control"); roughAmtCtrl.name = "Rough Amount";
+            roughAmtCtrl.property("Slider").setValue(5);
+            var roughDetCtrl = fxs.addProperty("ADBE Slider Control"); roughDetCtrl.name = "Rough Detail";
+            roughDetCtrl.property("Slider").setValue(3);
+        } else if (style === "dashed") {
+            var dashLenCtrl = fxs.addProperty("ADBE Slider Control"); dashLenCtrl.name = "Dash Length";
+            dashLenCtrl.property("Slider").setValue(20);
+            var gapLenCtrl = fxs.addProperty("ADBE Slider Control"); gapLenCtrl.name = "Gap Length";
+            gapLenCtrl.property("Slider").setValue(10);
+        }
 
         layer.property("Transform").property("Anchor Point").setValue([0, 0]);
 
@@ -363,16 +383,59 @@ function pcCreateLineHighlighter() {
             // createPath not available in this AE version, keep static path
         }
 
+        // Stroke
         var stroke = grpContents.addProperty("ADBE Vector Graphic - Stroke");
         stroke.property("Color").setValue([1, 1, 0]);
         try { stroke.property("Stroke Width").expression = "effect(\"Thickness\")(\"Slider\")"; } catch(ex) {}
         try { stroke.property("Color").expression = "effect(\"Color\")(\"Color\")"; } catch(ex) {}
 
+        // Dashed style: add dashes to stroke
+        if (style === "dashed") {
+            try {
+                var dashes = stroke.property("Dashes");
+                var dash = dashes.addProperty("ADBE Vector Stroke Dash 1");
+                dash.expression = "effect(\"Dash Length\")(\"Slider\")";
+                var gap = dashes.addProperty("ADBE Vector Stroke Gap 1");
+                gap.expression = "effect(\"Gap Length\")(\"Slider\")";
+            } catch(ex) {
+                // Fallback: static dashes
+                try {
+                    stroke.property("Dashes").addProperty("ADBE Vector Stroke Dash 1").setValue(20);
+                    stroke.property("Dashes").addProperty("ADBE Vector Stroke Gap 1").setValue(10);
+                } catch(ex2) {}
+            }
+        }
+
+        // Wiggle style: Wiggle Paths operator (animated organic movement)
+        if (style === "wiggle") {
+            var wigglePaths = grpContents.addProperty("ADBE Vector Filter - Roughen");
+            try { wigglePaths.property("ADBE Vector Roughen Size").expression = "effect(\"Wiggle Amount\")(\"Slider\")"; } catch(ex) {}
+            try { wigglePaths.property("ADBE Vector Roughen Detail").setValue(3); } catch(ex) {}
+            try { wigglePaths.property("ADBE Vector Temporal Freq").expression = "effect(\"Wiggle Speed\")(\"Slider\")"; } catch(ex) {}
+        }
+
+        // Rough style: Wiggle Paths with 0 temporal freq (static hand-drawn look)
+        if (style === "rough") {
+            var roughPaths = grpContents.addProperty("ADBE Vector Filter - Roughen");
+            try { roughPaths.property("ADBE Vector Roughen Size").expression = "effect(\"Rough Amount\")(\"Slider\")"; } catch(ex) {}
+            try { roughPaths.property("ADBE Vector Roughen Detail").expression = "effect(\"Rough Detail\")(\"Slider\")"; } catch(ex) {}
+            try { roughPaths.property("ADBE Vector Temporal Freq").setValue(0); } catch(ex) {}
+        }
+
+        // Trim Paths
         var trim = grpContents.addProperty("ADBE Vector Filter - Trim");
         trim.property("End").setValue(100);
 
+        // Apply Glow if requested
+        if (enableGlow) {
+            var glow = fxs.addProperty("ADBE Glo2");
+            try { glow.property("Glow Threshold").setValue(40); } catch(ex) {}
+            try { glow.property("Glow Radius").setValue(25); } catch(ex) {}
+            try { glow.property("Glow Intensity").setValue(1.5); } catch(ex) {}
+        }
+
         app.endUndoGroup();
-        return JSON.stringify({ success: true });
+        return JSON.stringify({ success: true, style: style });
     } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
 }
 
@@ -382,7 +445,15 @@ function pcLineHighlighterToggleGlow(enable) {
     try {
         app.beginUndoGroup("Toggle Glow");
         var layer = s.layers[0];
+        if (layer.name.indexOf("Line Highlight") === -1) {
+            app.endUndoGroup();
+            return JSON.stringify({ error: "La capa seleccionada no es un Line Highlight." });
+        }
         var fxs = layer.property("Effects");
+        if (!fxs) {
+            app.endUndoGroup();
+            return JSON.stringify({ error: "La capa no tiene panel de Effects." });
+        }
         if (enable) {
             var existing = null;
             for (var i = 1; i <= fxs.numProperties; i++) {
@@ -390,9 +461,10 @@ function pcLineHighlighterToggleGlow(enable) {
             }
             if (!existing) {
                 var glow = fxs.addProperty("ADBE Glo2");
-                try { glow.property("Glow Threshold").setValue(40); } catch(_){}
-                try { glow.property("Glow Radius").setValue(25); } catch(_){}
-                try { glow.property("Glow Intensity").setValue(1.5); } catch(_){}
+                glow.name = "Line Glow";
+                try { glow.property("Glow Threshold").setValue(40); } catch(ex) {}
+                try { glow.property("Glow Radius").setValue(25); } catch(ex) {}
+                try { glow.property("Glow Intensity").setValue(1.5); } catch(ex) {}
             }
         } else {
             for (var j = fxs.numProperties; j >= 1; j--) {
