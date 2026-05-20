@@ -1613,7 +1613,7 @@ function pcCornerProfesor(corner, circular, durationFrames, sizePx, animate, eas
 
 // ─── TEXT HELPER ────────────────────────────────────────────────
 
-function pcTextHelper(animType, mode, animMode, delayPerUnit, enableGlow, easeOut, easeIn) {
+function pcTextHelper(animType, mode, animMode, durationFrames, enableGlow, easeOut, easeIn) {
     var comp = _pcRequireComp();
     if (!comp) return JSON.stringify({ error: "No hay composici\u00f3n activa." });
     try {
@@ -1658,11 +1658,10 @@ function pcTextHelper(animType, mode, animMode, delayPerUnit, enableGlow, easeOu
         var rangeStart = rangeSel.property("Start");
         var rangeEnd = rangeSel.property("End");
 
-        // Animation duration: text length × delay frames
+        // Animation duration in frames
         var fps = comp.frameRate;
         var t0 = comp.time;
-        var srcText = textLayer.property("ADBE Text Properties").property("ADBE Text Document").value.text;
-        var totalDur = (srcText.length * delayPerUnit) / fps;
+        var totalDur = durationFrames / fps;
         var t1 = t0 + totalDur;
 
         // Based On from mode: char=1, word=3, line=4

@@ -1188,13 +1188,13 @@
                 btn.addEventListener("click", function(evt) {
                     var animType = btn.getAttribute("data-anim");
                     var mode = document.querySelector('input[name="th-mode"]:checked').value;
-                    var delay = parseInt(document.getElementById("th-delay").value) || 2;
+                    var dur = parseInt(document.getElementById("th-dur").value) || 20;
                     var glow = document.getElementById("th-glow").checked;
                     // Shift=In only, Shift+Alt=Out only, normal=InOut
                     var animMode = "inout";
                     if (evt.shiftKey && evt.altKey) animMode = "out";
                     else if (evt.shiftKey) animMode = "in";
-                    callHost("pcTextHelper('" + animType + "','" + mode + "','" + animMode + "'," + delay + "," + glow + "," + easeOut() + "," + easeIn() + ")");
+                    callHost("pcTextHelper('" + animType + "','" + mode + "','" + animMode + "'," + dur + "," + glow + "," + easeOut() + "," + easeIn() + ")");
                 });
             })(thBtns[ti]);
         }
