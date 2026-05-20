@@ -619,11 +619,11 @@ function pcCreateHighlightBox(mode, easeOut, easeIn, enableGlow) {
         var centerX = minX + boxW / 2;
         var centerY = minY + boxH / 2;
 
-        // Create shape layer
+        // Create shape layer (match source layer duration)
         var layer = comp.layers.addShape();
         layer.name = "Highlight Box";
-        layer.inPoint = comp.time;
-        layer.outPoint = comp.time + 10;
+        layer.inPoint = srcLayer.inPoint;
+        layer.outPoint = srcLayer.outPoint;
 
         // Effect controls
         var fxs = layer.property("Effects");
