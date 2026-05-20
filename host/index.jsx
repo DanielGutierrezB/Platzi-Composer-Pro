@@ -609,37 +609,41 @@ function pcCreateHighlightBox(mode, easeOut, easeIn, enableGlow) {
                 var gc = null;
                 try { gc = grpItem.property("Contents"); } catch(ex) { continue; }
                 if (!gc) continue;
-                // Find path in this group
+                // Find path in this group and extract as shape
                 for (var p = 1; p <= gc.numProperties; p++) {
                     var prop = gc.property(p);
-                    if (prop.matchName === "ADBE Vector Shape - Group" || prop.matchName === "ADBE Vector Shape - Rect" || prop.matchName === "ADBE Vector Shape - Ellipse") {
-                        var pathData = null;
-                        if (prop.matchName === "ADBE Vector Shape - Rect") {
-                            // Rectangle: get size and position
-                            var rSize = prop.property("ADBE Vector Rect Size").value;
-                            var rPos = prop.property("ADBE Vector Rect Position").value;
-                            // Factor in group transform
-                            var gPos = [0, 0];
-                            try { gPos = grpItem.property("Transform").property("Position").value; } catch(ex) {}
-                            boxes.push({ centerX: rPos[0] + gPos[0], centerY: rPos[1] + gPos[1], boxW: rSize[0], boxH: rSize[1] });
-                        } else if (prop.matchName === "ADBE Vector Shape - Group") {
-                            // Freeform path: calc bounding box
-                            try { pathData = prop.property("Path").value; } catch(ex) { continue; }
-                            var verts = pathData.vertices;
-                            if (!verts || verts.length < 2) continue;
-                            var minX = verts[0][0], maxX = verts[0][0];
-                            var minY = verts[0][1], maxY = verts[0][1];
-                            for (var v = 1; v < verts.length; v++) {
-                                if (verts[v][0] < minX) minX = verts[v][0];
-                                if (verts[v][0] > maxX) maxX = verts[v][0];
-                                if (verts[v][1] < minY) minY = verts[v][1];
-                                if (verts[v][1] > maxY) maxY = verts[v][1];
+                    if (prop.matchName === "ADBE Vector Shape - Group") {
+                        // Freeform path: copy directly
+                        try {
+                            var pathVal = prop.property("Path").value;
+                            if (pathVal.vertices.length >= 2) {
+                                boxes.push({ maskShape: pathVal, isPath: true });
                             }
-                            var gPos2 = [0, 0];
-                            try { gPos2 = grpItem.property("Transform").property("Position").value; } catch(ex) {}
-                            boxes.push({ centerX: (minX + maxX) / 2 + gPos2[0], centerY: (minY + maxY) / 2 + gPos2[1], boxW: maxX - minX, boxH: maxY - minY });
-                        }
-                        break; // one path per group
+                        } catch(ex) {}
+                        break;
+                    } else if (prop.matchName === "ADBE Vector Shape - Rect") {
+                        // Rectangle: convert to path
+                        var rSize = prop.property("ADBE Vector Rect Size").value;
+                        var rPos = [0, 0];
+                        try { rPos = prop.property("ADBE Vector Rect Position").value; } catch(ex) {}
+                        var gPos = [0, 0];
+                        try { gPos = grpItem.property("Transform").property("Position").value; } catch(ex) {}
+                        var hw = rSize[0] / 2, hh = rSize[1] / 2;
+                        var cx = rPos[0] + gPos[0], cy = rPos[1] + gPos[1];
+                        var rectShape = new Shape();
+                        rectShape.vertices = [[cx - hw, cy - hh], [cx + hw, cy - hh], [cx + hw, cy + hh], [cx - hw, cy + hh]];
+                        rectShape.closed = true;
+                        boxes.push({ maskShape: rectShape, isPath: true });
+                        break;
+                    } else if (prop.matchName === "ADBE Vector Shape - Ellipse") {
+                        // Ellipse: store as bounding rect (path conversion is complex)
+                        var eSize = prop.property("ADBE Vector Ellipse Size").value;
+                        var ePos = [0, 0];
+                        try { ePos = prop.property("ADBE Vector Ellipse Position").value; } catch(ex) {}
+                        var gPos3 = [0, 0];
+                        try { gPos3 = grpItem.property("Transform").property("Position").value; } catch(ex) {}
+                        boxes.push({ centerX: ePos[0] + gPos3[0], centerY: ePos[1] + gPos3[1], boxW: eSize[0], boxH: eSize[1] });
+                        break;
                     }
                 }
             }
@@ -692,9 +696,15 @@ function pcCreateHighlightBox(mode, easeOut, easeIn, enableGlow) {
 
             // Position at box center
             if (isShapeMode) {
-                // Shape mode: absolute position based on srcLayer position + shape offsets
-                layer.property("Transform").property("Position").setValue([srcPos[0] + box.centerX, srcPos[1] + box.centerY]);
-                layer.property("Transform").property("Anchor Point").setValue([0, 0]);
+                if (box.isPath) {
+                    // Shape mode with path: match srcLayer position
+                    layer.property("Transform").property("Position").setValue(srcPos);
+                    layer.property("Transform").property("Anchor Point").setValue([0, 0]);
+                } else {
+                    // Shape mode with bounding box (ellipse fallback)
+                    layer.property("Transform").property("Position").setValue([srcPos[0] + box.centerX, srcPos[1] + box.centerY]);
+                    layer.property("Transform").property("Anchor Point").setValue([0, 0]);
+                }
                 if (srcLayer.parent) {
                     layer.parent = srcLayer.parent;
                 }
