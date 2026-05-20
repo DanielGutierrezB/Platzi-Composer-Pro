@@ -570,6 +570,7 @@ function pcCreateZoomFocus(blurAmount, scaleFactor, easeOut, easeIn) {
         var compCenterY = comp.height / 2;
         var dup = original.duplicate();
         dup.name = "ZoomFocus_" + original.name;
+        dup.inPoint = comp.time;
         original.property("Masks").property(1).remove();
         var fxsOrig = original.property("Effects");
         var blurCtrl = fxsOrig.addProperty("ADBE Slider Control"); blurCtrl.name = "Blur Amount";
@@ -590,7 +591,8 @@ function pcCreateZoomFocus(blurAmount, scaleFactor, easeOut, easeIn) {
         var targetPos = [posVal[0] + (compCenterX - maskCompX), posVal[1] + (compCenterY - maskCompY)];
         var fps = comp.frameRate;
         var dur = 20 / fps;
-        var inPt = dup.inPoint;
+        // Animation starts at playhead, ends at layer outPoint
+        var inPt = comp.time;
         var outPt = dup.outPoint;
         // Position keyframes
         var posProp = dup.property("Transform").property("Position");
