@@ -1050,6 +1050,18 @@
             callHost("pcCreateZoomFocus(" + blur + "," + sf + "," + eo + "," + ei + ")");
         });
 
+        // Highlight Box
+        document.getElementById("btn-box-create").addEventListener("click", function(e) {
+            var eo = document.getElementById("ease-out").value;
+            var ei = document.getElementById("ease-in").value;
+            var glow = document.getElementById("chk-box-glow").checked;
+            var mode = "none";
+            if (e.shiftKey && e.altKey) mode = "out";
+            else if (e.altKey) mode = "in";
+            else if (e.shiftKey) mode = "inout";
+            callHost("pcCreateHighlightBox('" + mode + "', " + eo + ", " + ei + ", " + glow + ")");
+        });
+
         // Universal animate — routes based on selected layer name
         function animateHighlighter(mode) {
             csInterface.evalScript("pcGetSelectedLayerName()", function(result) {
@@ -1057,6 +1069,7 @@
                 try { name = (JSON.parse(result) || {}).name || ""; } catch(_) {}
                 var fn = "pcHighlighterAnimate";
                 if (name.indexOf("Line Highlight") !== -1) fn = "pcLineHighlighterAnimate";
+                else if (name.indexOf("Highlight Box") !== -1) fn = "pcLineHighlighterAnimate";
                 else if (name.indexOf("Focus Mask") !== -1) fn = "pcFocusMaskAnimate";
                 callHost(fn + "('" + mode + "', " + easeOut() + ", " + easeIn() + ")");
             });

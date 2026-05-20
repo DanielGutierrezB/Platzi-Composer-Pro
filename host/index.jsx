@@ -608,6 +608,122 @@ function pcLineHighlighterAnimate(mode, easeOut, easeIn) {
     } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
 }
 
+// ─── HIGHLIGHT BOX ───────────────────────────────────────────
+
+function pcCreateHighlightBox(mode, easeOut, easeIn, enableGlow) {
+    var comp = _pcRequireComp();
+    if (!comp) return JSON.stringify({ error: "No hay composición activa." });
+    var s = _pcRequireSelected();
+    if (!s) return JSON.stringify({ error: "Selecciona una capa con máscara." });
+    try {
+        app.beginUndoGroup("Create Highlight Box");
+        var srcLayer = s.layers[0];
+
+        // Get mask from source layer
+        var masks = srcLayer.property("Masks");
+        if (!masks || masks.numProperties < 1) {
+            app.endUndoGroup();
+            return JSON.stringify({ error: "La capa no tiene máscara. Dibuja una primero." });
+        }
+        var mask = masks.property(1);
+        var maskPath = mask.property("maskPath").value;
+        var verts = maskPath.vertices;
+
+        // Calculate bounding box from mask vertices
+        var minX = verts[0][0], maxX = verts[0][0];
+        var minY = verts[0][1], maxY = verts[0][1];
+        for (var i = 1; i < verts.length; i++) {
+            if (verts[i][0] < minX) minX = verts[i][0];
+            if (verts[i][0] > maxX) maxX = verts[i][0];
+            if (verts[i][1] < minY) minY = verts[i][1];
+            if (verts[i][1] > maxY) maxY = verts[i][1];
+        }
+        var boxW = maxX - minX;
+        var boxH = maxY - minY;
+        var centerX = minX + boxW / 2;
+        var centerY = minY + boxH / 2;
+
+        // Create shape layer
+        var layer = comp.layers.addShape();
+        layer.name = "Highlight Box";
+        layer.inPoint = comp.time;
+        layer.outPoint = comp.time + 10;
+
+        // Effect controls
+        var fxs = layer.property("Effects");
+        var thkCtrl = fxs.addProperty("ADBE Slider Control"); thkCtrl.name = "Thickness";
+        thkCtrl.property("Slider").setValue(4);
+        var colorCtrl = fxs.addProperty("ADBE Color Control"); colorCtrl.name = "Color";
+        colorCtrl.property("Color").setValue([0.039, 0.914, 0.541]);
+        var padCtrl = fxs.addProperty("ADBE Slider Control"); padCtrl.name = "Padding";
+        padCtrl.property("Slider").setValue(10);
+
+        // Position layer at mask center, parent to source
+        layer.property("Transform").property("Position").setValue([centerX, centerY]);
+        layer.property("Transform").property("Anchor Point").setValue([0, 0]);
+        layer.parent = srcLayer;
+
+        // Build rectangle shape from mask bounds
+        var contents = layer.property("Contents");
+        var grp = contents.addProperty("ADBE Vector Group"); grp.name = "BoxGroup";
+        var grpContents = grp.property("Contents");
+
+        // Rectangle path with padding expression
+        var rect = grpContents.addProperty("ADBE Vector Shape - Rect");
+        try {
+            rect.property("ADBE Vector Rect Size").expression =
+                "var pad = thisComp.layer(\"" + layer.name + "\").effect(\"Padding\")(\"Slider\");" +
+                "[" + boxW + " + pad*2, " + boxH + " + pad*2]";
+        } catch(ex) {
+            rect.property("ADBE Vector Rect Size").setValue([boxW + 20, boxH + 20]);
+        }
+
+        // Stroke
+        var stroke = grpContents.addProperty("ADBE Vector Graphic - Stroke");
+        stroke.property("Color").setValue([0.039, 0.914, 0.541]);
+        try { stroke.property("Stroke Width").expression = "effect(\"Thickness\")(\"Slider\")"; } catch(ex) {}
+        try { stroke.property("Color").expression = "effect(\"Color\")(\"Color\")"; } catch(ex) {}
+
+        // Trim Paths for animation
+        var trim = grpContents.addProperty("ADBE Vector Filter - Trim");
+        trim.property("End").setValue(100);
+
+        // Glow (always present)
+        var glow = fxs.addProperty("ADBE Glo2");
+        glow.name = "Box Glow";
+        try { glow.property("Glow Threshold").setValue(40); } catch(ex) {}
+        try { glow.property("Glow Radius").setValue(20); } catch(ex) {}
+        try { glow.property("Glow Intensity").setValue(1); } catch(ex) {}
+        glow.enabled = !!enableGlow;
+
+        // Animate based on mode
+        var fps = comp.frameRate;
+        var dur = 20 / fps;
+        if (mode === "in" || mode === "inout") {
+            var t0 = comp.time, t1 = t0 + dur;
+            trim.property("End").setValueAtTime(t0, 0);
+            trim.property("End").setValueAtTime(t1, 100);
+            _pcApplyEaseScalar(trim.property("End"), 1, 2, easeOut, easeIn);
+        }
+        if (mode === "out" || mode === "inout") {
+            var tOut0 = (mode === "inout") ? layer.outPoint - dur : comp.time;
+            var tOut1 = tOut0 + dur;
+            trim.property("End").setValueAtTime(tOut0, 100);
+            trim.property("End").setValueAtTime(tOut1, 0);
+            var kCount = trim.property("End").numKeys;
+            _pcApplyEaseScalar(trim.property("End"), kCount - 1, kCount, easeOut, easeIn);
+        }
+
+        // Remove mask from source (already used)
+        try { masks.property(1).remove(); } catch(ex) {}
+
+        layer.selected = true;
+        app.endUndoGroup();
+        return JSON.stringify({ success: true });
+    } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
+}
+
+
 // ─── FOCUS MASK ──────────────────────────────────────────────
 
 function pcCreateFocusMask(opacityVal, featherVal) {
