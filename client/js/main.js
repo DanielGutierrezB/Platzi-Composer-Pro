@@ -1165,28 +1165,27 @@
             });
         });
 
-        // Text Helper — mode radio toggle (for old Chromium without :has())
+        // Text Helper — mode radio toggle with inline styles (CEP compat)
         var thRadios = document.querySelectorAll(".th-radio");
-        for (var ri = 0; ri < thRadios.length; ri++) {
-            (function(label) {
-                label.addEventListener("click", function() {
-                    for (var rj = 0; rj < thRadios.length; rj++) thRadios[rj].classList.remove("active");
-                    label.classList.add("active");
-                });
-            })(thRadios[ri]);
+        function updateRadioStyles() {
+            for (var rj = 0; rj < thRadios.length; rj++) {
+                var isChecked = thRadios[rj].querySelector("input").checked;
+                thRadios[rj].style.background = isChecked ? "#0AE98A" : "";
+                thRadios[rj].style.color = isChecked ? "#000" : "";
+                thRadios[rj].style.opacity = isChecked ? "1" : "0.5";
+                thRadios[rj].style.fontWeight = isChecked ? "600" : "";
+            }
         }
-        // Set initial active
-        if (thRadios.length > 0) thRadios[0].classList.add("active");
+        for (var ri = 0; ri < thRadios.length; ri++) {
+            thRadios[ri].addEventListener("click", updateRadioStyles);
+        }
+        updateRadioStyles();
 
         // Text Helper — each button is a type, auto-detects if text is selected
         var thBtns = document.querySelectorAll(".btn-th");
         for (var ti = 0; ti < thBtns.length; ti++) {
             (function(btn) {
                 btn.addEventListener("click", function(evt) {
-                    // Mark active button
-                    for (var tj = 0; tj < thBtns.length; tj++) thBtns[tj].classList.remove("active");
-                    btn.classList.add("active");
-
                     var animType = btn.getAttribute("data-anim");
                     var mode = document.querySelector('input[name="th-mode"]:checked').value;
                     var delay = parseInt(document.getElementById("th-delay").value) || 2;

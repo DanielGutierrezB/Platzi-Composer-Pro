@@ -1058,11 +1058,7 @@ html, body {
     font-weight: 600;
     opacity: 1 !important;
 }
-.th-anim-btn.active {
-    background: rgba(10, 233, 138, 0.15) !important;
-    border-color: #0AE98A !important;
-    color: #0AE98A !important;
-}
+
 
 .has-update {
     animation: pulse-update 1.5s infinite;
