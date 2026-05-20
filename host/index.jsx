@@ -487,13 +487,13 @@ function pcCreateLineHighlighter(style, enableGlow) {
         var trim = grpContents.addProperty("ADBE Vector Filter - Trim");
         trim.property("End").setValue(100);
 
-        // Apply Glow if requested
-        if (enableGlow) {
-            var glow = fxs.addProperty("ADBE Glo2");
-            try { glow.property("Glow Threshold").setValue(40); } catch(ex) {}
-            try { glow.property("Glow Radius").setValue(25); } catch(ex) {}
-            try { glow.property("Glow Intensity").setValue(1.5); } catch(ex) {}
-        }
+        // Always add Glow effect (disabled if checkbox not checked)
+        var glow = fxs.addProperty("ADBE Glo2");
+        glow.name = "Line Glow";
+        try { glow.property("Glow Threshold").setValue(40); } catch(ex) {}
+        try { glow.property("Glow Radius").setValue(25); } catch(ex) {}
+        try { glow.property("Glow Intensity").setValue(1.5); } catch(ex) {}
+        glow.enabled = !!enableGlow;
 
         // Chalk style: Wiggle Paths with SMOOTH points + thick stroke = real chalk texture
         if (style === "chalk") {
