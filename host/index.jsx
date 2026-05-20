@@ -263,6 +263,11 @@ function pcHighlighterAnimate(mode, easeOut, easeIn) {
     try {
         app.beginUndoGroup("Highlight " + mode);
         var comp = s.comp, layer = s.layers[0];
+        var nm = layer.name || "";
+        if (nm.indexOf("Highlight") === -1 && nm.indexOf("Line Highlight") === -1) {
+            app.endUndoGroup();
+            return JSON.stringify({ error: "La capa no es Stroke/Line Highlight." });
+        }
         var prop = layer.property("Effects").property("Length").property("Slider");
         var fullLen = prop.value, fps = comp.frameRate;
 
@@ -284,6 +289,192 @@ function pcHighlighterAnimate(mode, easeOut, easeIn) {
             var kIn = new KeyframeEase(0, easeIn), kOut = new KeyframeEase(0, easeOut);
             for (var k = 1; k <= 4; k++) prop.setTemporalEaseAtKey(k, [kIn], [kOut]);
         }
+        app.endUndoGroup();
+        return JSON.stringify({ success: true });
+    } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
+}
+
+// ─── LINE HIGHLIGHTER ────────────────────────────────────────
+
+function pcCreateLineHighlighter() {
+    var comp = _pcRequireComp();
+    if (!comp) return JSON.stringify({ error: "No hay composición activa." });
+    try {
+        app.beginUndoGroup("Create Line Highlighter");
+        var layer = comp.layers.addShape();
+        layer.name = "Line Highlight";
+        layer.inPoint = comp.time;
+        layer.outPoint = comp.time + 10;
+
+        var fxs = layer.property("Effects");
+        var tc = fxs.addProperty("ADBE Slider Control"); tc.name = "Thickness";
+        tc.property("Slider").setValue(8);
+        var lc = fxs.addProperty("ADBE Slider Control"); lc.name = "Length";
+        lc.property("Slider").setValue(400);
+
+        layer.property("Transform").property("Anchor Point").setValue([0, 0]);
+
+        var contents = layer.property("Contents");
+        var rg = contents.addProperty("ADBE Vector Group"); rg.name = "LineHighlight";
+        var rc = rg.property("Contents");
+        var pg = rc.addProperty("ADBE Vector Shape - Group");
+        pg.property("Path").expression =
+            "var L = effect('Length')('Slider');\n" +
+            "createPath([[0,0],[L,0]], [], [], false)";
+        var stroke = rc.addProperty("ADBE Vector Graphic - Stroke");
+        stroke.property("Color").setValue([1, 1, 0]);
+        stroke.property("Stroke Width").expression = "effect('Thickness')('Slider')";
+
+        app.endUndoGroup();
+        return JSON.stringify({ success: true });
+    } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
+}
+
+function pcLineHighlighterToggleGlow(enable) {
+    var s = _pcRequireSelected();
+    if (!s) return JSON.stringify({ error: "Selecciona la capa Line Highlight." });
+    try {
+        app.beginUndoGroup("Toggle Line Glow");
+        var layer = s.layers[0];
+        var fx = layer.property("Effects");
+        var existing = null;
+        for (var i = 1; i <= fx.numProperties; i++) {
+            var p = fx.property(i);
+            if (p && p.matchName === "ADBE Glo2") { existing = p; break; }
+        }
+        if (enable) {
+            if (!existing) fx.addProperty("ADBE Glo2");
+        } else if (existing) {
+            existing.remove();
+        }
+        app.endUndoGroup();
+        return JSON.stringify({ success: true });
+    } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
+}
+
+// ─── FOCUS MASK ──────────────────────────────────────────────
+
+function pcCreateFocusMask() {
+    var comp = _pcRequireComp();
+    if (!comp) return JSON.stringify({ error: "No hay composición activa." });
+    try {
+        app.beginUndoGroup("Create Focus Mask");
+        var selected = comp.selectedLayers;
+        var solid = comp.layers.addSolid([0,0,0], "Focus Mask", comp.width, comp.height, 1);
+        solid.property("Transform").property("Opacity").setValue(70);
+
+        var fx = solid.property("Effects");
+        var ws = fx.addProperty("ADBE Slider Control"); ws.name = "Width";
+        ws.property("Slider").setValue(400);
+        var hs = fx.addProperty("ADBE Slider Control"); hs.name = "Height";
+        hs.property("Slider").setValue(300);
+
+        var mask = solid.mask.addProperty("Mask");
+        mask.maskMode = MaskMode.SUBTRACT;
+        try { mask.maskFeather.setValue([20, 20]); } catch(_){}
+
+        mask.property("Mask Path").expression =
+            "var w = effect('Width')('Slider');\n" +
+            "var h = effect('Height')('Slider');\n" +
+            "var cx = thisComp.width/2, cy = thisComp.height/2;\n" +
+            "createPath([[cx-w/2,cy-h/2],[cx+w/2,cy-h/2],[cx+w/2,cy+h/2],[cx-w/2,cy+h/2]], [], [], true)";
+
+        if (selected.length > 0) {
+            var topmost = selected[0];
+            for (var i = 1; i < selected.length; i++) {
+                if (selected[i].index < topmost.index) topmost = selected[i];
+            }
+            solid.moveBefore(topmost);
+        }
+
+        app.endUndoGroup();
+        return JSON.stringify({ success: true });
+    } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
+}
+
+function pcFocusMaskAnimate(mode, easeOut, easeIn) {
+    var s = _pcRequireSelected();
+    if (!s) return JSON.stringify({ error: "Selecciona la capa Focus Mask." });
+    try {
+        app.beginUndoGroup("Focus Mask " + mode);
+        var comp = s.comp, layer = s.layers[0];
+        var prop = layer.property("Transform").property("Opacity");
+        var fps = comp.frameRate;
+        var target = 70;
+
+        if (mode === "in") {
+            var t0 = comp.time, t1 = t0 + (20 / fps);
+            prop.setValueAtTime(t0, 0);
+            prop.setValueAtTime(t1, target);
+            _pcApplyEaseScalar(prop, 1, 2, easeOut, easeIn);
+        } else if (mode === "out") {
+            var t0 = comp.time, t1 = t0 + (20 / fps);
+            prop.setValueAtTime(t0, target);
+            prop.setValueAtTime(t1, 0);
+            _pcApplyEaseScalar(prop, 1, 2, easeOut, easeIn);
+        } else {
+            var inPt = layer.inPoint, outPt = layer.outPoint;
+            var dur = 20 / fps;
+            prop.setValueAtTime(inPt, 0);
+            prop.setValueAtTime(inPt + dur, target);
+            prop.setValueAtTime(outPt - dur, target);
+            prop.setValueAtTime(outPt, 0);
+            var kIn = new KeyframeEase(0, easeIn), kOut = new KeyframeEase(0, easeOut);
+            for (var k = 1; k <= 4; k++) prop.setTemporalEaseAtKey(k, [kIn], [kOut]);
+        }
+        app.endUndoGroup();
+        return JSON.stringify({ success: true });
+    } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
+}
+
+// ─── ZOOM FOCUS ──────────────────────────────────────────────
+
+function pcCreateZoomFocus(blurAmount, scaleFactor) {
+    var s = _pcRequireSelected();
+    if (!s) return JSON.stringify({ error: "Selecciona una capa." });
+    try {
+        app.beginUndoGroup("Create Zoom Focus");
+        var comp = s.comp;
+        var orig = s.layers[0];
+        var fps = comp.frameRate;
+
+        var dup = orig.duplicate();
+        dup.name = "ZoomFocus_" + orig.name;
+        dup.moveBefore(orig);
+
+        var adj = comp.layers.addSolid([0,0,0], "ZoomFocus_Blur", comp.width, comp.height, 1);
+        adj.adjustmentLayer = true;
+        adj.moveAfter(orig);
+
+        var blur = adj.property("Effects").addProperty("ADBE Gaussian Blur 2");
+        var blurry = blur.property("Blurriness");
+        if (!blurry) blurry = blur.property(1);
+
+        var inPt = orig.inPoint, outPt = orig.outPoint;
+        var dur = 20 / fps;
+
+        blurry.setValueAtTime(inPt, 0);
+        blurry.setValueAtTime(inPt + dur, blurAmount);
+        blurry.setValueAtTime(outPt - dur, blurAmount);
+        blurry.setValueAtTime(outPt, 0);
+
+        var adjOp = adj.property("Transform").property("Opacity");
+        adjOp.setValueAtTime(inPt, 0);
+        adjOp.setValueAtTime(inPt + dur, 100);
+        adjOp.setValueAtTime(outPt - dur, 100);
+        adjOp.setValueAtTime(outPt, 0);
+
+        var dupScale = dup.property("Transform").property("Scale");
+        var sBase = dupScale.value;
+        var factor = scaleFactor / 100.0;
+        var sBig = (sBase.length === 3)
+            ? [sBase[0] * factor, sBase[1] * factor, sBase[2] * factor]
+            : [sBase[0] * factor, sBase[1] * factor];
+        dupScale.setValueAtTime(inPt, sBase);
+        dupScale.setValueAtTime(inPt + dur, sBig);
+        dupScale.setValueAtTime(outPt - dur, sBig);
+        dupScale.setValueAtTime(outPt, sBase);
+
         app.endUndoGroup();
         return JSON.stringify({ success: true });
     } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }

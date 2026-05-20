@@ -943,12 +943,28 @@
             return (evt && evt.shiftKey) || (cb && cb.checked);
         }
 
-        // Highlighter
+        // Highlighter — Stroke
         on("btn-hl-create", "click", function() { callHost("pcCreateHighlighter()"); });
         on("btn-hl-flip",   "click", function() { callHost("pcFlipHorizontal()"); });
         on("btn-hl-in",     "click", function() { callHost("pcHighlighterAnimate('in', " + easeOut() + ", " + easeIn() + ")"); });
         on("btn-hl-out",    "click", function() { callHost("pcHighlighterAnimate('out', " + easeOut() + ", " + easeIn() + ")"); });
         on("btn-hl-inout",  "click", function() { callHost("pcHighlighterAnimate('inout', " + easeOut() + ", " + easeIn() + ")"); });
+
+        // Highlighter — Line
+        on("btn-line-create", "click", function() { callHost("pcCreateLineHighlighter()"); });
+        on("chk-line-glow",   "change", function() { callHost("pcLineHighlighterToggleGlow(" + this.checked + ")"); });
+        on("btn-line-in",     "click", function() { callHost("pcHighlighterAnimate('in', " + easeOut() + ", " + easeIn() + ")"); });
+        on("btn-line-out",    "click", function() { callHost("pcHighlighterAnimate('out', " + easeOut() + ", " + easeIn() + ")"); });
+        on("btn-line-inout",  "click", function() { callHost("pcHighlighterAnimate('inout', " + easeOut() + ", " + easeIn() + ")"); });
+
+        // Highlighter — Focus Mask
+        on("btn-focus-create", "click", function() { callHost("pcCreateFocusMask()"); });
+        on("btn-focus-in",     "click", function() { callHost("pcFocusMaskAnimate('in', " + easeOut() + ", " + easeIn() + ")"); });
+        on("btn-focus-out",    "click", function() { callHost("pcFocusMaskAnimate('out', " + easeOut() + ", " + easeIn() + ")"); });
+        on("btn-focus-inout",  "click", function() { callHost("pcFocusMaskAnimate('inout', " + easeOut() + ", " + easeIn() + ")"); });
+
+        // Highlighter — Zoom Focus
+        on("btn-zoom-focus-create", "click", function() { callHost("pcCreateZoomFocus(15, 120)"); });
 
         // Quick Scale
         [5, 10, 20, 30].forEach(function(pct) {

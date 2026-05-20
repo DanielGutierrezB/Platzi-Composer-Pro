@@ -510,6 +510,47 @@ html, body {
 
 .btn-full { width: 100%; }
 
+/* ─── Highlighter sub-types ─── */
+
+.hl-type {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.hl-type-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--accent-bright);
+    letter-spacing: 0.2px;
+}
+
+.hl-type-desc {
+    font-size: 9px;
+    color: var(--text-muted);
+    line-height: 1.4;
+    margin-bottom: 2px;
+}
+
+.hl-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 4px 0;
+    opacity: 0.7;
+}
+
+.toggle-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 10px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 0 6px;
+    user-select: none;
+}
+.toggle-label input { cursor: pointer; }
+
 /* ─── Spellcheck Specific ─── */
 
 .sub-section { margin-top: 4px; }
