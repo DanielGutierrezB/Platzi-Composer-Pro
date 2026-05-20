@@ -573,11 +573,8 @@ function pcCreateZoomFocus(blurAmount, scaleFactor, easeOut, easeIn) {
         dup.inPoint = comp.time;
         original.property("Masks").property(1).remove();
         var fxsOrig = original.property("Effects");
-        var blurCtrl = fxsOrig.addProperty("ADBE Slider Control"); blurCtrl.name = "Blur Amount";
-        blurCtrl.property("Slider").setValue(ba);
         var blur = fxsOrig.addProperty("ADBE Gaussian Blur 2");
-        blur.property("Blurriness").setValue(ba);
-        try { blur.property("Blurriness").expression = "effect(\"Blur Amount\")(\"Slider\")"; } catch(ex) {}
+        blur.property("Blurriness").setValue(0);
         try { blur.property("Repeat Edge Pixels").setValue(1); } catch(e) {}
         // Add Mask Feather control to duplicate
         var fxsDup = dup.property("Effects");
@@ -621,18 +618,18 @@ function pcCreateZoomFocus(blurAmount, scaleFactor, easeOut, easeIn) {
         _pcApplyEaseArray(scaleProp, ks1, ks2, eo, ei);
         _pcApplyEaseArray(scaleProp, ks3, ks4, eo, ei);
 
-        // Blur keyframes — animate the SLIDER (expression links it to Blurriness)
-        var blurSlider = blurCtrl.property("Slider");
-        var kb1 = blurSlider.addKey(inPt); blurSlider.setValueAtKey(kb1, 0);
-        var kb2 = blurSlider.addKey(inPt + dur); blurSlider.setValueAtKey(kb2, ba);
-        var kb3 = blurSlider.addKey(outPt - dur); blurSlider.setValueAtKey(kb3, ba);
-        var kb4 = blurSlider.addKey(outPt); blurSlider.setValueAtKey(kb4, 0);
-        blurSlider.setInterpolationTypeAtKey(kb1, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
-        blurSlider.setInterpolationTypeAtKey(kb2, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
-        blurSlider.setInterpolationTypeAtKey(kb3, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
-        blurSlider.setInterpolationTypeAtKey(kb4, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
-        _pcApplyEaseScalar(blurSlider, kb1, kb2, eo, ei);
-        _pcApplyEaseScalar(blurSlider, kb3, kb4, eo, ei);
+        // Blur keyframes — animate Blurriness directly (no expression)
+        var blurProp = blur.property("Blurriness");
+        var kb1 = blurProp.addKey(inPt); blurProp.setValueAtKey(kb1, 0);
+        var kb2 = blurProp.addKey(inPt + dur); blurProp.setValueAtKey(kb2, ba);
+        var kb3 = blurProp.addKey(outPt - dur); blurProp.setValueAtKey(kb3, ba);
+        var kb4 = blurProp.addKey(outPt); blurProp.setValueAtKey(kb4, 0);
+        blurProp.setInterpolationTypeAtKey(kb1, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+        blurProp.setInterpolationTypeAtKey(kb2, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+        blurProp.setInterpolationTypeAtKey(kb3, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+        blurProp.setInterpolationTypeAtKey(kb4, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+        _pcApplyEaseScalar(blurProp, kb1, kb2, eo, ei);
+        _pcApplyEaseScalar(blurProp, kb3, kb4, eo, ei);
         app.endUndoGroup();
         return JSON.stringify({ success: true });
     } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
