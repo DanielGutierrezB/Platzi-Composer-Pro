@@ -703,7 +703,7 @@ function pcCreateHighlightBox(mode, easeOut, easeIn, enableGlow) {
             var padCtrl = fxs.addProperty("ADBE Slider Control"); padCtrl.name = "Padding";
             padCtrl.property("Slider").setValue(10);
             var roundCtrl = fxs.addProperty("ADBE Slider Control"); roundCtrl.name = "Roundness";
-            roundCtrl.property("Slider").setValue(0);
+            roundCtrl.property("Slider").setValue(60);
 
             // Position at box center
             if (isShapeMode) {
@@ -831,11 +831,14 @@ function pcCreateFocusMask(opacityVal, featherVal) {
         opaCtrl.property("Slider").setValue(opa);
         var fthCtrl = fxs.addProperty("ADBE Slider Control"); fthCtrl.name = "Feather";
         fthCtrl.property("Slider").setValue(fth);
+        var roundCtrl = fxs.addProperty("ADBE Slider Control"); roundCtrl.name = "Roundness";
+        roundCtrl.property("Slider").setValue(60);
 
         try { dark.property("Transform").property("Opacity").expression = "effect(\"Darkness\")(\"Slider\")"; } catch(ex) {}
 
         var maskProp = dark.property("Masks").addProperty("Mask");
         maskProp.property("maskShape").setValue(maskShapeVal);
+        try { maskProp.property("maskExpansion").expression = "effect(\"Roundness\")(\"Slider\")"; } catch(ex) {}
         maskProp.maskMode = MaskMode.SUBTRACT;
         try {
             maskProp.property("maskFeather").expression = "var f = effect(\"Feather\")(\"Slider\"); [f, f]";
@@ -929,7 +932,10 @@ function pcCreateZoomFocus(blurAmount, scaleFactor, easeOut, easeIn) {
         var fxsDup = dup.property("Effects");
         var mfCtrl = fxsDup.addProperty("ADBE Slider Control"); mfCtrl.name = "Mask Feather";
         mfCtrl.property("Slider").setValue(0);
+        var roundCtrlZF = fxsDup.addProperty("ADBE Slider Control"); roundCtrlZF.name = "Roundness";
+        roundCtrlZF.property("Slider").setValue(60);
         try { dup.property("Masks").property(1).property("maskFeather").expression = "var f = effect(\"Mask Feather\")(\"Slider\"); [f, f]"; } catch(ex) {}
+        try { dup.property("Masks").property(1).property("maskExpansion").expression = "effect(\"Roundness\")(\"Slider\")"; } catch(ex) {}
         var posVal = dup.property("Transform").property("Position").value;
         var anchorVal = dup.property("Transform").property("Anchor Point").value;
         var maskCompX = posVal[0] - anchorVal[0] + maskCenterX;
