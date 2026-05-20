@@ -543,29 +543,45 @@ function pcCreateZoomFocus(blurAmount, scaleFactor, easeOut, easeIn) {
         var dur = 20 / fps;
         var inPt = dup.inPoint;
         var outPt = dup.outPoint;
+        // Position keyframes
         var posProp = dup.property("Transform").property("Position");
-        posProp.setValueAtTime(inPt, posVal);
-        posProp.setValueAtTime(inPt + dur, targetPos);
-        posProp.setValueAtTime(outPt - dur, targetPos);
-        posProp.setValueAtTime(outPt, posVal);
+        var kp1 = posProp.addKey(inPt); posProp.setValueAtKey(kp1, posVal);
+        var kp2 = posProp.addKey(inPt + dur); posProp.setValueAtKey(kp2, targetPos);
+        var kp3 = posProp.addKey(outPt - dur); posProp.setValueAtKey(kp3, targetPos);
+        var kp4 = posProp.addKey(outPt); posProp.setValueAtKey(kp4, posVal);
+        posProp.setInterpolationTypeAtKey(kp1, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+        posProp.setInterpolationTypeAtKey(kp2, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+        posProp.setInterpolationTypeAtKey(kp3, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+        posProp.setInterpolationTypeAtKey(kp4, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+        _pcApplyEaseScalar(posProp, kp1, kp2, eo, ei);
+        _pcApplyEaseScalar(posProp, kp3, kp4, eo, ei);
+
+        // Scale keyframes
         var scaleProp = dup.property("Transform").property("Scale");
         var origScale = scaleProp.value;
-        scaleProp.setValueAtTime(inPt, origScale);
-        scaleProp.setValueAtTime(inPt + dur, [sf, sf]);
-        scaleProp.setValueAtTime(outPt - dur, [sf, sf]);
-        scaleProp.setValueAtTime(outPt, origScale);
+        var ks1 = scaleProp.addKey(inPt); scaleProp.setValueAtKey(ks1, origScale);
+        var ks2 = scaleProp.addKey(inPt + dur); scaleProp.setValueAtKey(ks2, [sf, sf]);
+        var ks3 = scaleProp.addKey(outPt - dur); scaleProp.setValueAtKey(ks3, [sf, sf]);
+        var ks4 = scaleProp.addKey(outPt); scaleProp.setValueAtKey(ks4, origScale);
+        scaleProp.setInterpolationTypeAtKey(ks1, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+        scaleProp.setInterpolationTypeAtKey(ks2, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+        scaleProp.setInterpolationTypeAtKey(ks3, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+        scaleProp.setInterpolationTypeAtKey(ks4, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+        _pcApplyEaseArray(scaleProp, ks1, ks2, eo, ei);
+        _pcApplyEaseArray(scaleProp, ks3, ks4, eo, ei);
+
+        // Blur keyframes
         var blurProp = blur.property("Blurriness");
-        blurProp.setValueAtTime(inPt, 0);
-        blurProp.setValueAtTime(inPt + dur, ba);
-        blurProp.setValueAtTime(outPt - dur, ba);
-        blurProp.setValueAtTime(outPt, 0);
-        // Apply ease using proven helper functions
-        _pcApplyEaseArray(posProp, 1, 2, eo, ei);
-        _pcApplyEaseArray(posProp, 3, 4, eo, ei);
-        _pcApplyEaseArray(scaleProp, 1, 2, eo, ei);
-        _pcApplyEaseArray(scaleProp, 3, 4, eo, ei);
-        _pcApplyEaseScalar(blurProp, 1, 2, eo, ei);
-        _pcApplyEaseScalar(blurProp, 3, 4, eo, ei);
+        var kb1 = blurProp.addKey(inPt); blurProp.setValueAtKey(kb1, 0);
+        var kb2 = blurProp.addKey(inPt + dur); blurProp.setValueAtKey(kb2, ba);
+        var kb3 = blurProp.addKey(outPt - dur); blurProp.setValueAtKey(kb3, ba);
+        var kb4 = blurProp.addKey(outPt); blurProp.setValueAtKey(kb4, 0);
+        blurProp.setInterpolationTypeAtKey(kb1, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+        blurProp.setInterpolationTypeAtKey(kb2, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+        blurProp.setInterpolationTypeAtKey(kb3, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+        blurProp.setInterpolationTypeAtKey(kb4, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+        _pcApplyEaseScalar(blurProp, kb1, kb2, eo, ei);
+        _pcApplyEaseScalar(blurProp, kb3, kb4, eo, ei);
         app.endUndoGroup();
         return JSON.stringify({ success: true });
     } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
