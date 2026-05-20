@@ -1747,7 +1747,7 @@ function pcTextHelper(animType, mode, animMode, durationFrames, enableGlow, ease
         // Glow (always added, enabled/disabled based on checkbox)
         var glow = fxs.addProperty("ADBE Glo2");
         glow.name = "Text Glow";
-        try { glow.property("Glow Threshold").setValue(60); } catch(ex) {}
+        try { glow.property("Glow Threshold").setValue(153); } catch(ex) {}
         try { glow.property("Glow Radius").setValue(25); } catch(ex) {}
         try { glow.property("Glow Intensity").setValue(1); } catch(ex) {}
         glow.enabled = enableGlow;
