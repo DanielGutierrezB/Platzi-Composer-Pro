@@ -1044,8 +1044,7 @@
             var sf = 150;
             var eo = document.getElementById("ease-out").value || 33;
             var ei = document.getElementById("ease-in").value || 100;
-            var noOut = document.getElementById("zf-no-out").checked ? 1 : 0;
-            callHost("pcCreateZoomFocus(" + blur + "," + sf + "," + eo + "," + ei + "," + noOut + ")");
+            callHost("pcCreateZoomFocus(" + blur + "," + sf + "," + eo + "," + ei + ")");
         });
 
         // Universal animate — routes based on selected layer name

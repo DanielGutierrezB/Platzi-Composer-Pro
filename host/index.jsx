@@ -540,7 +540,7 @@ function pcFocusMaskAnimate(mode, easeOut, easeIn) {
 
 // ─── ZOOM FOCUS ──────────────────────────────────────────────
 
-function pcCreateZoomFocus(blurAmount, scaleFactor, easeOut, easeIn, disableOut) {
+function pcCreateZoomFocus(blurAmount, scaleFactor, easeOut, easeIn) {
     var s = _pcRequireSelected();
     if (!s) return JSON.stringify({ error: "Selecciona una capa con máscara." });
     try {
@@ -550,7 +550,6 @@ function pcCreateZoomFocus(blurAmount, scaleFactor, easeOut, easeIn, disableOut)
         var sf = scaleFactor || 150;
         var eo = easeOut || 75;
         var ei = easeIn || 75;
-        var noOut = disableOut ? true : false;
         var masks = original.property("Masks");
         if (!masks || masks.numProperties === 0) {
             app.endUndoGroup();
@@ -592,53 +591,45 @@ function pcCreateZoomFocus(blurAmount, scaleFactor, easeOut, easeIn, disableOut)
         var dur = 20 / fps;
         var inPt = comp.time;
         var outPt = dup.outPoint;
+        // Position keyframes
+        var posProp = dup.property("Transform").property("Position");
+        var kp1 = posProp.addKey(inPt); posProp.setValueAtKey(kp1, posVal);
+        var kp2 = posProp.addKey(inPt + dur); posProp.setValueAtKey(kp2, targetPos);
+        var kp3 = posProp.addKey(outPt - dur); posProp.setValueAtKey(kp3, targetPos);
+        var kp4 = posProp.addKey(outPt); posProp.setValueAtKey(kp4, posVal);
+        posProp.setInterpolationTypeAtKey(kp1, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+        posProp.setInterpolationTypeAtKey(kp2, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+        posProp.setInterpolationTypeAtKey(kp3, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+        posProp.setInterpolationTypeAtKey(kp4, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+        _pcApplyEaseScalar(posProp, kp1, kp2, eo, ei);
+        _pcApplyEaseScalar(posProp, kp3, kp4, eo, ei);
 
-        // --- Position (expression-based: tied to clip duration) ---
-        var posExpr = 'var d = ' + dur.toFixed(4) + ';\n'
-            + 'var startPos = ' + JSON.stringify(posVal) + ';\n'
-            + 'var endPos = ' + JSON.stringify(targetPos) + ';\n'
-            + 'var noOut = ' + (noOut ? 1 : 0) + ';\n'
-            + 'var eo = ' + eo + '; var ei = ' + ei + ';\n'
-            + 'var tIn = time - inPoint;\n'
-            + 'var tOut = outPoint - time;\n'
-            + 'if (tIn < d) { var p = tIn/d; p = Math.pow(p, ei/50); linear(p, 0, 1, startPos, endPos); }\n'
-            + 'else if (!noOut && tOut < d) { var p = tOut/d; p = Math.pow(p, eo/50); linear(p, 0, 1, startPos, endPos); }\n'
-            + 'else { endPos; }';
-        dup.property("Transform").property("Position").expression = posExpr;
+        // Scale keyframes
+        var scaleProp = dup.property("Transform").property("Scale");
+        var origScale = scaleProp.value;
+        var ks1 = scaleProp.addKey(inPt); scaleProp.setValueAtKey(ks1, origScale);
+        var ks2 = scaleProp.addKey(inPt + dur); scaleProp.setValueAtKey(ks2, [sf, sf]);
+        var ks3 = scaleProp.addKey(outPt - dur); scaleProp.setValueAtKey(ks3, [sf, sf]);
+        var ks4 = scaleProp.addKey(outPt); scaleProp.setValueAtKey(ks4, origScale);
+        scaleProp.setInterpolationTypeAtKey(ks1, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+        scaleProp.setInterpolationTypeAtKey(ks2, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+        scaleProp.setInterpolationTypeAtKey(ks3, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+        scaleProp.setInterpolationTypeAtKey(ks4, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+        _pcApplyEaseArray(scaleProp, ks1, ks2, eo, ei);
+        _pcApplyEaseArray(scaleProp, ks3, ks4, eo, ei);
 
-        // --- Scale (expression-based) ---
-        var scaleExpr = 'var d = ' + dur.toFixed(4) + ';\n'
-            + 'var startScale = ' + JSON.stringify([origScale || 100, origScale || 100]) + ';\n'
-            + 'var endScale = [' + sf + ',' + sf + '];\n'
-            + 'var noOut = ' + (noOut ? 1 : 0) + ';\n'
-            + 'var tIn = time - inPoint;\n'
-            + 'var tOut = outPoint - time;\n'
-            + 'if (tIn < d) { linear(tIn, 0, d, startScale, endScale); }\n'
-            + 'else if (!noOut && tOut < d) { linear(tOut, 0, d, startScale, endScale); }\n'
-            + 'else { endScale; }';
-        var origScaleVal = dup.property("Transform").property("Scale").value;
-        var scaleExprFinal = scaleExpr.replace(JSON.stringify([origScale || 100, origScale || 100]), JSON.stringify([origScaleVal[0], origScaleVal[1]]));
-        dup.property("Transform").property("Scale").expression = scaleExprFinal;
-
-        // --- Blur (expression-based on original) ---
-        var blurExpr = 'var d = ' + dur.toFixed(4) + ';\n'
-            + 'var maxBlur = ' + ba + ';\n'
-            + 'var noOut = ' + (noOut ? 1 : 0) + ';\n'
-            + 'var tIn = time - thisLayer.inPoint;\n'
-            + 'var tOut = thisLayer.outPoint - time;\n'
-            + 'if (tIn < d) { linear(tIn, 0, d, 0, maxBlur); }\n'
-            + 'else if (!noOut && tOut < d) { linear(tOut, 0, d, 0, maxBlur); }\n'
-            + 'else { maxBlur; }';
-        blur.property("Blurriness").expression = blurExpr;
-
-        // --- Markers for visual reference ---
-        var markers = dup.property("Marker");
-        var mIn = new MarkerValue("IN"); markers.setValueAtTime(inPt, mIn);
-        var mInEnd = new MarkerValue("▶"); markers.setValueAtTime(inPt + dur, mInEnd);
-        if (!noOut) {
-            var mOutStart = new MarkerValue("◀"); markers.setValueAtTime(outPt - dur, mOutStart);
-            var mOut = new MarkerValue("OUT"); markers.setValueAtTime(outPt, mOut);
-        }
+        // Blur keyframes
+        var blurProp = blur.property("Blurriness");
+        var kb1 = blurProp.addKey(inPt); blurProp.setValueAtKey(kb1, 0);
+        var kb2 = blurProp.addKey(inPt + dur); blurProp.setValueAtKey(kb2, ba);
+        var kb3 = blurProp.addKey(outPt - dur); blurProp.setValueAtKey(kb3, ba);
+        var kb4 = blurProp.addKey(outPt); blurProp.setValueAtKey(kb4, 0);
+        blurProp.setInterpolationTypeAtKey(kb1, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+        blurProp.setInterpolationTypeAtKey(kb2, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+        blurProp.setInterpolationTypeAtKey(kb3, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+        blurProp.setInterpolationTypeAtKey(kb4, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+        _pcApplyEaseScalar(blurProp, kb1, kb2, eo, ei);
+        _pcApplyEaseScalar(blurProp, kb3, kb4, eo, ei);
 
         app.endUndoGroup();
         return JSON.stringify({ success: true });
