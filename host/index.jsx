@@ -400,7 +400,7 @@ function pcCreateLineHighlighter(style, enableGlow) {
     try {
         app.beginUndoGroup("Create Line Highlight");
         var layer = comp.layers.addShape();
-        var styleNames = {"solid":"Solid","chalk":"Chalk","thunder":"Thunder","dashed":"Dashed"};
+        var styleNames = {"solid":"Solid","thunder":"Thunder","dashed":"Dashed"};
         layer.name = "Line Highlight - " + (styleNames[style] || style);
         layer.inPoint = comp.time;
         layer.outPoint = comp.time + 3;
@@ -415,12 +415,7 @@ function pcCreateLineHighlighter(style, enableGlow) {
         colorCtrl.property("Color").setValue([1, 1, 0]);
 
         // Style-specific controls
-        if (style === "chalk") {
-            var chalkBorderCtrl = fxs.addProperty("ADBE Slider Control"); chalkBorderCtrl.name = "Chalk Border";
-            chalkBorderCtrl.property("Slider").setValue(6);
-            var chalkScaleCtrl = fxs.addProperty("ADBE Slider Control"); chalkScaleCtrl.name = "Chalk Scale";
-            chalkScaleCtrl.property("Slider").setValue(12);
-        } else if (style === "thunder") {
+        if (style === "thunder") {
             var thunAmtCtrl = fxs.addProperty("ADBE Slider Control"); thunAmtCtrl.name = "Thunder Amount";
             thunAmtCtrl.property("Slider").setValue(3);
             var thunDetCtrl = fxs.addProperty("ADBE Slider Control"); thunDetCtrl.name = "Thunder Detail";
@@ -483,34 +478,6 @@ function pcCreateLineHighlighter(style, enableGlow) {
             try { thunPaths.property("ADBE Vector Temporal Freq").expression = "effect(\"Thunder Speed\")(\"Slider\")"; } catch(ex) {}
         }
 
-        // Chalk style: Wiggle Paths with SMOOTH points (BEFORE Trim Paths)
-        if (style === "chalk") {
-            thkCtrl.property("Slider").setValue(15);
-            try { stroke.property("ADBE Vector Stroke Line Cap").setValue(2); } catch(ex) {}
-
-            // Primary wiggle: organic bumpy edges
-            var chalkWiggle = grpContents.addProperty("ADBE Vector Filter - Roughen");
-            try { chalkWiggle.property("ADBE Vector Roughen Size").expression = "effect(\"Chalk Border\")(\"Slider\")"; } catch(ex) {}
-            try { chalkWiggle.property("ADBE Vector Roughen Detail").expression = "effect(\"Chalk Scale\")(\"Slider\")"; } catch(ex) {}
-            // Try multiple matchNames for Points type (Smooth=2)
-            try { chalkWiggle.property("ADBE Vector Roughen Type").setValue(2); } catch(ex) {
-                try { chalkWiggle.property("Points").setValue(2); } catch(ex2) {
-                    try { chalkWiggle.property(3).setValue(2); } catch(ex3) {}
-                }
-            }
-            try { chalkWiggle.property("ADBE Vector Temporal Freq").setValue(0); } catch(ex) {} // Static
-
-            // Micro wiggle: fine grain texture
-            var chalkMicro = grpContents.addProperty("ADBE Vector Filter - Roughen");
-            try { chalkMicro.property("ADBE Vector Roughen Size").setValue(2); } catch(ex) {}
-            try { chalkMicro.property("ADBE Vector Roughen Detail").setValue(15); } catch(ex) {}
-            try { chalkMicro.property("ADBE Vector Roughen Type").setValue(2); } catch(ex) {
-                try { chalkMicro.property("Points").setValue(2); } catch(ex2) {
-                    try { chalkMicro.property(3).setValue(2); } catch(ex3) {}
-                }
-            }
-            try { chalkMicro.property("ADBE Vector Temporal Freq").setValue(0.3); } catch(ex) {} // Subtle vibration
-        }
 
         // Trim Paths (MUST be last operator for animation to work)
         var trim = grpContents.addProperty("ADBE Vector Filter - Trim");
