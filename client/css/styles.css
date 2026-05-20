@@ -390,30 +390,59 @@ html, body {
     padding: 6px 8px;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 0;
     flex: 1;
     overflow-y: auto;
 }
 
-.tool-card {
-    background: var(--bg-raised);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    overflow: hidden;
-    transition: border-color var(--transition);
+/* Tab bar: horizontal row of headers */
+.tools-tab-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 4px 0;
+    margin-bottom: 6px;
 }
-.tool-card:hover { border-color: var(--border-light); }
+
+.tool-card {
+    background: none;
+    border: none;
+    border-radius: 0;
+    overflow: hidden;
+}
+.tool-card:hover { border-color: transparent; }
 
 .tool-card-header {
+    display: none; /* hidden when using tab bar */
+}
+
+/* Tab buttons in the tab bar */
+.tools-tab {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 8px 12px;
+    gap: 4px;
+    padding: 6px 10px;
+    border-radius: var(--radius);
+    background: var(--bg-raised);
+    border: 1px solid var(--border);
     cursor: pointer;
     user-select: none;
-    transition: background var(--transition);
+    transition: all var(--transition);
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-muted);
+    white-space: nowrap;
 }
-.tool-card-header:hover { background: var(--bg-hover); }
+.tools-tab:hover {
+    background: var(--bg-hover);
+    border-color: var(--border-light);
+    color: var(--text-primary);
+}
+.tools-tab.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+}
 
 .tool-card-title {
     font-size: 11px;
@@ -426,15 +455,14 @@ html, body {
 }
 
 .toggle-icon {
-    font-size: 12px;
-    color: var(--text-muted);
-    transition: transform 200ms ease;
-    line-height: 1;
+    display: none; /* no longer needed */
 }
 
 .tool-card-body {
     padding: 8px 12px 10px;
-    border-top: 1px solid var(--border);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg-raised);
     display: flex;
     flex-direction: column;
     gap: 6px;

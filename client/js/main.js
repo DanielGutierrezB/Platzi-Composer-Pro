@@ -960,38 +960,62 @@
 
     // ─── Collapsible sections (accordion) ───────────────────────
     function bindCollapsibles() {
+        // Tab bar navigation
+        var tabs = document.querySelectorAll(".tools-tab");
         var headers = document.querySelectorAll(".tool-card-header");
-        headers.forEach(function(hdr) {
-            hdr.addEventListener("click", function() {
-                var body = hdr.nextElementSibling;
-                if (!body) return;
-                var isOpen = !body.classList.contains("hidden");
 
-                headers.forEach(function(otherHdr) {
-                    var otherBody = otherHdr.nextElementSibling;
-                    var otherIcon = otherHdr.querySelector(".toggle-icon");
-                    if (otherBody) otherBody.classList.add("hidden");
-                    if (otherIcon) otherIcon.textContent = "▸";
+        function activateTab(toolName) {
+            // Update tab buttons
+            for (var t = 0; t < tabs.length; t++) {
+                tabs[t].classList.toggle("active", tabs[t].getAttribute("data-tool") === toolName);
+            }
+            // Show/hide tool card bodies
+            for (var h = 0; h < headers.length; h++) {
+                var body = headers[h].nextElementSibling;
+                var isCurrent = headers[h].getAttribute("data-tool") === toolName;
+                if (body) body.classList.toggle("hidden", !isCurrent);
+            }
+        }
+
+        // Tab click handlers
+        for (var i = 0; i < tabs.length; i++) {
+            (function(tab) {
+                tab.addEventListener("click", function() {
+                    activateTab(tab.getAttribute("data-tool"));
                 });
+            })(tabs[i]);
+        }
 
-                if (!isOpen) {
-                    body.classList.remove("hidden");
-                    var icon = hdr.querySelector(".toggle-icon");
-                    if (icon) icon.textContent = "▾";
-                }
-            });
-        });
+        // Also keep old header click working (fallback)
+        for (var j = 0; j < headers.length; j++) {
+            (function(hdr) {
+                hdr.addEventListener("click", function() {
+                    activateTab(hdr.getAttribute("data-tool"));
+                });
+            })(headers[j]);
+        }
+
+        // Default: activate first tab (zoomer is open by default)
+        var defaultOpen = document.querySelector(".tool-card-body:not(.hidden)");
+        if (defaultOpen) {
+            var parentHeader = defaultOpen.previousElementSibling;
+            if (parentHeader) activateTab(parentHeader.getAttribute("data-tool"));
+        } else {
+            activateTab("zoomer");
+        }
     }
 
     function expandSpellCheck() {
+        var tabs = document.querySelectorAll(".tools-tab");
         var headers = document.querySelectorAll(".tool-card-header");
-        headers.forEach(function(hdr) {
-            var body = hdr.nextElementSibling;
-            var icon = hdr.querySelector(".toggle-icon");
-            var isSpellCheck = hdr.getAttribute("data-tool") === "spellcheck";
+        for (var t = 0; t < tabs.length; t++) {
+            tabs[t].classList.toggle("active", tabs[t].getAttribute("data-tool") === "spellcheck");
+        }
+        for (var h = 0; h < headers.length; h++) {
+            var body = headers[h].nextElementSibling;
+            var isSpellCheck = headers[h].getAttribute("data-tool") === "spellcheck";
             if (body) body.classList.toggle("hidden", !isSpellCheck);
-            if (icon) icon.textContent = isSpellCheck ? "▾" : "▸";
-        });
+        }
     }
 
     // ─── Platzi Composer tool event handlers ─────────────────────
