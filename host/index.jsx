@@ -1453,24 +1453,24 @@ function pcMiniProfesor(side, xPct, yPct, animate, easeOut, easeIn) {
         var posExpr = "var d = " + durFrames + " / thisComp.frameRate;\n" +
             "var s = " + startPos + "; var e = " + endPos + ";\n" +
             "var v = e;\n" +
-            "try { var inT = thisLayer.marker.key(\"IN\").time; v = ease(time, inT, inT + d, s, e); } catch(ex) {}\n" +
-            "try { var outT = thisLayer.marker.key(\"OUT\").time; v = ease(time, outT, outT + d, v, s); } catch(ex) {}\n" +
+            "if(thisLayer.marker.numKeys >= 1){ var inT = thisLayer.marker.key(1).time; v = ease(time, inT, inT + d, s, e); }\n" +
+            "if(thisLayer.marker.numKeys >= 2){ var outT = thisLayer.marker.key(2).time; v = ease(time, outT, outT + d, v, s); }\n" +
             "v;";
 
         // Size expression (reads matte markers)
         var sizeExpr = "var d = " + durFrames + " / thisComp.frameRate;\n" +
             "var s = " + startSize + "; var e = " + endSize + ";\n" +
             "var v = e;\n" +
-            "try { var inT = thisComp.layer(\"" + mn + "\").marker.key(\"IN\").time; v = ease(time, inT, inT + d, s, e); } catch(ex) {}\n" +
-            "try { var outT = thisComp.layer(\"" + mn + "\").marker.key(\"OUT\").time; v = ease(time, outT, outT + d, v, s); } catch(ex) {}\n" +
+            "if(thisComp.layer('" + mn + "').marker.numKeys >= 1){ var inT = thisComp.layer('" + mn + "').marker.key(1).time; v = ease(time, inT, inT + d, s, e); }\n" +
+            "if(thisComp.layer('" + mn + "').marker.numKeys >= 2){ var outT = thisComp.layer('" + mn + "').marker.key(2).time; v = ease(time, outT, outT + d, v, s); }\n" +
             "v;";
 
         // Roundness expression
         var roundExpr = "var d = " + durFrames + " / thisComp.frameRate;\n" +
             "var s = 0; var e = " + END_R + ";\n" +
             "var v = e;\n" +
-            "try { var inT = thisComp.layer(\"" + mn + "\").marker.key(\"IN\").time; v = ease(time, inT, inT + d, s, e); } catch(ex) {}\n" +
-            "try { var outT = thisComp.layer(\"" + mn + "\").marker.key(\"OUT\").time; v = ease(time, outT, outT + d, v, s); } catch(ex) {}\n" +
+            "if(thisComp.layer('" + mn + "').marker.numKeys >= 1){ var inT = thisComp.layer('" + mn + "').marker.key(1).time; v = ease(time, inT, inT + d, s, e); }\n" +
+            "if(thisComp.layer('" + mn + "').marker.numKeys >= 2){ var outT = thisComp.layer('" + mn + "').marker.key(2).time; v = ease(time, outT, outT + d, v, s); }\n" +
             "v;";
 
         // Apply to matte position
@@ -1518,8 +1518,8 @@ function pcMiniProfesor(side, xPct, yPct, animate, easeOut, easeIn) {
             var scaleExpr = "var d = " + durFrames + " / thisComp.frameRate;\n" +
                 "var s = " + cs0Str + "; var e = " + cs1Str + ";\n" +
                 "var v = e;\n" +
-                "try { var inT = thisComp.layer(\"" + mn + "\").marker.key(\"IN\").time; v = ease(time, inT, inT + d, s, e); } catch(ex) {}\n" +
-                "try { var outT = thisComp.layer(\"" + mn + "\").marker.key(\"OUT\").time; v = ease(time, outT, outT + d, v, s); } catch(ex) {}\n" +
+                "if(thisComp.layer('" + mn + "').marker.numKeys >= 1){ var inT = thisComp.layer('" + mn + "').marker.key(1).time; v = ease(time, inT, inT + d, s, e); }\n" +
+                "if(thisComp.layer('" + mn + "').marker.numKeys >= 2){ var outT = thisComp.layer('" + mn + "').marker.key(2).time; v = ease(time, outT, outT + d, v, s); }\n" +
                 "v;";
             try { camScale.expression = scaleExpr; } catch(ex) {
                 _pcSetUniformScale(target, fitS);
@@ -1532,8 +1532,8 @@ function pcMiniProfesor(side, xPct, yPct, animate, easeOut, easeIn) {
             var camPosExpr = "var d = " + durFrames + " / thisComp.frameRate;\n" +
                 "var s = " + cpStr + "; var e = " + cpStr + ";\n" +
                 "var v = e;\n" +
-                "try { var inT = thisComp.layer(\"" + mn + "\").marker.key(\"IN\").time; v = ease(time, inT, inT + d, s, e); } catch(ex) {}\n" +
-                "try { var outT = thisComp.layer(\"" + mn + "\").marker.key(\"OUT\").time; v = ease(time, outT, outT + d, v, s); } catch(ex) {}\n" +
+                "if(thisComp.layer('" + mn + "').marker.numKeys >= 1){ var inT = thisComp.layer('" + mn + "').marker.key(1).time; v = ease(time, inT, inT + d, s, e); }\n" +
+                "if(thisComp.layer('" + mn + "').marker.numKeys >= 2){ var outT = thisComp.layer('" + mn + "').marker.key(2).time; v = ease(time, outT, outT + d, v, s); }\n" +
                 "v;";
             try { camPos.expression = camPosExpr; } catch(ex) {}
 
@@ -1544,8 +1544,8 @@ function pcMiniProfesor(side, xPct, yPct, animate, easeOut, easeIn) {
             var matteScaleExpr = "var d = " + durFrames + " / thisComp.frameRate;\n" +
                 "var s = " + msStr + "; var e = " + msStr + ";\n" +
                 "var v = e;\n" +
-                "try { var inT = thisLayer.marker.key(\"IN\").time; v = ease(time, inT, inT + d, s, e); } catch(ex) {}\n" +
-                "try { var outT = thisLayer.marker.key(\"OUT\").time; v = ease(time, outT, outT + d, v, s); } catch(ex) {}\n" +
+                "if(thisLayer.marker.numKeys >= 1){ var inT = thisLayer.marker.key(1).time; v = ease(time, inT, inT + d, s, e); }\n" +
+                "if(thisLayer.marker.numKeys >= 2){ var outT = thisLayer.marker.key(2).time; v = ease(time, outT, outT + d, v, s); }\n" +
                 "v;";
             try { matteScaleProp.expression = matteScaleExpr; } catch(ex) {}
         } else {
