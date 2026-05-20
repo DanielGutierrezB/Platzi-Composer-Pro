@@ -236,11 +236,19 @@ function pcCreateHighlighter() {
         layer.property("Transform").property("Anchor Point").setValue([0, 0]);
 
         var contents = layer.property("Contents");
-        var rg = contents.addProperty("ADBE Vector Group"); rg.name = "HighlightRectangle";
+        var rg = contents.addProperty("ADBE Vector Group"); rg.name = "HighlightLine";
         var rc = rg.property("Contents");
-        var rp = rc.addProperty("ADBE Vector Shape - Rect");
-        rp.property("Size").expression = "[effect('Length')('Slider'), 0]";
-        rp.property("Position").expression = "[effect('Length')('Slider')/2, 0]";
+        var pathGrp = rc.addProperty("ADBE Vector Shape - Group");
+        var lineShape = new Shape();
+        lineShape.vertices = [[0, 0], [400, 0]];
+        lineShape.closed = false;
+        pathGrp.property("Path").setValue(lineShape);
+        try {
+            pathGrp.property("Path").expression =
+                "createPath([[0,0],[effect(\"Length\")(\"Slider\"),0]], [], [], false)";
+        } catch(ex) {
+            // createPath not available in this AE version, keep static path
+        }
         var stroke = rc.addProperty("ADBE Vector Graphic - Stroke");
         stroke.property("Color").setValue([1, 1, 0]);
         stroke.property("Stroke Width").expression = "effect('Thickness')('Slider')";
