@@ -1027,23 +1027,36 @@ html, body {
     align-items: center;
     margin-bottom: 4px;
 }
+.th-mode-bar {
+    display: flex;
+    gap: 0;
+    margin-bottom: 8px;
+    border-radius: var(--radius-sm, 4px);
+    overflow: hidden;
+    border: 1px solid var(--border);
+}
 .th-radio {
+    flex: 1;
+    text-align: center;
     font-size: 10px;
     cursor: pointer;
-    padding: 4px 8px;
-    border-radius: var(--radius-sm, 4px);
-    border: 1px solid var(--border);
+    padding: 6px 8px;
+    border: none;
+    border-right: 1px solid var(--border);
     background: var(--bg-surface);
-    color: var(--text-primary);
+    color: var(--text-secondary, #888);
+    opacity: 0.5;
     transition: all var(--transition);
 }
+.th-radio:last-child { border-right: none; }
 .th-radio input[type="radio"] { display: none; }
 .th-radio:has(input:checked),
 .th-radio.active {
     background: #0AE98A !important;
-    border-color: #0AE98A !important;
+    border-color: transparent !important;
     color: #000 !important;
     font-weight: 600;
+    opacity: 1 !important;
 }
 .th-anim-btn.active {
     background: rgba(10, 233, 138, 0.15) !important;
