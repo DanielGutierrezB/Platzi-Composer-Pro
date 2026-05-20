@@ -994,7 +994,8 @@ html, body {
     transition: all var(--transition);
 }
 .th-radio input[type="radio"] { display: none; }
-.th-radio:has(input:checked) {
+.th-radio:has(input:checked),
+.th-radio.active {
     background: var(--accent);
     border-color: var(--accent);
     color: #000;

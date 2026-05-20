@@ -1165,6 +1165,19 @@
             });
         });
 
+        // Text Helper — mode radio toggle (for old Chromium without :has())
+        var thRadios = document.querySelectorAll(".th-radio");
+        for (var ri = 0; ri < thRadios.length; ri++) {
+            (function(label) {
+                label.addEventListener("click", function() {
+                    for (var rj = 0; rj < thRadios.length; rj++) thRadios[rj].classList.remove("active");
+                    label.classList.add("active");
+                });
+            })(thRadios[ri]);
+        }
+        // Set initial active
+        if (thRadios.length > 0) thRadios[0].classList.add("active");
+
         // Text Helper — each button is a type, auto-detects if text is selected
         var thBtns = document.querySelectorAll(".btn-th");
         for (var ti = 0; ti < thBtns.length; ti++) {
@@ -1172,9 +1185,9 @@
                 btn.addEventListener("click", function() {
                     var animType = btn.getAttribute("data-anim");
                     var mode = document.querySelector('input[name="th-mode"]:checked').value;
-                    var duration = parseInt(document.getElementById("th-duration").value) || 20;
+                    var delay = parseInt(document.getElementById("th-delay").value) || 2;
                     var glow = document.getElementById("th-glow").checked;
-                    callHost("pcTextHelper('" + animType + "','" + mode + "'," + duration + "," + glow + "," + easeOut() + "," + easeIn() + ")");
+                    callHost("pcTextHelper('" + animType + "','" + mode + "'," + delay + "," + glow + "," + easeOut() + "," + easeIn() + ")");
                 });
             })(thBtns[ti]);
         }
