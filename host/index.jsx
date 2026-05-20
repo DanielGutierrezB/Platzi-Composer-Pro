@@ -1744,14 +1744,13 @@ function pcTextHelper(animType, mode, animMode, durationFrames, enableGlow, ease
         var colorCtrl = fxs.addProperty("ADBE Color Control"); colorCtrl.name = "Text Color";
         colorCtrl.property("Color").setValue([1, 1, 1]);
 
-        // Glow
-        if (enableGlow) {
-            var glow = fxs.addProperty("ADBE Glo2");
-            glow.name = "Text Glow";
-            try { glow.property("Glow Threshold").setValue(50); } catch(ex) {}
-            try { glow.property("Glow Radius").setValue(25); } catch(ex) {}
-            try { glow.property("Glow Intensity").setValue(1); } catch(ex) {}
-        }
+        // Glow (always added, enabled/disabled based on checkbox)
+        var glow = fxs.addProperty("ADBE Glo2");
+        glow.name = "Text Glow";
+        try { glow.property("Glow Threshold").setValue(60); } catch(ex) {}
+        try { glow.property("Glow Radius").setValue(25); } catch(ex) {}
+        try { glow.property("Glow Intensity").setValue(1); } catch(ex) {}
+        glow.enabled = enableGlow;
 
         // Link text color via expression
         try {
