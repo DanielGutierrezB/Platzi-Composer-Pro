@@ -1637,8 +1637,7 @@ function saveLogToFile(jsonString) {
 // ─── Update from GitHub ──────────────────────────────────────────
 function runGitPull() {
     try {
-        var script = 'do shell script "cd ~/Movies/Platzi-Composer-Pro && git pull origin main 2>&1"';
-        var result = app.doScript(script, ScriptLanguage.APPLESCRIPT);
+        var result = system.callSystem("cd ~/Movies/Platzi-Composer-Pro && git pull origin main 2>&1");
         return JSON.stringify({ success: true, output: result });
     } catch(e) {
         return JSON.stringify({ error: e.toString() });
