@@ -648,7 +648,7 @@ function pcCreateHighlightBox(mode, easeOut, easeIn, enableGlow) {
                 return JSON.stringify({ error: "No se encontraron paths en el shape layer." });
             }
         }
-        // MODE 2: Layer with masks
+        // MODE 2: Layer with masks — use actual mask paths
         else {
             var masks = srcLayer.property("Masks");
             if (!masks || masks.numProperties < 1) {
@@ -656,17 +656,9 @@ function pcCreateHighlightBox(mode, easeOut, easeIn, enableGlow) {
                 return JSON.stringify({ error: "La capa no tiene m\u00e1scara ni shapes. Dibuja una primero." });
             }
             for (var m = 1; m <= masks.numProperties; m++) {
-                var maskPath = masks.property(m).property("maskPath").value;
-                var mverts = maskPath.vertices;
-                var mMinX = mverts[0][0], mMaxX = mverts[0][0];
-                var mMinY = mverts[0][1], mMaxY = mverts[0][1];
-                for (var mv = 1; mv < mverts.length; mv++) {
-                    if (mverts[mv][0] < mMinX) mMinX = mverts[mv][0];
-                    if (mverts[mv][0] > mMaxX) mMaxX = mverts[mv][0];
-                    if (mverts[mv][1] < mMinY) mMinY = mverts[mv][1];
-                    if (mverts[mv][1] > mMaxY) mMaxY = mverts[mv][1];
-                }
-                boxes.push({ centerX: (mMinX + mMaxX) / 2, centerY: (mMinY + mMaxY) / 2, boxW: mMaxX - mMinX, boxH: mMaxY - mMinY });
+                var maskPathObj = masks.property(m).property("maskPath").value;
+                // Store the full path shape data
+                boxes.push({ maskShape: maskPathObj, isPath: true });
             }
             // Remove masks after extraction
             for (var rm = masks.numProperties; rm >= 1; rm--) {
@@ -707,8 +699,8 @@ function pcCreateHighlightBox(mode, easeOut, easeIn, enableGlow) {
                     layer.parent = srcLayer.parent;
                 }
             } else {
-                // Mask mode: parent to source layer, position relative to layer
-                layer.property("Transform").property("Position").setValue([box.centerX, box.centerY]);
+                // Mask mode: parent to source layer, path coords are already correct
+                layer.property("Transform").property("Position").setValue([0, 0]);
                 layer.property("Transform").property("Anchor Point").setValue([0, 0]);
                 layer.parent = srcLayer;
             }
@@ -717,13 +709,19 @@ function pcCreateHighlightBox(mode, easeOut, easeIn, enableGlow) {
             var grp = contents.addProperty("ADBE Vector Group"); grp.name = "BoxGroup";
             var grpContents = grp.property("Contents");
 
-            var rect = grpContents.addProperty("ADBE Vector Shape - Rect");
-            try {
-                rect.property("ADBE Vector Rect Size").expression =
-                    "var pad = thisLayer.effect(\"Padding\")(\"Slider\");" +
-                    "[" + box.boxW + " + pad*2, " + box.boxH + " + pad*2]";
-            } catch(ex) {
-                rect.property("ADBE Vector Rect Size").setValue([box.boxW + 20, box.boxH + 20]);
+            // Create shape: use actual path for masks, rectangle for shape mode
+            if (box.isPath && box.maskShape) {
+                var pathGrp = grpContents.addProperty("ADBE Vector Shape - Group");
+                pathGrp.property("Path").setValue(box.maskShape);
+            } else {
+                var rect = grpContents.addProperty("ADBE Vector Shape - Rect");
+                try {
+                    rect.property("ADBE Vector Rect Size").expression =
+                        "var pad = thisLayer.effect(\"Padding\")(\"Slider\");" +
+                        "[" + box.boxW + " + pad*2, " + box.boxH + " + pad*2]";
+                } catch(ex) {
+                    rect.property("ADBE Vector Rect Size").setValue([box.boxW + 20, box.boxH + 20]);
+                }
             }
 
             var stroke = grpContents.addProperty("ADBE Vector Graphic - Stroke");
