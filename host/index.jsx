@@ -1489,6 +1489,17 @@ function pcMiniProfesor(side, xPct, yPct, animate, easeOut, easeIn) {
                 camPos.setInterpolationTypeAtKey(cpk2, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
                 _pcApplyEaseScalar(camPos, cpk1, cpk2, easeOut, easeIn);
             } catch(_){}
+
+            // Add Scale keyframes on matte (shape layer) for editor adjustment
+            var matteScaleProp = matte.property("ADBE Transform Group").property("ADBE Scale");
+            var matteScaleVal = matteScaleProp.valueAtTime(t1c, false);
+            var msk1 = matteScaleProp.addKey(t0c); matteScaleProp.setValueAtKey(msk1, matteScaleVal);
+            var msk2 = matteScaleProp.addKey(t1c); matteScaleProp.setValueAtKey(msk2, matteScaleVal);
+            try {
+                matteScaleProp.setInterpolationTypeAtKey(msk1, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+                matteScaleProp.setInterpolationTypeAtKey(msk2, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+                _pcApplyEaseArray(matteScaleProp, msk1, msk2, easeOut, easeIn);
+            } catch(_){}
         } else {
             _pcSetUniformScale(target, _pcFitScaleToHeight(target, END_H));
         }
