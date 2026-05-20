@@ -199,6 +199,20 @@ html, body {
 }
 .btn-icon-tiny:hover { color: var(--text-primary); background: var(--bg-hover); }
 
+.btn-defaults {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 11px;
+    padding: 2px 4px;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+    color: var(--text-secondary);
+}
+.btn-defaults:hover {
+    opacity: 1;
+}
+
 /* ─── Settings ─── */
 
 .settings-panel {

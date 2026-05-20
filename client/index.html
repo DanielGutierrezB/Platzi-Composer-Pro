@@ -14,7 +14,7 @@
             <div class="header-spacer"></div>
             <span id="comp-name" class="comp-name">Sin composición activa</span>
             <span id="layer-count" class="layer-count"></span>
-            <span id="version-badge" class="version-label">v1.0.7</span>
+            <span id="version-badge" class="version-label">v1.0.8</span>
             <button id="btn-update" class="icon-btn" title="Verificar actualización / Recargar panel">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
@@ -40,23 +40,22 @@
         <!-- Ease + Zoom bar -->
         <div class="global-ease-bar">
             <div class="ease-group">
-                <label>Out</label>
+                <label title="Influencia de ease al salir de un keyframe (velocidad de salida)">Out</label>
                 <input type="number" id="ease-out" class="ease-input" value="33" min="0" max="100" title="Ease Out (0-100)">
             </div>
             <div class="ease-group">
-                <label>In</label>
-                <input type="number" id="ease-in" class="ease-input" value="100" min="0" max="100" title="Ease In (0-100)">
+                <label title="Influencia de ease al llegar a un keyframe (velocidad de llegada)">In</label>
+                <input type="number" id="ease-in" class="ease-input" value="10" min="0" max="100" title="Ease In (0-100)">
             </div>
-            <button id="btn-save-ease" class="btn-icon-tiny" title="Guardar ease defaults">
-                <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 1h6l3 3v6a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1z" stroke="currentColor" stroke-width="1.2" fill="none"/><rect x="4" y="1" width="4" height="3" rx="0.5" stroke="currentColor" stroke-width="0.8" fill="none"/><rect x="3" y="7" width="6" height="3" rx="0.5" stroke="currentColor" stroke-width="0.8" fill="none"/></svg>
-            </button>
             <div class="ease-divider"></div>
             <div class="ease-group">
-                <label>Zoom</label>
+                <label title="Porcentaje de zoom por defecto para Quick Scale">Zoom</label>
                 <input type="number" id="cont-zoom-pct" class="ease-input" value="10" min="0" title="Zoom %">
             </div>
             <button id="btn-cont-zoom" class="btn btn-sm btn-ghost">Apply In</button>
             <button id="btn-cont-zoom-ph" class="btn btn-sm btn-ghost">Apply on Playhead</button>
+            <button class="btn-defaults btn-save-def" data-keys="ease-out,ease-in,cont-zoom-pct" title="Guardar como default">💾</button>
+            <button class="btn-defaults btn-reset-def" data-keys="ease-out,ease-in,cont-zoom-pct" title="Restaurar defaults">↩</button>
         </div>
     </header>
 
@@ -174,8 +173,10 @@
                     <button id="btn-zbr" class="btn btn-tool" title="Bottom Right">BR ↘</button>
                 </div>
                 <div class="tool-inline-row">
-                    <label>Dur</label><input type="number" id="zoom-dur" class="tool-input" value="20" title="Frames">
-                    <label>Zoom%</label><input type="number" id="zoom-pct" class="tool-input" value="130">
+                    <label title="Duración del zoom en frames">Dur</label><input type="number" id="zoom-dur" class="tool-input" value="20" title="Frames">
+                    <label title="Porcentaje de zoom (100=sin cambio, 130=30% más grande)">Zoom%</label><input type="number" id="zoom-pct" class="tool-input" value="130">
+                    <button class="btn-defaults btn-save-def" data-keys="zoom-dur,zoom-pct" title="Guardar como default">💾</button>
+                    <button class="btn-defaults btn-reset-def" data-keys="zoom-dur,zoom-pct" title="Restaurar defaults">↩</button>
                 </div>
             </div>
         </div>
@@ -282,11 +283,13 @@
                     <div class="hl-type-label">👤 Mini Profesor</div>
                     <div class="hl-type-desc">Mueve la cámara del profesor a los lados</div>
                     <div class="tool-inline-row">
-                        <label>X%</label><input type="number" id="mp-x" class="tool-input" value="35">
-                        <label>Y%</label><input type="number" id="mp-y" class="tool-input" value="0">
+                        <label title="Posición horizontal del profesor (0=centro, negativo=izquierda)">X%</label><input type="number" id="mp-x" class="tool-input" value="35">
+                        <label title="Posición vertical del profesor (0=centro, negativo=arriba)">Y%</label><input type="number" id="mp-y" class="tool-input" value="0">
                         <button id="btn-mp-left" class="btn btn-tool" title="Shift+Clic anima">◀ Left</button>
                         <button id="btn-mp-right" class="btn btn-tool" title="Shift+Clic anima">Right ▶</button>
                         <label class="toggle-label"><input type="checkbox" id="mp-animate"> Animate</label>
+                        <button class="btn-defaults btn-save-def" data-keys="mp-x,mp-y" title="Guardar como default">💾</button>
+                        <button class="btn-defaults btn-reset-def" data-keys="mp-x,mp-y" title="Restaurar defaults">↩</button>
                     </div>
                 </div>
 
@@ -304,10 +307,12 @@
                         <button id="btn-cp-br" class="btn btn-tool" title="Shift+Clic anima">BR ↘</button>
                     </div>
                     <div class="tool-inline-row">
-                        <label>Dur</label><input type="number" id="cp-dur" class="tool-input" value="20">
-                        <label>Size</label><input type="number" id="cp-size" class="tool-input" value="600">
+                        <label title="Duración de la animación en frames">Dur</label><input type="number" id="cp-dur" class="tool-input" value="20">
+                        <label title="Tamaño del recorte del profesor en píxeles">Size</label><input type="number" id="cp-size" class="tool-input" value="600">
                         <label>px</label>
                         <label class="toggle-label"><input type="checkbox" id="cp-animate"> Animate</label>
+                        <button class="btn-defaults btn-save-def" data-keys="cp-dur,cp-size" title="Guardar como default">💾</button>
+                        <button class="btn-defaults btn-reset-def" data-keys="cp-dur,cp-size" title="Restaurar defaults">↩</button>
                     </div>
                 </div>
             </div>

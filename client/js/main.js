@@ -14,6 +14,13 @@
     var LOCAL_VERSION = "1.0.0";
     var REMOTE_VERSION_URL = "https://raw.githubusercontent.com/DanielGutierrezB/Platzi-Composer-Pro/main/VERSION";
 
+    var DEFAULTS = {
+        "ease-out": 33, "ease-in": 10, "cont-zoom-pct": 10,
+        "mp-x": 35, "mp-y": 0,
+        "cp-dur": 20, "cp-size": 600,
+        "zoom-dur": 20, "zoom-pct": 130
+    };
+
     var state = {
         layers: [],
         layerResults: {},
@@ -64,7 +71,7 @@
 
         loadLocalVersion(extensionPath);
         loadSavedSettings();
-        loadSavedEase();
+        loadDefaults();
         bindEvents();
         refreshProviderUI();
         updateAIStatus();
@@ -116,21 +123,30 @@
         }
     }
 
-    function loadSavedEase() {
-        var savedOut = localStorage.getItem("pc_ease_out");
-        var savedIn = localStorage.getItem("pc_ease_in");
-        var eoEl = document.getElementById("ease-out");
-        var eiEl = document.getElementById("ease-in");
-        if (savedOut !== null && eoEl) eoEl.value = savedOut;
-        if (savedIn !== null && eiEl) eiEl.value = savedIn;
+    function saveDefaults(keys) {
+        keys.forEach(function(k) {
+            var el = document.getElementById(k);
+            if (el) localStorage.setItem("pc_def_" + k, el.value);
+        });
+        showToast("Defaults guardados", "success");
     }
 
-    function saveEaseDefaults() {
-        var eo = document.getElementById("ease-out");
-        var ei = document.getElementById("ease-in");
-        if (eo) localStorage.setItem("pc_ease_out", eo.value);
-        if (ei) localStorage.setItem("pc_ease_in", ei.value);
-        showToast("Ease defaults guardados: Out " + (eo ? eo.value : "") + " / In " + (ei ? ei.value : ""), "success");
+    function resetDefaults(keys) {
+        keys.forEach(function(k) {
+            var el = document.getElementById(k);
+            var saved = localStorage.getItem("pc_def_" + k);
+            var val = saved !== null ? saved : DEFAULTS[k];
+            if (el && val !== undefined) el.value = val;
+        });
+        showToast("Defaults restaurados", "info");
+    }
+
+    function loadDefaults() {
+        Object.keys(DEFAULTS).forEach(function(k) {
+            var el = document.getElementById(k);
+            var saved = localStorage.getItem("pc_def_" + k);
+            if (el && saved !== null) el.value = saved;
+        });
     }
 
     function bindEvents() {
@@ -139,9 +155,27 @@
         on("btn-save-api-key", "click", saveApiKey);
         on("btn-back", "click", showListView);
         on("btn-ollama-refresh", "click", checkOllamaConnection);
-        on("btn-save-ease", "click", saveEaseDefaults);
         on("btn-save-log", "click", saveActionLog);
         on("btn-update", "click", checkForUpdate);
+
+        var saveBtns = document.querySelectorAll(".btn-save-def");
+        for (var i = 0; i < saveBtns.length; i++) {
+            (function(btn) {
+                btn.addEventListener("click", function() {
+                    var keys = (btn.getAttribute("data-keys") || "").split(",").filter(Boolean);
+                    saveDefaults(keys);
+                });
+            })(saveBtns[i]);
+        }
+        var resetBtns = document.querySelectorAll(".btn-reset-def");
+        for (var j = 0; j < resetBtns.length; j++) {
+            (function(btn) {
+                btn.addEventListener("click", function() {
+                    var keys = (btn.getAttribute("data-keys") || "").split(",").filter(Boolean);
+                    resetDefaults(keys);
+                });
+            })(resetBtns[j]);
+        }
 
         on("ai-provider-select", "change", function() {
             var prov = this.value;
