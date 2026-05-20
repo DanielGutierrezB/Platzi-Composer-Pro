@@ -1613,7 +1613,7 @@ function pcCornerProfesor(corner, circular, durationFrames, sizePx, animate, eas
 
 // ─── TEXT HELPER ────────────────────────────────────────────────
 
-function pcTextHelper(animType, mode, delayPerUnit, enableGlow, easeOut, easeIn) {
+function pcTextHelper(animType, mode, animMode, delayPerUnit, enableGlow, easeOut, easeIn) {
     var comp = _pcRequireComp();
     if (!comp) return JSON.stringify({ error: "No hay composici\u00f3n activa." });
     try {
@@ -1676,14 +1676,33 @@ function pcTextHelper(animType, mode, delayPerUnit, enableGlow, easeOut, easeIn)
         if (animType === "typewriter") basedOnVal = 1;
         try { advanced.property("Based On").setValue(basedOnVal); } catch(ex) {}
 
-        // Animate Start from 0 to 100
-        var ks1 = rangeStart.addKey(t0); rangeStart.setValueAtKey(ks1, 0);
-        var ks2 = rangeStart.addKey(t1); rangeStart.setValueAtKey(ks2, 100);
-        try {
-            rangeStart.setInterpolationTypeAtKey(ks1, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
-            rangeStart.setInterpolationTypeAtKey(ks2, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
-            _pcApplyEaseScalar(rangeStart, ks1, ks2, easeOut, easeIn);
-        } catch(ex) {}
+        // Animate based on animMode (in, out, inout)
+        if (animMode === "in" || animMode === "inout") {
+            var ks1 = rangeStart.addKey(t0); rangeStart.setValueAtKey(ks1, 0);
+            var ks2 = rangeStart.addKey(t1); rangeStart.setValueAtKey(ks2, 100);
+            try {
+                rangeStart.setInterpolationTypeAtKey(ks1, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+                rangeStart.setInterpolationTypeAtKey(ks2, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+                _pcApplyEaseScalar(rangeStart, ks1, ks2, easeOut, easeIn);
+            } catch(ex) {}
+        }
+        if (animMode === "out" || animMode === "inout") {
+            // Out animation: 5 seconds after playhead (or after In ends)
+            var outStart = (animMode === "inout") ? t0 + 5.0 : t0;
+            var outEnd = outStart + totalDur;
+            var ko1 = rangeStart.addKey(outStart); rangeStart.setValueAtKey(ko1, 100);
+            var ko2 = rangeStart.addKey(outEnd); rangeStart.setValueAtKey(ko2, 0);
+            try {
+                rangeStart.setInterpolationTypeAtKey(ko1, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+                rangeStart.setInterpolationTypeAtKey(ko2, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+                var kCount = rangeStart.numKeys;
+                _pcApplyEaseScalar(rangeStart, kCount - 1, kCount, easeOut, easeIn);
+            } catch(ex) {}
+        }
+        if (animMode === "out" && rangeStart.numKeys === 2) {
+            // For out-only, set initial state to fully visible (Start=100)
+            rangeStart.setValueAtKey(1, 100);
+        }
 
         // Set animator properties based on animation type
         if (animType === "typewriter") {

@@ -1182,12 +1182,16 @@
         var thBtns = document.querySelectorAll(".btn-th");
         for (var ti = 0; ti < thBtns.length; ti++) {
             (function(btn) {
-                btn.addEventListener("click", function() {
+                btn.addEventListener("click", function(evt) {
                     var animType = btn.getAttribute("data-anim");
                     var mode = document.querySelector('input[name="th-mode"]:checked').value;
                     var delay = parseInt(document.getElementById("th-delay").value) || 2;
                     var glow = document.getElementById("th-glow").checked;
-                    callHost("pcTextHelper('" + animType + "','" + mode + "'," + delay + "," + glow + "," + easeOut() + "," + easeIn() + ")");
+                    // Shift=In only, Shift+Alt=Out only, normal=InOut
+                    var animMode = "inout";
+                    if (evt.shiftKey && evt.altKey) animMode = "out";
+                    else if (evt.shiftKey) animMode = "in";
+                    callHost("pcTextHelper('" + animType + "','" + mode + "','" + animMode + "'," + delay + "," + glow + "," + easeOut() + "," + easeIn() + ")");
                 });
             })(thBtns[ti]);
         }
