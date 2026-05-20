@@ -1920,7 +1920,11 @@ function saveLogToFile(jsonString) {
 // ─── Update from GitHub ──────────────────────────────────────────
 function runGitPull() {
     try {
-        var result = system.callSystem("cd ~/Movies/Platzi-Composer-Pro && git pull origin main 2>&1");
+        // Get the actual extension path dynamically
+        var scriptFile = new File($.fileName);
+        var extPath = scriptFile.parent.parent.fsName;
+        var cmd = "cd \"" + extPath + "\" && git pull origin main 2>&1";
+        var result = system.callSystem(cmd);
         return JSON.stringify({ success: true, output: result });
     } catch(e) {
         return JSON.stringify({ error: e.toString() });
