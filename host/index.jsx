@@ -1463,7 +1463,7 @@ function pcMiniProfesor(side, xPct, yPct, animate, easeOut, easeIn) {
         }
 
         // Shape layer starts at animation time
-        matte.inPoint = comp.time;
+        matte.inPoint = target.inPoint;
 
         matte.moveBefore(target);
         target.parent = matte;
@@ -1583,7 +1583,7 @@ function pcCornerProfesor(corner, circular, durationFrames, sizePx, animate, eas
         }
 
         // Shape layer starts at animation time
-        matte.inPoint = comp.time;
+        matte.inPoint = target.inPoint;
 
         matte.moveBefore(target);
         target.parent = matte;
