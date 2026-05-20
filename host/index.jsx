@@ -506,26 +506,32 @@ function pcFocusMaskAnimate(mode, easeOut, easeIn) {
     try {
         app.beginUndoGroup("Focus Mask " + mode);
         var comp = s.comp, layer = s.layers[0];
-        var opac = layer.property("Transform").property("Opacity");
         var fps = comp.frameRate;
+
+        // Try to animate the Darkness slider (if it exists via effect controls)
+        var darkSlider = null;
+        try { darkSlider = layer.property("Effects").property("Darkness").property("Slider"); } catch(ex) {}
+        // Fallback to Opacity if no Darkness slider
+        var prop = darkSlider || layer.property("Transform").property("Opacity");
+        var maxVal = darkSlider ? 70 : 70;
 
         if (mode === "in") {
             var t0 = comp.time, t1 = t0 + (20 / fps);
-            opac.setValueAtTime(t0, 0); opac.setValueAtTime(t1, 70);
-            _pcApplyEaseScalar(opac, 1, 2, easeOut, easeIn);
+            prop.setValueAtTime(t0, 0); prop.setValueAtTime(t1, maxVal);
+            _pcApplyEaseScalar(prop, 1, 2, easeOut, easeIn);
         } else if (mode === "out") {
             var t0b = comp.time, t1b = t0b + (20 / fps);
-            opac.setValueAtTime(t0b, 70); opac.setValueAtTime(t1b, 0);
-            _pcApplyEaseScalar(opac, 1, 2, easeOut, easeIn);
+            prop.setValueAtTime(t0b, maxVal); prop.setValueAtTime(t1b, 0);
+            _pcApplyEaseScalar(prop, 1, 2, easeOut, easeIn);
         } else {
             var inPt = layer.inPoint, outPt = layer.outPoint;
             var dur = 20 / fps;
-            opac.setValueAtTime(inPt, 0);
-            opac.setValueAtTime(inPt + dur, 70);
-            opac.setValueAtTime(outPt - dur, 70);
-            opac.setValueAtTime(outPt, 0);
+            prop.setValueAtTime(inPt, 0);
+            prop.setValueAtTime(inPt + dur, maxVal);
+            prop.setValueAtTime(outPt - dur, maxVal);
+            prop.setValueAtTime(outPt, 0);
             var kIn = new KeyframeEase(0, easeIn), kOut = new KeyframeEase(0, easeOut);
-            for (var k = 1; k <= 4; k++) opac.setTemporalEaseAtKey(k, [kIn], [kOut]);
+            for (var k = 1; k <= 4; k++) prop.setTemporalEaseAtKey(k, [kIn], [kOut]);
         }
         app.endUndoGroup();
         return JSON.stringify({ success: true });
@@ -613,18 +619,18 @@ function pcCreateZoomFocus(blurAmount, scaleFactor, easeOut, easeIn) {
         _pcApplyEaseArray(scaleProp, ks1, ks2, eo, ei);
         _pcApplyEaseArray(scaleProp, ks3, ks4, eo, ei);
 
-        // Blur keyframes
-        var blurProp = blur.property("Blurriness");
-        var kb1 = blurProp.addKey(inPt); blurProp.setValueAtKey(kb1, 0);
-        var kb2 = blurProp.addKey(inPt + dur); blurProp.setValueAtKey(kb2, ba);
-        var kb3 = blurProp.addKey(outPt - dur); blurProp.setValueAtKey(kb3, ba);
-        var kb4 = blurProp.addKey(outPt); blurProp.setValueAtKey(kb4, 0);
-        blurProp.setInterpolationTypeAtKey(kb1, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
-        blurProp.setInterpolationTypeAtKey(kb2, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
-        blurProp.setInterpolationTypeAtKey(kb3, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
-        blurProp.setInterpolationTypeAtKey(kb4, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
-        _pcApplyEaseScalar(blurProp, kb1, kb2, eo, ei);
-        _pcApplyEaseScalar(blurProp, kb3, kb4, eo, ei);
+        // Blur keyframes — animate the SLIDER (expression links it to Blurriness)
+        var blurSlider = blurCtrl.property("Slider");
+        var kb1 = blurSlider.addKey(inPt); blurSlider.setValueAtKey(kb1, 0);
+        var kb2 = blurSlider.addKey(inPt + dur); blurSlider.setValueAtKey(kb2, ba);
+        var kb3 = blurSlider.addKey(outPt - dur); blurSlider.setValueAtKey(kb3, ba);
+        var kb4 = blurSlider.addKey(outPt); blurSlider.setValueAtKey(kb4, 0);
+        blurSlider.setInterpolationTypeAtKey(kb1, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+        blurSlider.setInterpolationTypeAtKey(kb2, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+        blurSlider.setInterpolationTypeAtKey(kb3, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+        blurSlider.setInterpolationTypeAtKey(kb4, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+        _pcApplyEaseScalar(blurSlider, kb1, kb2, eo, ei);
+        _pcApplyEaseScalar(blurSlider, kb3, kb4, eo, ei);
         app.endUndoGroup();
         return JSON.stringify({ success: true });
     } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
