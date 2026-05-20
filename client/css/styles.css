@@ -951,6 +951,24 @@ html, body {
     border-color: #fff;
     box-shadow: 0 0 4px rgba(255,255,255,0.5);
 }
+.btn-palette-action {
+    width: 24px;
+    height: 18px;
+    border-radius: 3px;
+    cursor: pointer;
+    border: 1px solid var(--border, #444);
+    background: var(--bg-input, #2a2a2a);
+    color: var(--text-primary, #ddd);
+    font-size: 11px;
+    padding: 0;
+    margin-left: 4px;
+    transition: background 0.15s, border-color 0.15s;
+}
+.btn-palette-action:hover {
+    background: var(--accent, #0AE98A);
+    border-color: var(--accent, #0AE98A);
+    color: #000;
+}
 
 /* ─── Responsive ─── */
 @media (max-width: 320px) {

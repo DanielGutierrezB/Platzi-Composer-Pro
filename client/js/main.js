@@ -1149,6 +1149,7 @@
         var swatches = document.getElementById("color-palette").children;
         for (var i = 0; i < swatches.length; i++) {
             (function(swatch) {
+                if (!swatch.getAttribute("data-color")) return; // skip non-swatch elements
                 swatch.addEventListener("click", function() {
                     var all = document.getElementById("color-palette").children;
                     for (var j = 0; j < all.length; j++) all[j].classList.remove("active");
@@ -1158,6 +1159,10 @@
                 });
             })(swatches[i]);
         }
+        // Mirror Keys button
+        document.getElementById("btn-mirror-keys").addEventListener("click", function() {
+            callHost("pcCloneMirrorKeys()");
+        });
     }
 
     // ─── Start ───────────────────────────────────────────────────

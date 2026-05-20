@@ -542,6 +542,67 @@ function pcLineHighlighterToggleGlow(enable) {
     } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
 }
 
+function pcCloneMirrorKeys() {
+    var comp = _pcRequireComp();
+    if (!comp) return JSON.stringify({ error: "No hay composici\u00f3n activa." });
+    try {
+        app.beginUndoGroup("Clone & Mirror Keys");
+        var targetTime = comp.time;
+        var mirrored = 0;
+
+        // Get all selected layers
+        var selLayers = comp.selectedLayers;
+        if (!selLayers || selLayers.length === 0) {
+            app.endUndoGroup();
+            return JSON.stringify({ error: "Selecciona capas con keyframes." });
+        }
+
+        for (var lay = 0; lay < selLayers.length; lay++) {
+            var layer = selLayers[lay];
+            // Get selected keys from all properties
+            var props = layer.selectedProperties;
+            if (!props || props.length === 0) continue;
+
+            for (var p = 0; p < props.length; p++) {
+                var prop = props[p];
+                if (!prop.numKeys || prop.numKeys === 0) continue;
+                var selKeys = prop.selectedKeys;
+                if (!selKeys || selKeys.length === 0) continue;
+
+                // Collect selected keyframe data
+                var keys = [];
+                var firstTime = prop.keyTime(selKeys[0]);
+                var lastTime = prop.keyTime(selKeys[selKeys.length - 1]);
+                for (var k = 0; k < selKeys.length; k++) {
+                    var ki = selKeys[k];
+                    keys.push({
+                        time: prop.keyTime(ki),
+                        value: prop.keyValue(ki)
+                    });
+                }
+
+                // Mirror: place cloned keys starting at targetTime, reversed in time
+                var duration = lastTime - firstTime;
+                for (var m = keys.length - 1; m >= 0; m--) {
+                    var originalOffset = keys[m].time - firstTime;
+                    var mirroredTime = targetTime + (duration - originalOffset);
+                    var newKey = prop.addKey(mirroredTime);
+                    prop.setValueAtKey(newKey, keys[m].value);
+                    // Copy interpolation type
+                    try {
+                        prop.setInterpolationTypeAtKey(newKey, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+                    } catch(ex) {}
+                }
+                mirrored++;
+            }
+        }
+
+        app.endUndoGroup();
+        if (mirrored === 0) return JSON.stringify({ error: "No se encontraron keyframes seleccionados." });
+        return JSON.stringify({ success: true, properties: mirrored });
+    } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
+}
+
 function pcFlipTrimAnimation() {
     var s = _pcRequireSelected();
     if (!s) return JSON.stringify({ error: "Selecciona una o más capas." });
