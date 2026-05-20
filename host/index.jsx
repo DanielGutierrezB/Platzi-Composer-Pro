@@ -403,7 +403,7 @@ function pcCreateLineHighlighter(style, enableGlow) {
         var styleNames = {"solid":"Solid","chalk":"Chalk","thunder":"Thunder","dashed":"Dashed"};
         layer.name = "Line Highlight - " + (styleNames[style] || style);
         layer.inPoint = comp.time;
-        layer.outPoint = comp.time + 10;
+        layer.outPoint = comp.time + 3;
 
         var fxs = layer.property("Effects");
         // Common controls
