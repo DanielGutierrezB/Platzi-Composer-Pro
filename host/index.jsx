@@ -325,9 +325,16 @@ function pcCreateLineHighlighter() {
         var grpContents = grp.property("Contents");
 
         var pathGrp = grpContents.addProperty("ADBE Vector Shape - Group");
-        pathGrp.property("Path").expression =
-            "var len = effect('Length')('Slider');\n" +
-            "createPath([[0,0],[len,0]], [], [], false)";
+        var lineShape = new Shape();
+        lineShape.vertices = [[0, 0], [400, 0]];
+        lineShape.closed = false;
+        pathGrp.property("Path").setValue(lineShape);
+        try {
+            pathGrp.property("Path").expression =
+                "var len = effect(\"Length\")(\"Slider\"); createPath([[0,0],[len,0]], [], [], false)";
+        } catch(ex) {
+            // createPath not available in this AE version, keep static path
+        }
 
         var stroke = grpContents.addProperty("ADBE Vector Graphic - Stroke");
         stroke.property("Color").setValue([1, 1, 0]);
@@ -439,8 +446,8 @@ function pcCreateFocusMask() {
         var maskShape = new Shape();
         maskShape.vertices = [[cx - hw, cy - hh], [cx + hw, cy - hh], [cx + hw, cy + hh], [cx - hw, cy + hh]];
         maskShape.closed = true;
-        maskProp.maskShape.setValue(maskShape);
-        maskProp.maskFeather.setValue([20, 20]);
+        maskProp.property("maskShape").setValue(maskShape);
+        maskProp.property("maskFeather").setValue([20, 20]);
 
         app.endUndoGroup();
         return JSON.stringify({ success: true });

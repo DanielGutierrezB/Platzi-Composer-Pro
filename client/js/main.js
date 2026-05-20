@@ -54,6 +54,11 @@
     // ─── Init ────────────────────────────────────────────────────
     function init() {
         var extensionPath = csInterface.getSystemPath(SystemPath.EXTENSION);
+
+        // Force reload host script on panel refresh
+        var hostPath = csInterface.getSystemPath(SystemPath.EXTENSION) + "/host/index.jsx";
+        csInterface.evalScript("$.evalFile(\"" + hostPath.replace(/\\/g, "/") + "\")");
+
         engine = new SpellCheckEngine({ extensionPath: extensionPath, uiLanguage: "es" });
         aiAnalyzer = new AIAnalyzer();
 
