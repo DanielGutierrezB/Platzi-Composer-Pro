@@ -958,15 +958,13 @@ function saveLogToFile(jsonString) {
     try {
         var downloads = Folder("~/Downloads");
         var base = downloads.exists ? downloads : Folder.desktop;
-        var homeFolder = Folder(base.fsName + "/PlatziComposerPro_logs");
-        if (!homeFolder.exists) homeFolder.create();
 
         var now = new Date();
         var pad = function(n) { return n < 10 ? "0" + n : "" + n; };
-        var filename = "log_" + now.getFullYear() + "-" + pad(now.getMonth() + 1) + "-" + pad(now.getDate()) +
+        var filename = "PlatziComposerPro_log_" + now.getFullYear() + "-" + pad(now.getMonth() + 1) + "-" + pad(now.getDate()) +
             "_" + pad(now.getHours()) + pad(now.getMinutes()) + pad(now.getSeconds()) + ".json";
 
-        var file = new File(homeFolder.fsName + "/" + filename);
+        var file = new File(base.fsName + "/" + filename);
         file.encoding = "UTF-8";
         file.open("w");
         file.write(jsonString);
