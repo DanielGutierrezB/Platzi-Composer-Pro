@@ -73,6 +73,7 @@
         loadSavedSettings();
         loadDefaults();
         bindEvents();
+        bindColorPalette();
         refreshProviderUI();
         updateAIStatus();
     }
@@ -1127,6 +1128,22 @@
                 callHost("pcCornerProfesor('" + corners[c] + "', " + circ + ", " + dur + ", " + size + ", " + anim + ", " + easeOut() + ", " + easeIn() + ")");
             });
         });
+    }
+
+    // ─── Color Palette ───────────────────────────────────────────
+    function bindColorPalette() {
+        var swatches = document.getElementById("color-palette").children;
+        for (var i = 0; i < swatches.length; i++) {
+            (function(swatch) {
+                swatch.addEventListener("click", function() {
+                    var all = document.getElementById("color-palette").children;
+                    for (var j = 0; j < all.length; j++) all[j].classList.remove("active");
+                    swatch.classList.add("active");
+                    var rgb = swatch.getAttribute("data-color");
+                    csInterface.evalScript("pcApplyColorToSelected([" + rgb + "])");
+                });
+            })(swatches[i]);
+        }
     }
 
     // ─── Start ───────────────────────────────────────────────────

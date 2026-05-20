@@ -193,6 +193,47 @@ function pcGetSelectedLayerName() {
     return JSON.stringify({ name: s.layers[0].name || "" });
 }
 
+function pcApplyColorToSelected(color) {
+    var s = _pcRequireSelected();
+    if (!s) return JSON.stringify({ error: "Selecciona una capa primero." });
+    try {
+        app.beginUndoGroup("Apply Color");
+        var layer = s.layers[0];
+        var fxs = layer.property("Effects");
+        // Try to find Color effect control
+        var applied = false;
+        if (fxs) {
+            for (var i = 1; i <= fxs.numProperties; i++) {
+                var fx = fxs.property(i);
+                if (fx.name === "Color" && fx.matchName === "ADBE Color Control") {
+                    fx.property("Color").setValue(color);
+                    applied = true;
+                    break;
+                }
+            }
+        }
+        // Also apply to stroke directly if it's a shape layer
+        if (layer.property("Contents")) {
+            var contents = layer.property("Contents");
+            for (var g = 1; g <= contents.numProperties; g++) {
+                try {
+                    var grpC = contents.property(g).property("Contents");
+                    if (grpC) {
+                        for (var p = 1; p <= grpC.numProperties; p++) {
+                            if (grpC.property(p).matchName === "ADBE Vector Graphic - Stroke") {
+                                try { grpC.property(p).property("Color").setValue(color); applied = true; } catch(ex) {}
+                            }
+                        }
+                    }
+                } catch(ex) {}
+            }
+        }
+        app.endUndoGroup();
+        if (!applied) return JSON.stringify({ error: "No se encontr\u00f3 control de color en la capa." });
+        return JSON.stringify({ success: true });
+    } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
+}
+
 function _pcApplyEaseScalar(prop, k1, k2, easeOutVal, easeInVal) {
     var eIn = new KeyframeEase(0, easeInVal);
     var eOut = new KeyframeEase(0, easeOutVal);
