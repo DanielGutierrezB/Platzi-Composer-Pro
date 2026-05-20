@@ -1613,7 +1613,7 @@ function pcCornerProfesor(corner, circular, durationFrames, sizePx, animate, eas
 
 // ─── TEXT HELPER ────────────────────────────────────────────────
 
-function pcTextHelper(animType, delayPerChar, enableGlow, easeOut, easeIn) {
+function pcTextHelper(animType, mode, delayPerChar, enableGlow, easeOut, easeIn) {
     var comp = _pcRequireComp();
     if (!comp) return JSON.stringify({ error: "No hay composici\u00f3n activa." });
     try {
@@ -1666,11 +1666,13 @@ function pcTextHelper(animType, delayPerChar, enableGlow, easeOut, easeIn) {
         var totalDur = (srcText.length * delayPerChar) / fps;
         var t1 = t0 + totalDur;
 
-        // Based On: 1=Characters, 2=Chars excl spaces, 3=Words, 4=Lines
-        try { advanced.property("Based On").setValue(1); } catch(ex) {} // Characters
-        if (animType === "word-by-word") {
-            try { advanced.property("Based On").setValue(3); } catch(ex) {} // Words
-        }
+        // Based On from mode: char=1, word=3, line=4
+        var basedOnVal = 1; // char
+        if (mode === "word") basedOnVal = 3;
+        if (mode === "line") basedOnVal = 4;
+        // Typewriter always char-by-char
+        if (animType === "typewriter") basedOnVal = 1;
+        try { advanced.property("Based On").setValue(basedOnVal); } catch(ex) {}
 
         // Animate Start from 0 to 100
         var ks1 = rangeStart.addKey(t0); rangeStart.setValueAtKey(ks1, 0);
@@ -1682,7 +1684,7 @@ function pcTextHelper(animType, delayPerChar, enableGlow, easeOut, easeIn) {
         } catch(ex) {}
 
         // Set animator properties based on animation type
-        if (animType === "typewriter" || animType === "word-by-word") {
+        if (animType === "typewriter") {
             var opacityProp = animProps.addProperty("ADBE Text Opacity");
             opacityProp.setValue(0);
         } else if (animType === "fade-up") {
@@ -1690,25 +1692,34 @@ function pcTextHelper(animType, delayPerChar, enableGlow, easeOut, easeIn) {
             opacityProp2.setValue(0);
             var posProp = animProps.addProperty("ADBE Text Position 3D");
             posProp.setValue([0, 30, 0]);
+        } else if (animType === "fade-down") {
+            var opFD = animProps.addProperty("ADBE Text Opacity");
+            opFD.setValue(0);
+            var posFD = animProps.addProperty("ADBE Text Position 3D");
+            posFD.setValue([0, -30, 0]);
+        } else if (animType === "fade-left") {
+            var opFL = animProps.addProperty("ADBE Text Opacity");
+            opFL.setValue(0);
+            var posFL = animProps.addProperty("ADBE Text Position 3D");
+            posFL.setValue([40, 0, 0]);
+        } else if (animType === "fade-right") {
+            var opFR = animProps.addProperty("ADBE Text Opacity");
+            opFR.setValue(0);
+            var posFR = animProps.addProperty("ADBE Text Position 3D");
+            posFR.setValue([-40, 0, 0]);
         } else if (animType === "scale-pop") {
             var scaleProp = animProps.addProperty("ADBE Text Scale 3D");
             scaleProp.setValue([0, 0, 100]);
         } else if (animType === "blur-reveal") {
-            var opacityProp3 = animProps.addProperty("ADBE Text Opacity");
-            opacityProp3.setValue(0);
-            // Blur via Tracking (wide spacing that reduces) as workaround
+            var opBR = animProps.addProperty("ADBE Text Opacity");
+            opBR.setValue(0);
             var trackProp = animProps.addProperty("ADBE Text Tracking Amount");
             trackProp.setValue(50);
-        } else if (animType === "slide-in") {
-            var posProp2 = animProps.addProperty("ADBE Text Position 3D");
-            posProp2.setValue([-60, 0, 0]);
-            var opacityProp4 = animProps.addProperty("ADBE Text Opacity");
-            opacityProp4.setValue(0);
         } else if (animType === "bounce") {
-            var posProp3 = animProps.addProperty("ADBE Text Position 3D");
-            posProp3.setValue([0, -50, 0]);
-            var opacityProp5 = animProps.addProperty("ADBE Text Opacity");
-            opacityProp5.setValue(0);
+            var posBounce = animProps.addProperty("ADBE Text Position 3D");
+            posBounce.setValue([0, -50, 0]);
+            var opBounce = animProps.addProperty("ADBE Text Opacity");
+            opBounce.setValue(0);
         }
 
         // Add Effect Controls for editor adjustment

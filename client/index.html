@@ -346,14 +346,20 @@
                 <span class="tool-card-title">✍️ Text Helper</span>
             </div>
             <div class="tool-card-body hidden">
+                <div class="th-mode-row">
+                    <label class="th-radio"><input type="radio" name="th-mode" value="char" checked> 🔤 Char</label>
+                    <label class="th-radio"><input type="radio" name="th-mode" value="word"> 💬 Word</label>
+                    <label class="th-radio"><input type="radio" name="th-mode" value="line"> 📏 Line</label>
+                </div>
                 <div class="th-grid">
-                    <button class="btn-th" data-anim="typewriter">Typewriter</button>
-                    <button class="btn-th" data-anim="word-by-word">Word by Word</button>
-                    <button class="btn-th" data-anim="fade-up">Fade Up</button>
-                    <button class="btn-th" data-anim="scale-pop">Scale Pop</button>
-                    <button class="btn-th" data-anim="blur-reveal">Blur Reveal</button>
-                    <button class="btn-th" data-anim="slide-in">Slide In</button>
-                    <button class="btn-th" data-anim="bounce">Bounce</button>
+                    <button class="btn-th" data-anim="typewriter">⌨️ Typewriter</button>
+                    <button class="btn-th" data-anim="fade-up">⬆️ Fade Up</button>
+                    <button class="btn-th" data-anim="fade-down">⬇️ Fade Down</button>
+                    <button class="btn-th" data-anim="fade-left">⬅️ Fade Left</button>
+                    <button class="btn-th" data-anim="fade-right">➡️ Fade Right</button>
+                    <button class="btn-th" data-anim="scale-pop">💥 Scale Pop</button>
+                    <button class="btn-th" data-anim="blur-reveal">🌫️ Blur Reveal</button>
+                    <button class="btn-th" data-anim="bounce">⚡ Bounce</button>
                 </div>
                 <div class="hl-type-row">
                     <label>Delay <input type="number" id="th-delay" value="2" min="1" max="20" step="1" class="num-input"></label>

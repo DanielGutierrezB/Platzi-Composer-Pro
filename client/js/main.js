@@ -1171,9 +1171,10 @@
             (function(btn) {
                 btn.addEventListener("click", function() {
                     var animType = btn.getAttribute("data-anim");
+                    var mode = document.querySelector('input[name="th-mode"]:checked').value;
                     var delay = parseInt(document.getElementById("th-delay").value) || 2;
                     var glow = document.getElementById("th-glow").checked;
-                    callHost("pcTextHelper('" + animType + "'," + delay + "," + glow + "," + easeOut() + "," + easeIn() + ")");
+                    callHost("pcTextHelper('" + animType + "','" + mode + "'," + delay + "," + glow + "," + easeOut() + "," + easeIn() + ")");
                 });
             })(thBtns[ti]);
         }
