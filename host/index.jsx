@@ -1654,8 +1654,9 @@ function pcTextHelper(animType, delayPerChar, enableGlow, easeOut, easeIn) {
         var advanced = rangeSel.property("ADBE Text Range Advanced");
 
         // Set range selector to animate character by character
-        var rangeStart = rangeSel.property("ADBE Text Percent Start");
-        var rangeEnd = rangeSel.property("ADBE Text Percent End");
+        // Use property("Start") and property("End") by display name
+        var rangeStart = rangeSel.property("Start");
+        var rangeEnd = rangeSel.property("End");
 
         // Animation duration based on delay per char
         var fps = comp.frameRate;
@@ -1665,10 +1666,10 @@ function pcTextHelper(animType, delayPerChar, enableGlow, easeOut, easeIn) {
         var totalDur = (srcText.length * delayPerChar) / fps;
         var t1 = t0 + totalDur;
 
-        // Based on shape
-        try { advanced.property("ADBE Text Range Type2").setValue(2); } catch(ex) {} // Per character
+        // Based On: 1=Characters, 2=Chars excl spaces, 3=Words, 4=Lines
+        try { advanced.property("Based On").setValue(1); } catch(ex) {} // Characters
         if (animType === "word-by-word") {
-            try { advanced.property("ADBE Text Range Type2").setValue(3); } catch(ex) {} // Per word
+            try { advanced.property("Based On").setValue(3); } catch(ex) {} // Words
         }
 
         // Animate Start from 0 to 100
@@ -1687,23 +1688,24 @@ function pcTextHelper(animType, delayPerChar, enableGlow, easeOut, easeIn) {
         } else if (animType === "fade-up") {
             var opacityProp2 = animProps.addProperty("ADBE Text Opacity");
             opacityProp2.setValue(0);
-            var posProp = animProps.addProperty("ADBE Text Position");
+            var posProp = animProps.addProperty("ADBE Text Position 3D");
             posProp.setValue([0, 30, 0]);
         } else if (animType === "scale-pop") {
-            var scaleProp = animProps.addProperty("ADBE Text Scale");
+            var scaleProp = animProps.addProperty("ADBE Text Scale 3D");
             scaleProp.setValue([0, 0, 100]);
         } else if (animType === "blur-reveal") {
             var opacityProp3 = animProps.addProperty("ADBE Text Opacity");
             opacityProp3.setValue(0);
-            var blurProp = animProps.addProperty("ADBE Text Blur");
-            blurProp.setValue(20);
+            // Blur via Tracking (wide spacing that reduces) as workaround
+            var trackProp = animProps.addProperty("ADBE Text Tracking Amount");
+            trackProp.setValue(50);
         } else if (animType === "slide-in") {
-            var posProp2 = animProps.addProperty("ADBE Text Position");
+            var posProp2 = animProps.addProperty("ADBE Text Position 3D");
             posProp2.setValue([-60, 0, 0]);
             var opacityProp4 = animProps.addProperty("ADBE Text Opacity");
             opacityProp4.setValue(0);
         } else if (animType === "bounce") {
-            var posProp3 = animProps.addProperty("ADBE Text Position");
+            var posProp3 = animProps.addProperty("ADBE Text Position 3D");
             posProp3.setValue([0, -50, 0]);
             var opacityProp5 = animProps.addProperty("ADBE Text Opacity");
             opacityProp5.setValue(0);
