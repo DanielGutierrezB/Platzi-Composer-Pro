@@ -606,15 +606,15 @@ function pcCloneMirrorKeys() {
                     try {
                         prop.setInterpolationTypeAtKey(newKey, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
                     } catch(ex) {}
-                    // Apply mirrored ease: original easeOut → new easeIn, original easeIn → new easeOut
+                    // Copy ease as-is (same Out/In values, only time is reversed)
                     try {
-                        if (keys[m].easeOut.length > 0 && keys[m].easeIn.length > 0) {
+                        if (keys[m].easeIn.length > 0 && keys[m].easeOut.length > 0) {
                             var newIn = [], newOut = [];
-                            for (var ne = 0; ne < keys[m].easeOut.length; ne++) {
-                                newIn.push(new KeyframeEase(keys[m].easeOut[ne].speed, keys[m].easeOut[ne].influence));
+                            for (var ne = 0; ne < keys[m].easeIn.length; ne++) {
+                                newIn.push(new KeyframeEase(keys[m].easeIn[ne].speed, keys[m].easeIn[ne].influence));
                             }
-                            for (var no = 0; no < keys[m].easeIn.length; no++) {
-                                newOut.push(new KeyframeEase(keys[m].easeIn[no].speed, keys[m].easeIn[no].influence));
+                            for (var no = 0; no < keys[m].easeOut.length; no++) {
+                                newOut.push(new KeyframeEase(keys[m].easeOut[no].speed, keys[m].easeOut[no].influence));
                             }
                             prop.setTemporalEaseAtKey(newKey, newIn, newOut);
                         }
