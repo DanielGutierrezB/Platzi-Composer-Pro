@@ -375,7 +375,7 @@ function pcCreateLineHighlighter(style, enableGlow) {
     try {
         app.beginUndoGroup("Create Line Highlight");
         var layer = comp.layers.addShape();
-        var styleNames = {"solid":"Solid","chalk":"Chalk","chalk-static":"Chalk Static","dashed":"Dashed"};
+        var styleNames = {"solid":"Solid","chalk":"Chalk","thunder":"Thunder","dashed":"Dashed"};
         layer.name = "Line Highlight - " + (styleNames[style] || style);
         layer.inPoint = comp.time;
         layer.outPoint = comp.time + 10;
@@ -391,17 +391,17 @@ function pcCreateLineHighlighter(style, enableGlow) {
 
         // Style-specific controls
         if (style === "chalk") {
-            var chalkAmtCtrl = fxs.addProperty("ADBE Slider Control"); chalkAmtCtrl.name = "Chalk Roughness";
-            chalkAmtCtrl.property("Slider").setValue(3);
-            var chalkDetCtrl = fxs.addProperty("ADBE Slider Control"); chalkDetCtrl.name = "Chalk Detail";
-            chalkDetCtrl.property("Slider").setValue(8);
-            var chalkSpdCtrl = fxs.addProperty("ADBE Slider Control"); chalkSpdCtrl.name = "Chalk Vibration";
-            chalkSpdCtrl.property("Slider").setValue(0.5);
-        } else if (style === "chalk-static") {
-            var csAmtCtrl = fxs.addProperty("ADBE Slider Control"); csAmtCtrl.name = "Chalk Roughness";
-            csAmtCtrl.property("Slider").setValue(3);
-            var csDetCtrl = fxs.addProperty("ADBE Slider Control"); csDetCtrl.name = "Chalk Detail";
-            csDetCtrl.property("Slider").setValue(8);
+            var chalkBorderCtrl = fxs.addProperty("ADBE Slider Control"); chalkBorderCtrl.name = "Chalk Border";
+            chalkBorderCtrl.property("Slider").setValue(8);
+            var chalkScaleCtrl = fxs.addProperty("ADBE Slider Control"); chalkScaleCtrl.name = "Chalk Scale";
+            chalkScaleCtrl.property("Slider").setValue(50);
+        } else if (style === "thunder") {
+            var thunAmtCtrl = fxs.addProperty("ADBE Slider Control"); thunAmtCtrl.name = "Thunder Amount";
+            thunAmtCtrl.property("Slider").setValue(3);
+            var thunDetCtrl = fxs.addProperty("ADBE Slider Control"); thunDetCtrl.name = "Thunder Detail";
+            thunDetCtrl.property("Slider").setValue(8);
+            var thunSpdCtrl = fxs.addProperty("ADBE Slider Control"); thunSpdCtrl.name = "Thunder Speed";
+            thunSpdCtrl.property("Slider").setValue(2);
         } else if (style === "dashed") {
             var dashLenCtrl = fxs.addProperty("ADBE Slider Control"); dashLenCtrl.name = "Dash Length";
             dashLenCtrl.property("Slider").setValue(20);
@@ -450,20 +450,12 @@ function pcCreateLineHighlighter(style, enableGlow) {
             }
         }
 
-        // Chalk style: high detail + low amplitude + subtle vibration = chalk/tiza texture
-        if (style === "chalk") {
-            var chalkPaths = grpContents.addProperty("ADBE Vector Filter - Roughen");
-            try { chalkPaths.property("ADBE Vector Roughen Size").expression = "effect(\"Chalk Roughness\")(\"Slider\")"; } catch(ex) {}
-            try { chalkPaths.property("ADBE Vector Roughen Detail").expression = "effect(\"Chalk Detail\")(\"Slider\")"; } catch(ex) {}
-            try { chalkPaths.property("ADBE Vector Temporal Freq").expression = "effect(\"Chalk Vibration\")(\"Slider\")"; } catch(ex) {}
-        }
-
-        // Chalk Static: same chalk texture but frozen (no animation)
-        if (style === "chalk-static") {
-            var csPaths = grpContents.addProperty("ADBE Vector Filter - Roughen");
-            try { csPaths.property("ADBE Vector Roughen Size").expression = "effect(\"Chalk Roughness\")(\"Slider\")"; } catch(ex) {}
-            try { csPaths.property("ADBE Vector Roughen Detail").expression = "effect(\"Chalk Detail\")(\"Slider\")"; } catch(ex) {}
-            try { csPaths.property("ADBE Vector Temporal Freq").setValue(0); } catch(ex) {}
+        // Thunder style: zigzag animated (like lightning)
+        if (style === "thunder") {
+            var thunPaths = grpContents.addProperty("ADBE Vector Filter - Roughen");
+            try { thunPaths.property("ADBE Vector Roughen Size").expression = "effect(\"Thunder Amount\")(\"Slider\")"; } catch(ex) {}
+            try { thunPaths.property("ADBE Vector Roughen Detail").expression = "effect(\"Thunder Detail\")(\"Slider\")"; } catch(ex) {}
+            try { thunPaths.property("ADBE Vector Temporal Freq").expression = "effect(\"Thunder Speed\")(\"Slider\")"; } catch(ex) {}
         }
 
         // Trim Paths
@@ -476,6 +468,19 @@ function pcCreateLineHighlighter(style, enableGlow) {
             try { glow.property("Glow Threshold").setValue(40); } catch(ex) {}
             try { glow.property("Glow Radius").setValue(25); } catch(ex) {}
             try { glow.property("Glow Intensity").setValue(1.5); } catch(ex) {}
+        }
+
+        // Chalk style: Roughen Edges effect for real chalk/tiza texture
+        if (style === "chalk") {
+            // Thicker stroke for chalk look
+            thkCtrl.property("Slider").setValue(12);
+            var re = fxs.addProperty("ADBE Roughen Edges");
+            re.name = "Chalk Texture";
+            try { re.property("ADBE Roughen Edges-0001").setValue(2); } catch(ex) {} // Edge Type: Roughen
+            try { re.property("ADBE Roughen Edges-0002").expression = "effect(\"Chalk Border\")(\"Slider\")"; } catch(ex) {} // Border
+            try { re.property("ADBE Roughen Edges-0004").expression = "effect(\"Chalk Scale\")(\"Slider\")"; } catch(ex) {} // Fractal Influence / Scale
+            try { re.property("ADBE Roughen Edges-0005").setValue(1); } catch(ex) {} // Stretch Width
+            try { re.property("ADBE Roughen Edges-0007").setValue(0.7); } catch(ex) {} // Complexity
         }
 
         app.endUndoGroup();
