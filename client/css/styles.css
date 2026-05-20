@@ -1035,10 +1035,15 @@ html, body {
 .th-radio input[type="radio"] { display: none; }
 .th-radio:has(input:checked),
 .th-radio.active {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: #000;
+    background: #0AE98A !important;
+    border-color: #0AE98A !important;
+    color: #000 !important;
     font-weight: 600;
+}
+.th-anim-btn.active {
+    background: rgba(10, 233, 138, 0.15) !important;
+    border-color: #0AE98A !important;
+    color: #0AE98A !important;
 }
 
 .has-update {
