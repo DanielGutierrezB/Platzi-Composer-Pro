@@ -1462,6 +1462,9 @@ function pcMiniProfesor(side, xPct, yPct, animate, easeOut, easeIn) {
             rcNA.property("ADBE Vector Rect Roundness").setValue(END_R);
         }
 
+        // Shape layer starts at animation time
+        matte.inPoint = comp.time;
+
         matte.moveBefore(target);
         target.parent = matte;
         _pcSetLocalPosToParentCenter(target);
@@ -1475,6 +1478,17 @@ function pcMiniProfesor(side, xPct, yPct, animate, easeOut, easeIn) {
             var ck1 = camScale.addKey(t0c); camScale.setValueAtKey(ck1, cs0);
             var ck2 = camScale.addKey(t1c); camScale.setValueAtKey(ck2, cs1);
             try { _pcApplyEaseArray(camScale, ck1, ck2, easeOut, easeIn); } catch(_){}
+
+            // Add Position keyframes on camera for editor adjustment
+            var camPos = target.property("ADBE Transform Group").property("ADBE Position");
+            var camPosVal = camPos.valueAtTime(t1c, false);
+            var cpk1 = camPos.addKey(t0c); camPos.setValueAtKey(cpk1, camPosVal);
+            var cpk2 = camPos.addKey(t1c); camPos.setValueAtKey(cpk2, camPosVal);
+            try {
+                camPos.setInterpolationTypeAtKey(cpk1, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+                camPos.setInterpolationTypeAtKey(cpk2, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+                _pcApplyEaseScalar(camPos, cpk1, cpk2, easeOut, easeIn);
+            } catch(_){}
         } else {
             _pcSetUniformScale(target, _pcFitScaleToHeight(target, END_H));
         }
@@ -1557,11 +1571,30 @@ function pcCornerProfesor(corner, circular, durationFrames, sizePx, animate, eas
             rcNA.property("ADBE Vector Rect Roundness").setValue(END_R);
         }
 
+        // Shape layer starts at animation time
+        matte.inPoint = comp.time;
+
         matte.moveBefore(target);
         target.parent = matte;
         _pcSetLocalPosToParentCenter(target);
         try { target.trackMatteType = TrackMatteType.ALPHA; } catch(_){}
         if (!animate) _pcSetUniformScale(target, _pcFitScaleToHeight(target, END_H));
+
+        // Add Position keyframes on camera for editor adjustment (Corner)
+        if (animate) {
+            var camPosC = target.property("ADBE Transform Group").property("ADBE Position");
+            var frames = durationFrames; if (isNaN(frames) || frames <= 0) frames = 20;
+            var t0p = comp.time, t1p = t0p + (frames / comp.frameRate);
+            var camPosCVal = camPosC.valueAtTime(t1p, false);
+            var cpkC1 = camPosC.addKey(t0p); camPosC.setValueAtKey(cpkC1, camPosCVal);
+            var cpkC2 = camPosC.addKey(t1p); camPosC.setValueAtKey(cpkC2, camPosCVal);
+            try {
+                camPosC.setInterpolationTypeAtKey(cpkC1, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+                camPosC.setInterpolationTypeAtKey(cpkC2, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+                _pcApplyEaseScalar(camPosC, cpkC1, cpkC2, easeOut, easeIn);
+            } catch(_){}
+        }
+
         app.endUndoGroup();
         return JSON.stringify({ success: true });
     } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
