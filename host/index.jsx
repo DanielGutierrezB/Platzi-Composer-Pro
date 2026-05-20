@@ -707,3 +707,37 @@ function pcCornerProfesor(corner, circular, durationFrames, sizePx, animate, eas
         return JSON.stringify({ success: true });
     } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
 }
+
+// ─── Save Log ────────────────────────────────────────────────────
+function saveLogToFile(jsonString) {
+    try {
+        var homeFolder = Folder("~/Desktop/PlatziComposerPro_logs");
+        if (!homeFolder.exists) homeFolder.create();
+
+        var now = new Date();
+        var pad = function(n) { return n < 10 ? "0" + n : "" + n; };
+        var filename = "log_" + now.getFullYear() + "-" + pad(now.getMonth() + 1) + "-" + pad(now.getDate()) +
+            "_" + pad(now.getHours()) + pad(now.getMinutes()) + pad(now.getSeconds()) + ".json";
+
+        var file = new File(homeFolder.fsName + "/" + filename);
+        file.encoding = "UTF-8";
+        file.open("w");
+        file.write(jsonString);
+        file.close();
+
+        return JSON.stringify({ success: true, path: file.fsName });
+    } catch(e) {
+        return JSON.stringify({ error: e.toString() });
+    }
+}
+
+// ─── Update from GitHub ──────────────────────────────────────────
+function runGitPull() {
+    try {
+        var script = 'do shell script "cd ~/Movies/Platzi-Composer-Pro && git pull origin main 2>&1"';
+        var result = app.doScript(script, ScriptLanguage.APPLESCRIPT);
+        return JSON.stringify({ success: true, output: result });
+    } catch(e) {
+        return JSON.stringify({ error: e.toString() });
+    }
+}

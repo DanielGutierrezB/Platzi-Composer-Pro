@@ -10,6 +10,10 @@
     var engine = null;
     var aiAnalyzer = null;
 
+    var actionLog = [];
+    var LOCAL_VERSION = "1.0.0";
+    var REMOTE_VERSION_URL = "https://raw.githubusercontent.com/DanielGutierrezB/Platzi-Composer-Pro/main/VERSION";
+
     var state = {
         layers: [],
         layerResults: {},
@@ -24,17 +28,64 @@
         }
     };
 
+    // ─── Action log ──────────────────────────────────────────────
+    function logAction(action, params) {
+        actionLog.push({
+            action: action,
+            timestamp: new Date().toISOString(),
+            params: params == null ? null : params
+        });
+    }
+
+    function callHost(fn, cb) {
+        logAction("callHost", fn);
+        csInterface.evalScript(fn, function(result) {
+            try {
+                var d = JSON.parse(result);
+                if (d.error) { showToast(d.error, "error"); return; }
+                showToast("Listo", "success");
+                if (cb) cb(d);
+            } catch(e) {
+                showToast("Error: " + e.message, "error");
+            }
+        });
+    }
+
     // ─── Init ────────────────────────────────────────────────────
     function init() {
         var extensionPath = csInterface.getSystemPath(SystemPath.EXTENSION);
         engine = new SpellCheckEngine({ extensionPath: extensionPath, uiLanguage: "es" });
         aiAnalyzer = new AIAnalyzer();
 
+        loadLocalVersion(extensionPath);
         loadSavedSettings();
         loadSavedEase();
         bindEvents();
         refreshProviderUI();
         updateAIStatus();
+    }
+
+    function loadLocalVersion(extensionPath) {
+        var badge = document.getElementById("version-badge");
+
+        try {
+            var url = "file://" + extensionPath + "/VERSION";
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", url + "?_=" + Date.now(), true);
+            xhr.onload = function() {
+                if (xhr.status === 0 || (xhr.status >= 200 && xhr.status < 300)) {
+                    var txt = (xhr.responseText || "").replace(/\s+/g, "");
+                    if (txt) LOCAL_VERSION = txt;
+                }
+                if (badge) badge.textContent = "v" + LOCAL_VERSION;
+            };
+            xhr.onerror = function() {
+                if (badge) badge.textContent = "v" + LOCAL_VERSION;
+            };
+            xhr.send();
+        } catch(e) {
+            if (badge) badge.textContent = "v" + LOCAL_VERSION;
+        }
     }
 
     function loadSavedSettings() {
@@ -84,6 +135,8 @@
         on("btn-back", "click", showListView);
         on("btn-ollama-refresh", "click", checkOllamaConnection);
         on("btn-save-ease", "click", saveEaseDefaults);
+        on("btn-save-log", "click", saveActionLog);
+        on("btn-update", "click", checkForUpdate);
 
         on("ai-provider-select", "change", function() {
             var prov = this.value;
@@ -129,6 +182,11 @@
             toggleSettings();
             return;
         }
+
+        logAction("analysisStart", {
+            provider: state.settings.aiProvider,
+            model: state.settings.aiModel
+        });
 
         state.analyzing = true;
         state.layerResults = {};
@@ -214,6 +272,16 @@
 
         if (state.layers.length > 0) {
             updateLayersSummary();
+            var totalIssues = 0;
+            state.layers.forEach(function(_, i) {
+                var r = state.layerResults[i];
+                if (r && r.issues) totalIssues += r.issues.length;
+            });
+            logAction("analysisComplete", {
+                compName: state.compName,
+                layerCount: state.layers.length,
+                totalIssues: totalIssues
+            });
             showToast("Análisis completado — " + state.layers.length + " capa(s)", "success");
         }
     }
@@ -495,6 +563,12 @@
         var original = issue.original || issue.word || "";
 
         if (original && original.length > 0) {
+            logAction("fixApplied", {
+                layerName: layer.name,
+                original: original,
+                replacement: replacement,
+                issueType: issue.type || null
+            });
             csInterface.evalScript(
                 'replaceInLayer(' + aeIdx + ', "' + escExtend(original) + '", "' + escExtend(replacement) + '")',
                 function(r) { handleFixResult(layerIdx, issueIdx, r); }
@@ -505,6 +579,12 @@
     function applySuggestedText(suggestedText) {
         if (state.currentLayerIndex < 0) return;
         var layer = state.layers[state.currentLayerIndex];
+
+        logAction("fixApplied", {
+            layerName: layer.name,
+            mode: "fullSuggestedText",
+            replacement: suggestedText
+        });
 
         csInterface.evalScript(
             'setLayerText(' + layer.index + ', "' + escExtend(suggestedText) + '")',
@@ -711,6 +791,75 @@
         }
     }
 
+    // ─── Save Action Log ─────────────────────────────────────────
+    function saveActionLog() {
+        if (actionLog.length === 0) {
+            showToast("No hay acciones registradas todavía.", "info");
+            return;
+        }
+        var payload = JSON.stringify(actionLog);
+        var escaped = escExtend(payload);
+        csInterface.evalScript('saveLogToFile("' + escaped + '")', function(result) {
+            try {
+                var data = JSON.parse(result);
+                if (data.error) { showToast("Error guardando log: " + data.error, "error"); return; }
+                showToast("Log guardado en " + (data.path || "Desktop"), "success");
+            } catch(e) {
+                showToast("Error al guardar log.", "error");
+            }
+        });
+    }
+
+    // ─── Update Check ────────────────────────────────────────────
+    function compareVersions(a, b) {
+        var pa = String(a).split(".").map(function(n) { return parseInt(n, 10) || 0; });
+        var pb = String(b).split(".").map(function(n) { return parseInt(n, 10) || 0; });
+        var len = Math.max(pa.length, pb.length);
+        for (var i = 0; i < len; i++) {
+            var na = pa[i] || 0;
+            var nb = pb[i] || 0;
+            if (na > nb) return 1;
+            if (na < nb) return -1;
+        }
+        return 0;
+    }
+
+    function checkForUpdate() {
+        showToast("Verificando actualización...", "info");
+
+        var xhr = new XMLHttpRequest();
+        xhr.open("GET", REMOTE_VERSION_URL + "?_=" + Date.now(), true);
+        xhr.timeout = 8000;
+        xhr.onload = function() {
+            if (xhr.status >= 200 && xhr.status < 300) {
+                var remote = (xhr.responseText || "").replace(/\s+/g, "");
+                if (!remote) { location.reload(); return; }
+                if (compareVersions(remote, LOCAL_VERSION) > 0) {
+                    showToast("Nueva versión disponible: v" + remote + " — Actualizando...", "info");
+                    csInterface.evalScript("runGitPull()", function(result) {
+                        try {
+                            var data = JSON.parse(result);
+                            if (data.error) {
+                                showToast("Error actualizando: " + data.error, "error");
+                                return;
+                            }
+                            location.reload();
+                        } catch(e) {
+                            location.reload();
+                        }
+                    });
+                } else {
+                    location.reload();
+                }
+            } else {
+                location.reload();
+            }
+        };
+        xhr.onerror = function() { location.reload(); };
+        xhr.ontimeout = function() { location.reload(); };
+        try { xhr.send(); } catch(e) { location.reload(); }
+    }
+
     // ─── UI helpers ──────────────────────────────────────────────
     function setProgress(pct, text) {
         var fill = document.getElementById("progress-fill");
@@ -747,43 +896,46 @@
         return str.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n").replace(/\r/g, "\\r").replace(/\t/g, "\\t");
     }
 
-    // ─── Collapsible sections ───────────────────────────────────
+    // ─── Collapsible sections (accordion) ───────────────────────
     function bindCollapsibles() {
-        document.querySelectorAll(".tool-card-header").forEach(function(hdr) {
+        var headers = document.querySelectorAll(".tool-card-header");
+        headers.forEach(function(hdr) {
             hdr.addEventListener("click", function() {
                 var body = hdr.nextElementSibling;
-                var icon = hdr.querySelector(".toggle-icon");
                 if (!body) return;
-                body.classList.toggle("hidden");
-                if (icon) icon.textContent = body.classList.contains("hidden") ? "▸" : "▾";
+                var isOpen = !body.classList.contains("hidden");
+
+                headers.forEach(function(otherHdr) {
+                    var otherBody = otherHdr.nextElementSibling;
+                    var otherIcon = otherHdr.querySelector(".toggle-icon");
+                    if (otherBody) otherBody.classList.add("hidden");
+                    if (otherIcon) otherIcon.textContent = "▸";
+                });
+
+                if (!isOpen) {
+                    body.classList.remove("hidden");
+                    var icon = hdr.querySelector(".toggle-icon");
+                    if (icon) icon.textContent = "▾";
+                }
             });
         });
     }
 
     function expandSpellCheck() {
-        var body = document.getElementById("spellcheck-body");
-        var icon = document.getElementById("spellcheck-toggle-icon");
-        if (body) body.classList.remove("hidden");
-        if (icon) icon.textContent = "▾";
+        var headers = document.querySelectorAll(".tool-card-header");
+        headers.forEach(function(hdr) {
+            var body = hdr.nextElementSibling;
+            var icon = hdr.querySelector(".toggle-icon");
+            var isSpellCheck = hdr.getAttribute("data-tool") === "spellcheck";
+            if (body) body.classList.toggle("hidden", !isSpellCheck);
+            if (icon) icon.textContent = isSpellCheck ? "▾" : "▸";
+        });
     }
 
     // ─── Platzi Composer tool event handlers ─────────────────────
     function bindToolEvents() {
         function easeOut() { return parseFloat(document.getElementById("ease-out").value) || 33; }
         function easeIn()  { return parseFloat(document.getElementById("ease-in").value) || 100; }
-
-        function callHost(fn, cb) {
-            csInterface.evalScript(fn, function(result) {
-                try {
-                    var d = JSON.parse(result);
-                    if (d.error) { showToast(d.error, "error"); return; }
-                    showToast("Listo", "success");
-                    if (cb) cb(d);
-                } catch(e) {
-                    showToast("Error: " + e.message, "error");
-                }
-            });
-        }
 
         // Shift+Click: if shift is held OR checkbox is checked → animate = true
         function shouldAnimate(checkboxId, evt) {

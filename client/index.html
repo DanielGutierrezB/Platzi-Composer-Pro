@@ -7,13 +7,22 @@
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-    <!-- Compact Header: Line 1 = AI status + comp name + settings -->
+    <!-- Header compacto -->
     <header class="header">
         <div class="header-row">
             <div id="ai-status" class="ai-status"></div>
             <div class="header-spacer"></div>
             <span id="comp-name" class="comp-name">Sin composición activa</span>
             <span id="layer-count" class="layer-count"></span>
+            <!-- Save Log -->
+            <button id="btn-save-log" class="icon-btn" title="Guardar log de acciones">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <path d="M2 2h7l3 3v7a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z" stroke="currentColor" stroke-width="1.2" fill="none"/>
+                    <path d="M4 9h6M4 11h4" stroke="currentColor" stroke-width="1" stroke-linecap="round"/>
+                    <path d="M8 2v3h4" stroke="currentColor" stroke-width="1" fill="none"/>
+                </svg>
+            </button>
+            <!-- Settings -->
             <button id="btn-settings" class="icon-btn" title="Configuración IA">
                 <svg width="14" height="14" viewBox="0 0 15 15" fill="none">
                     <path d="M6.2 1.5L6.7 3.2C7 3.3 7.2 3.4 7.5 3.6L9.2 3L10.4 5.2L8.9 6.5C8.95 6.8 8.97 7.1 8.95 7.4L10.4 8.7L9.2 10.9L7.5 10.3C7.2 10.5 7 10.6 6.7 10.7L6.2 12.4H3.8L3.3 10.7C3 10.6 2.8 10.5 2.5 10.3L0.8 10.9L-0.4 8.7L1.1 7.4C1.05 7.1 1.03 6.8 1.05 6.5L-0.4 5.2L0.8 3L2.5 3.6C2.8 3.4 3 3.3 3.3 3.2L3.8 1.5H6.2Z" transform="translate(2.5 1)" stroke="currentColor" stroke-width="1.1" fill="none"/>
@@ -21,26 +30,26 @@
                 </svg>
             </button>
         </div>
-        <!-- Line 2 = Global Ease -->
+        <!-- Ease + Zoom bar -->
         <div class="global-ease-bar">
             <div class="ease-group">
-                <label>Ease Out</label>
-                <input type="number" id="ease-out" class="ease-input" value="33" min="0" max="100" title="Velocidad de salida del ease (0-100). Controla la suavidad al inicio de la animación">
+                <label>Out</label>
+                <input type="number" id="ease-out" class="ease-input" value="33" min="0" max="100" title="Ease Out (0-100)">
             </div>
             <div class="ease-group">
-                <label>Ease In</label>
-                <input type="number" id="ease-in" class="ease-input" value="100" min="0" max="100" title="Velocidad de entrada del ease (0-100). Controla la suavidad al final de la animación">
+                <label>In</label>
+                <input type="number" id="ease-in" class="ease-input" value="100" min="0" max="100" title="Ease In (0-100)">
             </div>
-            <button id="btn-save-ease" class="btn-icon-tiny" title="Guardar valores de ease como predeterminados">
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 1h6l3 3v6a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1z" stroke="currentColor" stroke-width="1.2" fill="none"/><rect x="4" y="1" width="4" height="3" rx="0.5" stroke="currentColor" stroke-width="0.8" fill="none"/><rect x="3" y="7" width="6" height="3" rx="0.5" stroke="currentColor" stroke-width="0.8" fill="none"/></svg>
+            <button id="btn-save-ease" class="btn-icon-tiny" title="Guardar ease defaults">
+                <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 1h6l3 3v6a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1z" stroke="currentColor" stroke-width="1.2" fill="none"/><rect x="4" y="1" width="4" height="3" rx="0.5" stroke="currentColor" stroke-width="0.8" fill="none"/><rect x="3" y="7" width="6" height="3" rx="0.5" stroke="currentColor" stroke-width="0.8" fill="none"/></svg>
             </button>
             <div class="ease-divider"></div>
             <div class="ease-group">
                 <label>Zoom</label>
-                <input type="number" id="cont-zoom-pct" class="ease-input" value="10" min="0" title="Porcentaje de zoom continuo lineal (sin ease)">
+                <input type="number" id="cont-zoom-pct" class="ease-input" value="10" min="0" title="Zoom %">
             </div>
-            <button id="btn-cont-zoom" class="btn btn-sm btn-ghost" title="Zoom lineal desde InPoint hasta OutPoint de las capas seleccionadas">Apply In</button>
-            <button id="btn-cont-zoom-ph" class="btn btn-sm btn-ghost" title="Zoom lineal desde el playhead actual hasta OutPoint de las capas seleccionadas">Apply Playhead</button>
+            <button id="btn-cont-zoom" class="btn btn-sm btn-ghost">Apply In</button>
+            <button id="btn-cont-zoom-ph" class="btn btn-sm btn-ghost">Apply PH</button>
         </div>
     </header>
 
@@ -58,13 +67,13 @@
             </div>
             <div id="ollama-status" class="ollama-status hidden">
                 <span id="ollama-status-text">Verificando...</span>
-                <button id="btn-ollama-refresh" class="btn-icon-tiny" title="Verificar conexión con Ollama">
+                <button id="btn-ollama-refresh" class="btn-icon-tiny" title="Verificar Ollama">
                     <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1.5 6A4.5 4.5 0 1 1 3 9.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><path d="M1 4.5V7.5H4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 </button>
             </div>
             <div id="api-key-group" class="settings-group api-key-row">
                 <input type="password" id="api-key-input" class="text-input" placeholder="API Key...">
-                <button id="btn-save-api-key" class="btn btn-sm btn-ghost" title="Guarda la API Key del proveedor seleccionado en almacenamiento local">Guardar</button>
+                <button id="btn-save-api-key" class="btn btn-sm btn-ghost">Guardar</button>
             </div>
             <div id="api-key-status" class="api-key-status"></div>
             <div class="settings-group">
@@ -74,18 +83,18 @@
         </div>
     </div>
 
-    <!-- ═══ ALL TOOL CARDS ═══ -->
+    <!-- Tools -->
     <div class="tools-container">
 
-        <!-- 1. SPELLCHECK IA (starts collapsed) -->
+        <!-- 1. SPELLCHECK IA -->
         <div class="tool-card">
-            <div class="tool-card-header" id="spellcheck-header" data-tool="spellcheck">
-                <span class="tool-card-title">SpellCheck IA</span>
-                <span id="spellcheck-toggle-icon" class="toggle-icon">▸</span>
+            <div class="tool-card-header" data-tool="spellcheck">
+                <span class="tool-card-title">🔍 SpellCheck IA</span>
+                <span class="toggle-icon">▸</span>
             </div>
-            <div id="spellcheck-body" class="tool-card-body hidden">
+            <div class="tool-card-body hidden">
                 <div class="action-bar">
-                    <button id="btn-analyze" class="btn-analyze" title="Escanea todas las capas de texto de la composición activa y analiza ortografía, gramática y estilo con IA">
+                    <button id="btn-analyze" class="btn-analyze" title="Analizar composición con IA">
                         <span class="btn-analyze-text">Analizar Composición</span>
                     </button>
                 </div>
@@ -102,7 +111,7 @@
                 </div>
                 <div id="layer-detail" class="sub-section hidden">
                     <div class="detail-header">
-                        <button id="btn-back" class="btn-back" title="Volver a la lista de capas">
+                        <button id="btn-back" class="btn-back">
                             <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 2L4 7L9 12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
                         </button>
                         <span id="detail-layer-name" class="detail-title"></span>
@@ -124,8 +133,8 @@
                         <div id="fix-explanation" class="fix-explanation"></div>
                         <div class="fix-input-row">
                             <input type="text" id="fix-input" class="fix-input" placeholder="Corrección...">
-                            <button id="btn-apply-fix" class="btn btn-success" title="Aplicar la corrección sugerida al texto de la capa">Aplicar</button>
-                            <button id="btn-ignore" class="btn btn-ghost" title="Ignorar este problema y continuar">Ignorar</button>
+                            <button id="btn-apply-fix" class="btn btn-success">Aplicar</button>
+                            <button id="btn-ignore" class="btn btn-ghost">Ignorar</button>
                         </div>
                         <div id="fix-suggestions" class="fix-suggestions"></div>
                     </div>
@@ -136,115 +145,115 @@
             </div>
         </div>
 
-        <!-- 2. ZOOMER (starts expanded) -->
+        <!-- 2. ZOOMER (default open) -->
         <div class="tool-card">
             <div class="tool-card-header" data-tool="zoomer">
-                <span class="tool-card-title">Zoomer</span>
+                <span class="tool-card-title">🔎 Zoomer</span>
                 <span class="toggle-icon">▾</span>
             </div>
             <div class="tool-card-body">
                 <div class="tool-label">Quick Scale</div>
                 <div class="tool-grid-2x2">
-                    <button id="btn-z5" class="btn btn-tool" title="Incrementa la escala de las capas seleccionadas en 5%">+5%</button>
-                    <button id="btn-z10" class="btn btn-tool" title="Incrementa la escala de las capas seleccionadas en 10%">+10%</button>
-                    <button id="btn-z20" class="btn btn-tool" title="Incrementa la escala de las capas seleccionadas en 20%">+20%</button>
-                    <button id="btn-z30" class="btn btn-tool" title="Incrementa la escala de las capas seleccionadas en 30%">+30%</button>
+                    <button id="btn-z5"  class="btn btn-tool" title="+5% escala">+5%</button>
+                    <button id="btn-z10" class="btn btn-tool" title="+10% escala">+10%</button>
+                    <button id="btn-z20" class="btn btn-tool" title="+20% escala">+20%</button>
+                    <button id="btn-z30" class="btn btn-tool" title="+30% escala">+30%</button>
                 </div>
                 <div class="tool-label">Zoom to Corner</div>
                 <div class="tool-grid-2x2">
-                    <button id="btn-ztl" class="btn btn-tool" title="Zoom animado hacia la esquina superior izquierda">↖ TL</button>
-                    <button id="btn-ztr" class="btn btn-tool" title="Zoom animado hacia la esquina superior derecha">TR ↗</button>
-                    <button id="btn-zbl" class="btn btn-tool" title="Zoom animado hacia la esquina inferior izquierda">↙ BL</button>
-                    <button id="btn-zbr" class="btn btn-tool" title="Zoom animado hacia la esquina inferior derecha">BR ↘</button>
+                    <button id="btn-ztl" class="btn btn-tool" title="Top Left">↖ TL</button>
+                    <button id="btn-ztr" class="btn btn-tool" title="Top Right">TR ↗</button>
+                    <button id="btn-zbl" class="btn btn-tool" title="Bottom Left">↙ BL</button>
+                    <button id="btn-zbr" class="btn btn-tool" title="Bottom Right">BR ↘</button>
                 </div>
                 <div class="tool-inline-row">
-                    <label>Dur</label><input type="number" id="zoom-dur" class="tool-input" value="20" title="Duración de la animación de zoom en frames">
-                    <label>Zoom%</label><input type="number" id="zoom-pct" class="tool-input" value="130" title="Porcentaje de zoom final (ej: 130 = 130% del tamaño original)">
+                    <label>Dur</label><input type="number" id="zoom-dur" class="tool-input" value="20" title="Frames">
+                    <label>Zoom%</label><input type="number" id="zoom-pct" class="tool-input" value="130">
                 </div>
             </div>
         </div>
 
-        <!-- 3. HIGHLIGHTER (starts expanded) -->
+        <!-- 3. HIGHLIGHTER -->
         <div class="tool-card">
             <div class="tool-card-header" data-tool="highlighter">
-                <span class="tool-card-title">Highlighter</span>
-                <span class="toggle-icon">▾</span>
+                <span class="tool-card-title">✨ Highlighter</span>
+                <span class="toggle-icon">▸</span>
             </div>
-            <div class="tool-card-body">
+            <div class="tool-card-body hidden">
                 <div class="tool-row">
-                    <button id="btn-hl-create" class="btn btn-tool" title="Crea una capa de forma tipo resaltador (highlight) en la composición activa">Create</button>
-                    <button id="btn-hl-flip" class="btn btn-tool" title="Voltea horizontalmente la capa seleccionada (espejo)">↔ Flip</button>
+                    <button id="btn-hl-create" class="btn btn-tool" title="Crear highlighter">Create</button>
+                    <button id="btn-hl-flip"   class="btn btn-tool" title="Flip horizontal">↔ Flip</button>
                 </div>
                 <div class="tool-label">Animate</div>
                 <div class="tool-row">
-                    <button id="btn-hl-in" class="btn btn-tool" title="Anima la aparición del highlight desde 0 hasta su longitud completa">▶ In</button>
-                    <button id="btn-hl-out" class="btn btn-tool" title="Anima la desaparición del highlight desde su longitud completa hasta 0">◀ Out</button>
-                    <button id="btn-hl-inout" class="btn btn-tool" title="Anima la aparición al inicio y la desaparición al final de la capa">◀▶ In/Out</button>
+                    <button id="btn-hl-in"    class="btn btn-tool">▶ In</button>
+                    <button id="btn-hl-out"   class="btn btn-tool">◀ Out</button>
+                    <button id="btn-hl-inout" class="btn btn-tool">◀▶ In/Out</button>
                 </div>
             </div>
         </div>
 
-        <!-- 4. SOLID CREATOR (starts expanded) -->
+        <!-- 4. SOLID CREATOR -->
         <div class="tool-card">
             <div class="tool-card-header" data-tool="solid">
-                <span class="tool-card-title">Solid Creator</span>
-                <span class="toggle-icon">▾</span>
+                <span class="tool-card-title">◻️ Solid Creator</span>
+                <span class="toggle-icon">▸</span>
             </div>
-            <div class="tool-card-body">
+            <div class="tool-card-body hidden">
                 <div class="tool-grid-2x2">
-                    <button id="btn-sol-left" class="btn btn-tool" title="Crea un sólido mitad izquierda, o mueve la capa seleccionada al 50% derecho. Shift+Clic para animar">◀ Left</button>
-                    <button id="btn-sol-right" class="btn btn-tool" title="Crea un sólido mitad derecha, o mueve la capa seleccionada al 50% izquierdo. Shift+Clic para animar">Right ▶</button>
-                    <button id="btn-sol-top" class="btn btn-tool" title="Crea un sólido mitad superior, o mueve la capa al 50% inferior. Shift+Clic para animar">▲ Up</button>
-                    <button id="btn-sol-bottom" class="btn btn-tool" title="Crea un sólido mitad inferior, o mueve la capa al 50% superior. Shift+Clic para animar">Down ▼</button>
+                    <button id="btn-sol-left"   class="btn btn-tool" title="Shift+Clic anima">◀ Left</button>
+                    <button id="btn-sol-right"  class="btn btn-tool" title="Shift+Clic anima">Right ▶</button>
+                    <button id="btn-sol-top"    class="btn btn-tool" title="Shift+Clic anima">▲ Up</button>
+                    <button id="btn-sol-bottom" class="btn btn-tool" title="Shift+Clic anima">Down ▼</button>
                 </div>
                 <div class="tool-inline-row">
-                    <label>Dur</label><input type="number" id="solid-dur" class="tool-input" value="20" title="Duración de la animación en frames">
+                    <label>Dur</label><input type="number" id="solid-dur" class="tool-input" value="20">
                     <label>frames</label>
-                    <label class="tool-checkbox" title="Si está activo, el movimiento se anima. También puedes usar Shift+Clic"><input type="checkbox" id="solid-animate"> Animate</label>
+                    <label class="tool-checkbox"><input type="checkbox" id="solid-animate"> Animate</label>
                 </div>
-                <button id="btn-sol-mask-in" class="btn btn-tool btn-full" title="Anima la máscara desde fuera de pantalla hacia su posición final (basado en el nombre de la capa). Shift+Clic para forzar animación">▶ Animate Mask In</button>
+                <button id="btn-sol-mask-in" class="btn btn-tool btn-full">▶ Animate Mask In</button>
             </div>
         </div>
 
-        <!-- 5. MINI PROFESOR (starts expanded) -->
+        <!-- 5. MINI PROFESOR -->
         <div class="tool-card">
             <div class="tool-card-header" data-tool="mini-prof">
-                <span class="tool-card-title">Mini Profesor</span>
-                <span class="toggle-icon">▾</span>
+                <span class="tool-card-title">👤 Mini Profesor</span>
+                <span class="toggle-icon">▸</span>
             </div>
-            <div class="tool-card-body">
+            <div class="tool-card-body hidden">
                 <div class="tool-inline-row">
-                    <label>X%</label><input type="number" id="mp-x" class="tool-input" value="35" title="Desplazamiento horizontal del mini profesor (% del tercio de la composición)">
-                    <label>Y%</label><input type="number" id="mp-y" class="tool-input" value="0" title="Desplazamiento vertical del mini profesor (% de la mitad de la composición)">
+                    <label>X%</label><input type="number" id="mp-x" class="tool-input" value="35">
+                    <label>Y%</label><input type="number" id="mp-y" class="tool-input" value="0">
                 </div>
                 <div class="tool-row">
-                    <button id="btn-mp-left" class="btn btn-tool" title="Mini profesor en el tercio izquierdo con matte redondeado. Shift+Clic para animar">◀ Left</button>
-                    <button id="btn-mp-right" class="btn btn-tool" title="Mini profesor en el tercio derecho con matte redondeado. Shift+Clic para animar">Right ▶</button>
+                    <button id="btn-mp-left"  class="btn btn-tool" title="Shift+Clic anima">◀ Left</button>
+                    <button id="btn-mp-right" class="btn btn-tool" title="Shift+Clic anima">Right ▶</button>
                 </div>
-                <label class="tool-checkbox" title="Si está activo, la transición se anima desde pantalla completa. También puedes usar Shift+Clic"><input type="checkbox" id="mp-animate"> Animate</label>
+                <label class="tool-checkbox"><input type="checkbox" id="mp-animate"> Animate</label>
             </div>
         </div>
 
-        <!-- 6. CORNER PROFESOR (starts expanded) -->
+        <!-- 6. CORNER PROFESOR -->
         <div class="tool-card">
             <div class="tool-card-header" data-tool="corner-prof">
-                <span class="tool-card-title">Corner Profesor</span>
-                <span class="toggle-icon">▾</span>
+                <span class="tool-card-title">📐 Corner Profesor</span>
+                <span class="toggle-icon">▸</span>
             </div>
-            <div class="tool-card-body">
-                <label class="tool-checkbox" title="Usa forma circular en vez de rectángulo redondeado para el matte"><input type="checkbox" id="cp-circular"> Circular</label>
+            <div class="tool-card-body hidden">
+                <label class="tool-checkbox"><input type="checkbox" id="cp-circular"> Circular</label>
                 <div class="tool-grid-2x2">
-                    <button id="btn-cp-tl" class="btn btn-tool" title="Profesor en esquina superior izquierda. Shift+Clic para animar">↖ TL</button>
-                    <button id="btn-cp-tr" class="btn btn-tool" title="Profesor en esquina superior derecha. Shift+Clic para animar">TR ↗</button>
-                    <button id="btn-cp-bl" class="btn btn-tool" title="Profesor en esquina inferior izquierda. Shift+Clic para animar">↙ BL</button>
-                    <button id="btn-cp-br" class="btn btn-tool" title="Profesor en esquina inferior derecha. Shift+Clic para animar">BR ↘</button>
+                    <button id="btn-cp-tl" class="btn btn-tool" title="Shift+Clic anima">↖ TL</button>
+                    <button id="btn-cp-tr" class="btn btn-tool" title="Shift+Clic anima">TR ↗</button>
+                    <button id="btn-cp-bl" class="btn btn-tool" title="Shift+Clic anima">↙ BL</button>
+                    <button id="btn-cp-br" class="btn btn-tool" title="Shift+Clic anima">BR ↘</button>
                 </div>
                 <div class="tool-inline-row">
-                    <label>Dur</label><input type="number" id="cp-dur" class="tool-input" value="20" title="Duración de la animación de transición en frames">
-                    <label>Size</label><input type="number" id="cp-size" class="tool-input" value="600" title="Tamaño del recuadro en píxeles (se escala según resolución)">
+                    <label>Dur</label><input type="number" id="cp-dur"  class="tool-input" value="20">
+                    <label>Size</label><input type="number" id="cp-size" class="tool-input" value="600">
                     <label>px</label>
                 </div>
-                <label class="tool-checkbox" title="Transición animada desde pantalla completa a la esquina. También puedes usar Shift+Clic"><input type="checkbox" id="cp-animate"> Animate</label>
+                <label class="tool-checkbox"><input type="checkbox" id="cp-animate"> Animate</label>
             </div>
         </div>
 
@@ -253,7 +262,14 @@
     <!-- Toast -->
     <div id="toast" class="toast"></div>
 
-    <!-- Scripts -->
+    <!-- Version badge + update -->
+    <div class="version-bar">
+        <button id="btn-update" class="version-update-btn" title="Verificar actualización">
+            <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M1.5 6A4.5 4.5 0 1 1 3 9.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M1 4.5V7.5H4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <span id="version-badge" class="version-badge">v1.0.0</span>
+    </div>
+
     <script src="js/CSInterface.js"></script>
     <script src="js/spellcheck-engine.js"></script>
     <script src="js/context-rules.js"></script>
