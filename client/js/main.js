@@ -1024,11 +1024,12 @@
             var ei = document.getElementById("ease-in").value;
             var style = document.getElementById("sel-line-style").value;
             var glow = document.getElementById("chk-line-glow").checked;
+            var shift = e.shiftKey, alt = e.altKey;
             csInterface.evalScript("pcCreateLineHighlighter('" + style + "', " + glow + ")", function(res) {
                 try { if (JSON.parse(res).error) { showToast(JSON.parse(res).error,"error"); return; } } catch(x){}
-                if (e.shiftKey && (e.altKey)) { callHost("pcLineHighlighterAnimate(\"out\","+eo+","+ei+")"); }
-                else if (e.altKey) { callHost("pcLineHighlighterAnimate(\"in\","+eo+","+ei+")"); }
-                else if (e.shiftKey) { callHost("pcLineHighlighterAnimate(\"inout\","+eo+","+ei+")"); }
+                if (shift && alt) { callHost("pcLineHighlighterAnimate(\"out\","+eo+","+ei+")"); }
+                else if (alt) { callHost("pcLineHighlighterAnimate(\"in\","+eo+","+ei+")"); }
+                else if (shift) { callHost("pcLineHighlighterAnimate(\"inout\","+eo+","+ei+")"); }
             });
         });
         on("chk-line-glow",         "change", function() { callHost("pcLineHighlighterToggleGlow(" + this.checked + ")"); });

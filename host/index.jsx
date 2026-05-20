@@ -417,9 +417,9 @@ function pcCreateLineHighlighter(style, enableGlow) {
         // Style-specific controls
         if (style === "chalk") {
             var chalkBorderCtrl = fxs.addProperty("ADBE Slider Control"); chalkBorderCtrl.name = "Chalk Border";
-            chalkBorderCtrl.property("Slider").setValue(4);
+            chalkBorderCtrl.property("Slider").setValue(6);
             var chalkScaleCtrl = fxs.addProperty("ADBE Slider Control"); chalkScaleCtrl.name = "Chalk Scale";
-            chalkScaleCtrl.property("Slider").setValue(10);
+            chalkScaleCtrl.property("Slider").setValue(12);
         } else if (style === "thunder") {
             var thunAmtCtrl = fxs.addProperty("ADBE Slider Control"); thunAmtCtrl.name = "Thunder Amount";
             thunAmtCtrl.property("Slider").setValue(3);
@@ -492,14 +492,23 @@ function pcCreateLineHighlighter(style, enableGlow) {
             var chalkWiggle = grpContents.addProperty("ADBE Vector Filter - Roughen");
             try { chalkWiggle.property("ADBE Vector Roughen Size").expression = "effect(\"Chalk Border\")(\"Slider\")"; } catch(ex) {}
             try { chalkWiggle.property("ADBE Vector Roughen Detail").expression = "effect(\"Chalk Scale\")(\"Slider\")"; } catch(ex) {}
-            try { chalkWiggle.property("ADBE Vector Roughen Points").setValue(2); } catch(ex) {} // Smooth
+            // Try multiple matchNames for Points type (Smooth=2)
+            try { chalkWiggle.property("ADBE Vector Roughen Type").setValue(2); } catch(ex) {
+                try { chalkWiggle.property("Points").setValue(2); } catch(ex2) {
+                    try { chalkWiggle.property(3).setValue(2); } catch(ex3) {}
+                }
+            }
             try { chalkWiggle.property("ADBE Vector Temporal Freq").setValue(0); } catch(ex) {} // Static
 
             // Micro wiggle: fine grain texture
             var chalkMicro = grpContents.addProperty("ADBE Vector Filter - Roughen");
-            try { chalkMicro.property("ADBE Vector Roughen Size").setValue(1.5); } catch(ex) {}
+            try { chalkMicro.property("ADBE Vector Roughen Size").setValue(2); } catch(ex) {}
             try { chalkMicro.property("ADBE Vector Roughen Detail").setValue(15); } catch(ex) {}
-            try { chalkMicro.property("ADBE Vector Roughen Points").setValue(2); } catch(ex) {} // Smooth
+            try { chalkMicro.property("ADBE Vector Roughen Type").setValue(2); } catch(ex) {
+                try { chalkMicro.property("Points").setValue(2); } catch(ex2) {
+                    try { chalkMicro.property(3).setValue(2); } catch(ex3) {}
+                }
+            }
             try { chalkMicro.property("ADBE Vector Temporal Freq").setValue(0.3); } catch(ex) {} // Subtle vibration
         }
 
