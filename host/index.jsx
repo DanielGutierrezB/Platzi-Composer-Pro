@@ -495,36 +495,39 @@ function pcCreateZoomFocus(blurAmount, scaleFactor) {
         app.beginUndoGroup("Create Zoom Focus");
         var comp = s.comp, original = s.layers[0];
 
+        // 1. Duplicate the selected layer (appears above original)
         var dup = original.duplicate();
         dup.name = "ZoomFocus_" + original.name;
 
-        var sf = scaleFactor || 120;
-        dup.property("Transform").property("Scale").setValue([sf, sf]);
-
-        var adj = comp.layers.addSolid([0, 0, 0], "ZoomFocus_Blur", comp.width, comp.height, 1);
-        adj.adjustmentLayer = true;
-        adj.moveAfter(original);
-        adj.inPoint = original.inPoint;
-        adj.outPoint = original.outPoint;
-
-        var blur = adj.property("Effects").addProperty("ADBE Gaussian Blur 2");
+        // 2. Apply Gaussian Blur to the ORIGINAL (bottom) layer
+        var blur = original.property("Effects").addProperty("ADBE Gaussian Blur 2");
         var ba = blurAmount || 15;
         blur.property("Blurriness").setValue(ba);
-        try { blur.property("Repeat Edge Pixels").setValue(1); } catch(_){}
+        try { blur.property("Repeat Edge Pixels").setValue(1); } catch(e) {}
 
+        // 3. Scale up the DUPLICATE (top) layer — no blur on this one
+        var sf = scaleFactor || 130;
+        dup.property("Transform").property("Scale").setValue([sf, sf]);
+
+        // 4. Animate: blur fades in, scale grows (over 20 frames)
         var fps = comp.frameRate;
         var dur = 20 / fps;
-        var blurProp = blur.property("Blurriness");
-        blurProp.setValueAtTime(adj.inPoint, 0);
-        blurProp.setValueAtTime(adj.inPoint + dur, ba);
-        blurProp.setValueAtTime(adj.outPoint - dur, ba);
-        blurProp.setValueAtTime(adj.outPoint, 0);
+        var inPt = dup.inPoint;
+        var outPt = dup.outPoint;
 
+        // Animate blur on original: 0 → blurAmount
+        var blurProp = blur.property("Blurriness");
+        blurProp.setValueAtTime(inPt, 0);
+        blurProp.setValueAtTime(inPt + dur, ba);
+        blurProp.setValueAtTime(outPt - dur, ba);
+        blurProp.setValueAtTime(outPt, 0);
+
+        // Animate scale on duplicate: 100% → scaleFactor%
         var scaleProp = dup.property("Transform").property("Scale");
-        scaleProp.setValueAtTime(dup.inPoint, [100, 100]);
-        scaleProp.setValueAtTime(dup.inPoint + dur, [sf, sf]);
-        scaleProp.setValueAtTime(dup.outPoint - dur, [sf, sf]);
-        scaleProp.setValueAtTime(dup.outPoint, [100, 100]);
+        scaleProp.setValueAtTime(inPt, [100, 100]);
+        scaleProp.setValueAtTime(inPt + dur, [sf, sf]);
+        scaleProp.setValueAtTime(outPt - dur, [sf, sf]);
+        scaleProp.setValueAtTime(outPt, [100, 100]);
 
         app.endUndoGroup();
         return JSON.stringify({ success: true });
