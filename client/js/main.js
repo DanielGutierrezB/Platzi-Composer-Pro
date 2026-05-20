@@ -1007,11 +1007,38 @@
         }
 
         // Highlighter — Create per type (modifiers trigger animation)
-        on("btn-hl-create",         "click", function(e) { hlCreateWithModifiers("pcCreateHighlighter()",     "pcHighlighterAnimate",     e); });
+        document.getElementById("btn-hl-create").addEventListener("click", function(e) {
+            var eo = document.getElementById("ease-out").value;
+            var ei = document.getElementById("ease-in").value;
+            csInterface.evalScript("pcCreateHighlighter()", function(res) {
+                try { if (JSON.parse(res).error) { showToast(JSON.parse(res).error,"error"); return; } } catch(x){}
+                if (e.shiftKey && (e.ctrlKey || e.metaKey)) { callHost("pcHighlighterAnimate(\"out\","+eo+","+ei+")"); }
+                else if (e.ctrlKey || e.metaKey) { callHost("pcHighlighterAnimate(\"in\","+eo+","+ei+")"); }
+                else if (e.shiftKey) { callHost("pcHighlighterAnimate(\"inout\","+eo+","+ei+")"); }
+            });
+        });
         on("btn-hl-flip",           "click", function()  { callHost("pcFlipHorizontal()"); });
-        on("btn-line-create",       "click", function(e) { hlCreateWithModifiers("pcCreateLineHighlighter()", "pcLineHighlighterAnimate", e); });
+        document.getElementById("btn-line-create").addEventListener("click", function(e) {
+            var eo = document.getElementById("ease-out").value;
+            var ei = document.getElementById("ease-in").value;
+            csInterface.evalScript("pcCreateLineHighlighter()", function(res) {
+                try { if (JSON.parse(res).error) { showToast(JSON.parse(res).error,"error"); return; } } catch(x){}
+                if (e.shiftKey && (e.ctrlKey || e.metaKey)) { callHost("pcLineHighlighterAnimate(\"out\","+eo+","+ei+")"); }
+                else if (e.ctrlKey || e.metaKey) { callHost("pcLineHighlighterAnimate(\"in\","+eo+","+ei+")"); }
+                else if (e.shiftKey) { callHost("pcLineHighlighterAnimate(\"inout\","+eo+","+ei+")"); }
+            });
+        });
         on("chk-line-glow",         "change", function() { callHost("pcLineHighlighterToggleGlow(" + this.checked + ")"); });
-        on("btn-focus-create",      "click", function(e) { hlCreateWithModifiers("pcCreateFocusMask()",       "pcFocusMaskAnimate",       e); });
+        document.getElementById("btn-focus-create").addEventListener("click", function(e) {
+            var eo = document.getElementById("ease-out").value;
+            var ei = document.getElementById("ease-in").value;
+            csInterface.evalScript("pcCreateFocusMask()", function(res) {
+                try { if (JSON.parse(res).error) { showToast(JSON.parse(res).error,"error"); return; } } catch(x){}
+                if (e.shiftKey && (e.ctrlKey || e.metaKey)) { callHost("pcFocusMaskAnimate(\"out\","+eo+","+ei+")"); }
+                else if (e.ctrlKey || e.metaKey) { callHost("pcFocusMaskAnimate(\"in\","+eo+","+ei+")"); }
+                else if (e.shiftKey) { callHost("pcFocusMaskAnimate(\"inout\","+eo+","+ei+")"); }
+            });
+        });
         on("btn-zoom-focus-create", "click", function()  { callHost("pcCreateZoomFocus(15, 150)"); });
 
         // Universal animate — routes based on selected layer name

@@ -496,13 +496,11 @@ function pcCreateZoomFocus(blurAmount, scaleFactor) {
         var comp = s.comp, original = s.layers[0];
         var ba = blurAmount || 15;
         var sf = scaleFactor || 150;
-
         var masks = original.property("Masks");
         if (!masks || masks.numProperties === 0) {
             app.endUndoGroup();
-            return JSON.stringify({ error: "Dibuja una máscara rectangular sobre el área que quieres enfocar, luego presiona Create." });
+            return JSON.stringify({ error: "Dibuja una máscara rectangular sobre el área a enfocar, luego presiona Create." });
         }
-
         var maskShapeVal = masks.property(1).property("maskShape").value;
         var verts = maskShapeVal.vertices;
         var minX = verts[0][0], maxX = verts[0][0], minY = verts[0][1], maxY = verts[0][1];
@@ -514,61 +512,45 @@ function pcCreateZoomFocus(blurAmount, scaleFactor) {
         }
         var maskCenterX = (minX + maxX) / 2;
         var maskCenterY = (minY + maxY) / 2;
-
         var compCenterX = comp.width / 2;
         var compCenterY = comp.height / 2;
-
-        // Duplicate first (duplicate inherits the mask)
         var dup = original.duplicate();
         dup.name = "ZoomFocus_" + original.name;
-
-        // Remove mask from original (bottom = full frame + blur)
         original.property("Masks").property(1).remove();
-
         var blur = original.property("Effects").addProperty("ADBE Gaussian Blur 2");
         blur.property("Blurriness").setValue(ba);
         try { blur.property("Repeat Edge Pixels").setValue(1); } catch(e) {}
-
         var posVal = dup.property("Transform").property("Position").value;
         var anchorVal = dup.property("Transform").property("Anchor Point").value;
-
         var maskCompX = posVal[0] - anchorVal[0] + maskCenterX;
         var maskCompY = posVal[1] - anchorVal[1] + maskCenterY;
-        var offsetX = compCenterX - maskCompX;
-        var offsetY = compCenterY - maskCompY;
-        var targetPos = [posVal[0] + offsetX, posVal[1] + offsetY];
-
+        var targetPos = [posVal[0] + (compCenterX - maskCompX), posVal[1] + (compCenterY - maskCompY)];
         var fps = comp.frameRate;
         var dur = 20 / fps;
         var inPt = dup.inPoint;
         var outPt = dup.outPoint;
-
         var posProp = dup.property("Transform").property("Position");
         posProp.setValueAtTime(inPt, posVal);
         posProp.setValueAtTime(inPt + dur, targetPos);
         posProp.setValueAtTime(outPt - dur, targetPos);
         posProp.setValueAtTime(outPt, posVal);
-
         var scaleProp = dup.property("Transform").property("Scale");
         var origScale = scaleProp.value;
         scaleProp.setValueAtTime(inPt, origScale);
         scaleProp.setValueAtTime(inPt + dur, [sf, sf]);
         scaleProp.setValueAtTime(outPt - dur, [sf, sf]);
         scaleProp.setValueAtTime(outPt, origScale);
-
         var blurProp = blur.property("Blurriness");
         blurProp.setValueAtTime(inPt, 0);
         blurProp.setValueAtTime(inPt + dur, ba);
         blurProp.setValueAtTime(outPt - dur, ba);
         blurProp.setValueAtTime(outPt, 0);
-
         var kIn = new KeyframeEase(0, 75), kOut = new KeyframeEase(0, 75);
         for (var k = 1; k <= 4; k++) {
-            try { posProp.setTemporalEaseAtKey(k, [kIn, kIn], [kOut, kOut]); } catch(e) {}
-            try { scaleProp.setTemporalEaseAtKey(k, [kIn, kIn], [kOut, kOut]); } catch(e) {}
-            try { blurProp.setTemporalEaseAtKey(k, [kIn], [kOut]); } catch(e) {}
+            try { posProp.setTemporalEaseAtKey(k, [kIn, kIn], [kOut, kOut]); } catch(ex) {}
+            try { scaleProp.setTemporalEaseAtKey(k, [kIn, kIn], [kOut, kOut]); } catch(ex) {}
+            try { blurProp.setTemporalEaseAtKey(k, [kIn], [kOut]); } catch(ex) {}
         }
-
         app.endUndoGroup();
         return JSON.stringify({ success: true });
     } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
