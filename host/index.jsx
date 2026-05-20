@@ -636,13 +636,22 @@ function pcCreateHighlightBox(mode, easeOut, easeIn, enableGlow) {
                         boxes.push({ maskShape: rectShape, isPath: true });
                         break;
                     } else if (prop.matchName === "ADBE Vector Shape - Ellipse") {
-                        // Ellipse: store as bounding rect (path conversion is complex)
+                        // Ellipse: convert to bezier path (4 points with tangent handles)
                         var eSize = prop.property("ADBE Vector Ellipse Size").value;
                         var ePos = [0, 0];
                         try { ePos = prop.property("ADBE Vector Ellipse Position").value; } catch(ex) {}
                         var gPos3 = [0, 0];
                         try { gPos3 = grpItem.property("Transform").property("Position").value; } catch(ex) {}
-                        boxes.push({ centerX: ePos[0] + gPos3[0], centerY: ePos[1] + gPos3[1], boxW: eSize[0], boxH: eSize[1] });
+                        var ecx = ePos[0] + gPos3[0], ecy = ePos[1] + gPos3[1];
+                        var rx = eSize[0] / 2, ry = eSize[1] / 2;
+                        // Kappa: magic number for bezier circle approximation
+                        var k = 0.5522847498;
+                        var ellShape = new Shape();
+                        ellShape.vertices = [[ecx, ecy - ry], [ecx + rx, ecy], [ecx, ecy + ry], [ecx - rx, ecy]];
+                        ellShape.inTangents = [[-rx * k, 0], [0, -ry * k], [rx * k, 0], [0, ry * k]];
+                        ellShape.outTangents = [[rx * k, 0], [0, ry * k], [-rx * k, 0], [0, -ry * k]];
+                        ellShape.closed = true;
+                        boxes.push({ maskShape: ellShape, isPath: true });
                         break;
                     }
                 }
