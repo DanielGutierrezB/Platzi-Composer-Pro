@@ -1010,6 +1010,11 @@ html, body {
     font-size: 16px;
     line-height: 1;
 }
+.th-svg {
+    width: 18px;
+    height: 18px;
+    color: currentColor;
+}
 .th-label {
     font-size: 9px;
     font-weight: 500;
