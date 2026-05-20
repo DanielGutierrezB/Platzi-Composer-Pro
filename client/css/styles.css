@@ -970,6 +970,15 @@ html, body {
     color: #000;
 }
 
+.has-update {
+    animation: pulse-update 1.5s infinite;
+    border-color: var(--accent, #0AE98A) !important;
+}
+@keyframes pulse-update {
+    0%, 100% { box-shadow: 0 0 4px rgba(10, 233, 138, 0.3); }
+    50% { box-shadow: 0 0 10px rgba(10, 233, 138, 0.7); }
+}
+
 /* ─── Responsive ─── */
 @media (max-width: 320px) {
     .global-ease-bar { flex-wrap: wrap; }

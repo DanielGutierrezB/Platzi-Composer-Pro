@@ -76,6 +76,28 @@
         bindColorPalette();
         refreshProviderUI();
         updateAIStatus();
+
+        // Check for updates on startup (non-blocking)
+        setTimeout(checkForUpdateOnStartup, 2000);
+    }
+
+    function checkForUpdateOnStartup() {
+        var xhr = new XMLHttpRequest();
+        xhr.open("GET", REMOTE_VERSION_URL + "?_=" + Date.now(), true);
+        xhr.timeout = 5000;
+        xhr.onload = function() {
+            if (xhr.status >= 200 && xhr.status < 300) {
+                var remote = (xhr.responseText || "").replace(/\s+/g, "");
+                if (remote && compareVersions(remote, LOCAL_VERSION) > 0) {
+                    showToast("⬆️ Actualizaci\u00F3n disponible: v" + remote + " (actual: v" + LOCAL_VERSION + ")", "info");
+                    var btn = document.getElementById("btn-update");
+                    if (btn) btn.classList.add("has-update");
+                }
+            }
+        };
+        xhr.onerror = function() {};
+        xhr.ontimeout = function() {};
+        try { xhr.send(); } catch(e) {}
     }
 
     function loadLocalVersion(extensionPath) {
