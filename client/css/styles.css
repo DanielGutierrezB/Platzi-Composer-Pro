@@ -575,6 +575,13 @@ html, body {
     opacity: 0.7;
 }
 
+.hl-hint {
+    font-size: 10px;
+    color: var(--text-muted);
+    padding: 4px 8px;
+    opacity: 0.7;
+}
+
 .toggle-label {
     display: inline-flex;
     align-items: center;

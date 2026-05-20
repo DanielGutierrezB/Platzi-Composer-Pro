@@ -982,13 +982,37 @@
             return (evt && evt.shiftKey) || (cb && cb.checked);
         }
 
-        // Highlighter — Create per type
-        on("btn-hl-create",         "click", function() { callHost("pcCreateHighlighter()"); });
-        on("btn-hl-flip",           "click", function() { callHost("pcFlipHorizontal()"); });
-        on("btn-line-create",       "click", function() { callHost("pcCreateLineHighlighter()"); });
+        // Shift+Click → In/Out · Ctrl+Click → In · Shift+Ctrl+Click → Out
+        function hlCreateWithModifiers(createFn, animFn, e) {
+            var eo = easeOut(), ei = easeIn();
+            logAction("callHost", createFn);
+            csInterface.evalScript(createFn, function(result) {
+                try {
+                    var d = JSON.parse(result);
+                    if (d.error) { showToast(d.error, "error"); return; }
+                } catch(ex) {
+                    showToast("Error: " + ex.message, "error");
+                    return;
+                }
+                var mode = null;
+                if (e.shiftKey && e.ctrlKey) mode = "out";
+                else if (e.ctrlKey) mode = "in";
+                else if (e.shiftKey) mode = "inout";
+                if (mode) {
+                    callHost(animFn + "(\"" + mode + "\"," + eo + "," + ei + ")");
+                } else {
+                    showToast("Listo", "success");
+                }
+            });
+        }
+
+        // Highlighter — Create per type (modifiers trigger animation)
+        on("btn-hl-create",         "click", function(e) { hlCreateWithModifiers("pcCreateHighlighter()",     "pcHighlighterAnimate",     e); });
+        on("btn-hl-flip",           "click", function()  { callHost("pcFlipHorizontal()"); });
+        on("btn-line-create",       "click", function(e) { hlCreateWithModifiers("pcCreateLineHighlighter()", "pcLineHighlighterAnimate", e); });
         on("chk-line-glow",         "change", function() { callHost("pcLineHighlighterToggleGlow(" + this.checked + ")"); });
-        on("btn-focus-create",      "click", function() { callHost("pcCreateFocusMask()"); });
-        on("btn-zoom-focus-create", "click", function() { callHost("pcCreateZoomFocus(15, 120)"); });
+        on("btn-focus-create",      "click", function(e) { hlCreateWithModifiers("pcCreateFocusMask()",       "pcFocusMaskAnimate",       e); });
+        on("btn-zoom-focus-create", "click", function()  { callHost("pcCreateZoomFocus(15, 150)"); });
 
         // Universal animate — routes based on selected layer name
         function animateHighlighter(mode) {
