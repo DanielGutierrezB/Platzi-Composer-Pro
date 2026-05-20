@@ -575,9 +575,14 @@ function pcCloneMirrorKeys() {
                 var lastTime = prop.keyTime(selKeys[selKeys.length - 1]);
                 for (var k = 0; k < selKeys.length; k++) {
                     var ki = selKeys[k];
+                    var eIn = null, eOut = null;
+                    try { eIn = prop.keyInTemporalEase(ki); } catch(ex) {}
+                    try { eOut = prop.keyOutTemporalEase(ki); } catch(ex) {}
                     keys.push({
                         time: prop.keyTime(ki),
-                        value: prop.keyValue(ki)
+                        value: prop.keyValue(ki),
+                        easeIn: eIn,
+                        easeOut: eOut
                     });
                 }
 
@@ -588,9 +593,14 @@ function pcCloneMirrorKeys() {
                     var mirroredTime = targetTime + (duration - originalOffset);
                     var newKey = prop.addKey(mirroredTime);
                     prop.setValueAtKey(newKey, keys[m].value);
-                    // Copy interpolation type
                     try {
                         prop.setInterpolationTypeAtKey(newKey, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+                    } catch(ex) {}
+                    // Mirror ease: swap in/out from original
+                    try {
+                        if (keys[m].easeOut && keys[m].easeIn) {
+                            prop.setTemporalEaseAtKey(newKey, keys[m].easeOut, keys[m].easeIn);
+                        }
                     } catch(ex) {}
                 }
                 mirrored++;
