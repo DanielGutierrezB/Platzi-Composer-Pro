@@ -1504,22 +1504,6 @@ function pcMiniProfesor(side, xPct, yPct, animate, easeOut, easeIn) {
             _pcSetUniformScale(target, _pcFitScaleToHeight(target, END_H));
         }
         try { target.trackMatteType = TrackMatteType.ALPHA; } catch(_){}
-
-        // Add IN/OUT markers on matte for visual reference
-        if (animate) {
-            var markerProp = matte.property("ADBE Marker");
-            var t0m = comp.time;
-            var t1m = t0m + (20.0 / comp.frameRate);
-            try {
-                var mvIn = new MarkerValue("IN");
-                markerProp.setValueAtTime(t0m, mvIn);
-            } catch(_){}
-            try {
-                var mvOut = new MarkerValue("OUT");
-                markerProp.setValueAtTime(target.outPoint - (20.0 / comp.frameRate), mvOut);
-            } catch(_){}
-        }
-
         app.endUndoGroup();
         return JSON.stringify({ success: true });
     } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
