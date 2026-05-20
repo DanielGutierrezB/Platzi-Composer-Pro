@@ -1032,7 +1032,7 @@
                 else if (shift) { callHost("pcLineHighlighterAnimate(\"inout\","+eo+","+ei+")"); }
             });
         });
-        on("chk-line-glow",         "change", function() { callHost("pcLineHighlighterToggleGlow(" + this.checked + ")"); });
+        // chk-line-glow: no change handler needed, value is read on Create click
         document.getElementById("btn-focus-create").addEventListener("click", function(e) {
             var eo = document.getElementById("ease-out").value;
             var ei = document.getElementById("ease-in").value;
