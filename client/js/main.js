@@ -1043,8 +1043,9 @@
             var blur = document.getElementById("zf-blur").value || 25;
             var sf = 150;
             var eo = document.getElementById("ease-out").value || 33;
-            var ei = document.getElementById("ease-in").value || 10;
-            callHost("pcCreateZoomFocus(" + blur + "," + sf + "," + eo + "," + ei + ")");
+            var ei = document.getElementById("ease-in").value || 100;
+            var noOut = document.getElementById("zf-no-out").checked ? 1 : 0;
+            callHost("pcCreateZoomFocus(" + blur + "," + sf + "," + eo + "," + ei + "," + noOut + ")");
         });
 
         // Universal animate — routes based on selected layer name
