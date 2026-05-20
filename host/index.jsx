@@ -485,7 +485,7 @@ function pcCreateLineHighlighter(style, enableGlow) {
 
         // Chalk style: Wiggle Paths with SMOOTH points (BEFORE Trim Paths)
         if (style === "chalk") {
-            thkCtrl.property("Slider").setValue(14);
+            thkCtrl.property("Slider").setValue(15);
             try { stroke.property("ADBE Vector Stroke Line Cap").setValue(2); } catch(ex) {}
 
             // Primary wiggle: organic bumpy edges
