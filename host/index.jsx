@@ -226,32 +226,25 @@ function pcCreateHighlighter() {
         layer.inPoint = comp.time;
         layer.outPoint = comp.time + 10;
         layer.property("Transform").property("Opacity").setValue(50);
-
-        var fxs = layer.property("Effects");
-        var tc = fxs.addProperty("ADBE Slider Control"); tc.name = "Thickness";
-        tc.property("Slider").setValue(100);
-        var lc = fxs.addProperty("ADBE Slider Control"); lc.name = "Length";
-        lc.property("Slider").setValue(400);
-
         layer.property("Transform").property("Anchor Point").setValue([0, 0]);
 
         var contents = layer.property("Contents");
         var rg = contents.addProperty("ADBE Vector Group"); rg.name = "HighlightLine";
         var rc = rg.property("Contents");
+
         var pathGrp = rc.addProperty("ADBE Vector Shape - Group");
         var lineShape = new Shape();
         lineShape.vertices = [[0, 0], [400, 0]];
         lineShape.closed = false;
         pathGrp.property("Path").setValue(lineShape);
-        try {
-            pathGrp.property("Path").expression =
-                "createPath([[0,0],[effect(\"Length\")(\"Slider\"),0]], [], [], false)";
-        } catch(ex) {
-            // createPath not available in this AE version, keep static path
-        }
+
         var stroke = rc.addProperty("ADBE Vector Graphic - Stroke");
         stroke.property("Color").setValue([1, 1, 0]);
-        stroke.property("Stroke Width").expression = "effect('Thickness')('Slider')";
+        stroke.property("Stroke Width").setValue(30);
+
+        var trim = rc.addProperty("ADBE Vector Filter - Trim");
+        trim.property("End").setValue(100);
+
         app.endUndoGroup();
         return JSON.stringify({ success: true });
     } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
@@ -277,31 +270,42 @@ function pcHighlighterAnimate(mode, easeOut, easeIn) {
     try {
         app.beginUndoGroup("Highlight " + mode);
         var comp = s.comp, layer = s.layers[0];
-        var nm = layer.name || "";
-        if (nm.indexOf("Highlight") === -1 && nm.indexOf("Line Highlight") === -1) {
-            app.endUndoGroup();
-            return JSON.stringify({ error: "La capa no es Stroke/Line Highlight." });
-        }
-        var prop = layer.property("Effects").property("Length").property("Slider");
-        var fullLen = prop.value, fps = comp.frameRate;
 
+        var contents = layer.property("Contents");
+        var trim = null;
+        for (var i = 1; i <= contents.numProperties; i++) {
+            var g = contents.property(i);
+            if (g.property && g.property("Contents")) {
+                var gc = g.property("Contents");
+                for (var j = 1; j <= gc.numProperties; j++) {
+                    if (gc.property(j).matchName === "ADBE Vector Filter - Trim") {
+                        trim = gc.property(j).property("End");
+                        break;
+                    }
+                }
+            }
+            if (trim) break;
+        }
+        if (!trim) { app.endUndoGroup(); return JSON.stringify({ error: "No se encontró Trim Paths." }); }
+
+        var fps = comp.frameRate;
         if (mode === "in") {
             var t0 = comp.time, t1 = t0 + (20 / fps);
-            prop.setValueAtTime(t0, 0); prop.setValueAtTime(t1, fullLen);
-            _pcApplyEaseScalar(prop, 1, 2, easeOut, easeIn);
+            trim.setValueAtTime(t0, 0); trim.setValueAtTime(t1, 100);
+            _pcApplyEaseScalar(trim, 1, 2, easeOut, easeIn);
         } else if (mode === "out") {
             var t0 = comp.time, t1 = t0 + (20 / fps);
-            prop.setValueAtTime(t0, fullLen); prop.setValueAtTime(t1, 0);
-            _pcApplyEaseScalar(prop, 1, 2, easeOut, easeIn);
+            trim.setValueAtTime(t0, 100); trim.setValueAtTime(t1, 0);
+            _pcApplyEaseScalar(trim, 1, 2, easeOut, easeIn);
         } else {
             var inPt = layer.inPoint, outPt = layer.outPoint;
             var dur = 20 / fps;
-            prop.setValueAtTime(inPt, 0);
-            prop.setValueAtTime(inPt + dur, fullLen);
-            prop.setValueAtTime(outPt - dur, fullLen);
-            prop.setValueAtTime(outPt, 0);
+            trim.setValueAtTime(inPt, 0);
+            trim.setValueAtTime(inPt + dur, 100);
+            trim.setValueAtTime(outPt - dur, 100);
+            trim.setValueAtTime(outPt, 0);
             var kIn = new KeyframeEase(0, easeIn), kOut = new KeyframeEase(0, easeOut);
-            for (var k = 1; k <= 4; k++) prop.setTemporalEaseAtKey(k, [kIn], [kOut]);
+            for (var k = 1; k <= 4; k++) trim.setTemporalEaseAtKey(k, [kIn], [kOut]);
         }
         app.endUndoGroup();
         return JSON.stringify({ success: true });
