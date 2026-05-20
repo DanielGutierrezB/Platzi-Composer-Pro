@@ -970,6 +970,28 @@ html, body {
     color: #000;
 }
 
+.th-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+    margin-bottom: 6px;
+}
+.btn-th {
+    padding: 5px 4px;
+    border-radius: 4px;
+    border: 1px solid var(--border, #444);
+    background: var(--bg-input, #2a2a2a);
+    color: var(--text-primary, #ddd);
+    font-size: 10px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+}
+.btn-th:hover {
+    background: var(--accent, #0AE98A);
+    border-color: var(--accent, #0AE98A);
+    color: #000;
+}
+
 .has-update {
     animation: pulse-update 1.5s infinite;
     border-color: var(--accent, #0AE98A) !important;

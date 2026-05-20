@@ -1613,22 +1613,17 @@ function pcCornerProfesor(corner, circular, durationFrames, sizePx, animate, eas
 
 // ─── TEXT HELPER ────────────────────────────────────────────────
 
-function pcTextHelper(animType, delayPerChar, enableGlow, easeOut, easeIn, applyToSelected) {
+function pcTextHelper(animType, delayPerChar, enableGlow, easeOut, easeIn) {
     var comp = _pcRequireComp();
     if (!comp) return JSON.stringify({ error: "No hay composici\u00f3n activa." });
     try {
         app.beginUndoGroup("Text Helper - " + animType);
         var textLayer;
 
-        if (applyToSelected) {
-            // Apply to existing selected text layer
-            var s = _pcRequireSelected();
-            if (!s) { app.endUndoGroup(); return JSON.stringify({ error: "Selecciona una capa de texto." }); }
-            textLayer = s.layers[0];
-            if (!(textLayer instanceof TextLayer)) {
-                app.endUndoGroup();
-                return JSON.stringify({ error: "La capa seleccionada no es texto." });
-            }
+        // Auto-detect: if a text layer is selected, apply to it; otherwise create new
+        var sel = comp.selectedLayers;
+        if (sel && sel.length > 0 && sel[0] instanceof TextLayer) {
+            textLayer = sel[0];
         } else {
             // Create new text layer
             textLayer = comp.layers.addText("Tu texto aqu\u00ed");

@@ -1165,19 +1165,18 @@
             });
         });
 
-        // Text Helper
-        on("btn-text-create", "click", function() {
-            var animType = document.getElementById("th-anim-type").value;
-            var delay = parseInt(document.getElementById("th-delay").value) || 2;
-            var glow = document.getElementById("th-glow").checked;
-            callHost("pcTextHelper('" + animType + "'," + delay + "," + glow + "," + easeOut() + "," + easeIn() + ",false)");
-        });
-        on("btn-text-apply", "click", function() {
-            var animType = document.getElementById("th-anim-type").value;
-            var delay = parseInt(document.getElementById("th-delay").value) || 2;
-            var glow = document.getElementById("th-glow").checked;
-            callHost("pcTextHelper('" + animType + "'," + delay + "," + glow + "," + easeOut() + "," + easeIn() + ",true)");
-        });
+        // Text Helper — each button is a type, auto-detects if text is selected
+        var thBtns = document.querySelectorAll(".btn-th");
+        for (var ti = 0; ti < thBtns.length; ti++) {
+            (function(btn) {
+                btn.addEventListener("click", function() {
+                    var animType = btn.getAttribute("data-anim");
+                    var delay = parseInt(document.getElementById("th-delay").value) || 2;
+                    var glow = document.getElementById("th-glow").checked;
+                    callHost("pcTextHelper('" + animType + "'," + delay + "," + glow + "," + easeOut() + "," + easeIn() + ")");
+                });
+            })(thBtns[ti]);
+        }
 
         // Annotations
         on("btn-ann-create", "click", function() {

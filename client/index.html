@@ -346,24 +346,18 @@
                 <span class="tool-card-title">✍️ Text Helper</span>
             </div>
             <div class="tool-card-body hidden">
-                <div class="hl-type-row">
-                    <select id="th-anim-type">
-                        <option value="typewriter">Typewriter</option>
-                        <option value="word-by-word">Word by Word</option>
-                        <option value="fade-up">Fade Up</option>
-                        <option value="scale-pop">Scale Pop</option>
-                        <option value="blur-reveal">Blur Reveal</option>
-                        <option value="slide-in">Slide In</option>
-                        <option value="bounce">Bounce</option>
-                    </select>
+                <div class="th-grid">
+                    <button class="btn-th" data-anim="typewriter">Typewriter</button>
+                    <button class="btn-th" data-anim="word-by-word">Word by Word</button>
+                    <button class="btn-th" data-anim="fade-up">Fade Up</button>
+                    <button class="btn-th" data-anim="scale-pop">Scale Pop</button>
+                    <button class="btn-th" data-anim="blur-reveal">Blur Reveal</button>
+                    <button class="btn-th" data-anim="slide-in">Slide In</button>
+                    <button class="btn-th" data-anim="bounce">Bounce</button>
                 </div>
                 <div class="hl-type-row">
-                    <label>Delay/char <input type="number" id="th-delay" value="2" min="1" max="20" step="1" class="num-input"></label>
+                    <label>Delay <input type="number" id="th-delay" value="2" min="1" max="20" step="1" class="num-input"></label>
                     <label class="toggle-label"><input type="checkbox" id="th-glow"> Glow</label>
-                </div>
-                <div class="hl-type-row">
-                    <button id="btn-text-create" class="btn-create">Create Text</button>
-                    <button id="btn-text-apply" class="btn-create" data-tooltip="Aplicar animación a texto seleccionado">Apply to Selected</button>
                 </div>
             </div>
         </div>
