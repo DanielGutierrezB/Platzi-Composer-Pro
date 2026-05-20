@@ -897,20 +897,10 @@
                 var remote = (xhr.responseText || "").replace(/\s+/g, "");
                 if (!remote) { location.reload(); return; }
                 if (compareVersions(remote, LOCAL_VERSION) > 0) {
-                    showToast("Nueva versión: v" + remote + " — Actualizando...", "info");
-                    csInterface.evalScript("runGitPull()", function(result) {
-                        try {
-                            var data = JSON.parse(result);
-                            if (data.error) {
-                                showToast("Error actualizando: " + data.error, "error");
-                                return;
-                            }
-                            location.reload();
-                        } catch(e) {
-                            location.reload();
-                        }
-                    });
+                    showToast("v" + remote + " disponible — descargando...", "info");
+                    _doGitHubUpdate(remote);
                 } else {
+                    showToast("Ya estás en la última versión ✓", "info");
                     location.reload();
                 }
             } else {
@@ -920,6 +910,166 @@
         xhr.onerror = function() { location.reload(); };
         xhr.ontimeout = function() { location.reload(); };
         try { xhr.send(); } catch(e) { location.reload(); }
+    }
+
+    // ─── GitHub Hybrid Updater (git pull → ZIP fallback) ─────────
+    function _doGitHubUpdate(remoteVersion) {
+        var fs, path, cp, https, os;
+        try {
+            fs = require("fs");
+            path = require("path");
+            cp = require("child_process");
+            https = require("https");
+            os = require("os");
+        } catch(e) {
+            showToast("Error: Node modules no disponibles", "error");
+            return;
+        }
+
+        var extPath = csInterface.getSystemPath(SystemPath.EXTENSION).replace(/^file:\/{0,3}/, "");
+        try { extPath = decodeURIComponent(extPath); } catch(_) {}
+
+        var gitDir = path.join(extPath, ".git");
+        var hasGit = fs.existsSync(gitDir);
+
+        if (hasGit) {
+            // Try git pull first
+            showToast("Git pull...", "info");
+            cp.execFile("git", ["pull", "--ff-only", "origin", "main"], 
+                { cwd: extPath, timeout: 60000 },
+                function(err, stdout, stderr) {
+                    if (err) {
+                        showToast("Git pull falló, intentando ZIP...", "info");
+                        _downloadZipUpdate(extPath, remoteVersion, fs, path, cp, https, os);
+                        return;
+                    }
+                    showToast("✅ Actualizado a v" + remoteVersion, "info");
+                    setTimeout(function() { location.reload(); }, 800);
+                }
+            );
+        } else {
+            _downloadZipUpdate(extPath, remoteVersion, fs, path, cp, https, os);
+        }
+    }
+
+    function _downloadZipUpdate(extPath, remoteVersion, fs, path, cp, https, os) {
+        var zipUrl = "https://api.github.com/repos/DanielGutierrezB/Platzi-Composer-Pro/zipball/main";
+        var zipPath = path.join(os.tmpdir(), "platzi-composer-update-" + Date.now() + ".zip");
+        var extractDir = path.join(os.tmpdir(), "platzi-composer-extract-" + Date.now());
+
+        showToast("Descargando update...", "info");
+
+        _httpsDownload(zipUrl, zipPath, https, function(dlErr) {
+            if (dlErr) {
+                showToast("Error descargando: " + dlErr.message, "error");
+                return;
+            }
+
+            showToast("Instalando...", "info");
+            try { fs.mkdirSync(extractDir, { recursive: true }); } catch(_) {}
+
+            // Extract ZIP
+            var isWin = process.platform === "win32";
+            var cmd, args;
+            if (isWin) {
+                cmd = "powershell";
+                args = ["-NoProfile", "-NonInteractive", "-Command",
+                    "Expand-Archive -LiteralPath '" + zipPath + "' -DestinationPath '" + extractDir + "' -Force"];
+            } else {
+                cmd = "unzip";
+                args = ["-q", zipPath, "-d", extractDir];
+            }
+
+            cp.execFile(cmd, args, { timeout: 120000 }, function(exErr) {
+                if (exErr) {
+                    showToast("Error extrayendo: " + exErr.message, "error");
+                    try { fs.unlinkSync(zipPath); } catch(_) {}
+                    return;
+                }
+
+                // Find extracted root folder
+                var entries = fs.readdirSync(extractDir);
+                var extractedRoot = null;
+                for (var i = 0; i < entries.length; i++) {
+                    var cand = path.join(extractDir, entries[i]);
+                    try {
+                        if (fs.statSync(cand).isDirectory()) { extractedRoot = cand; break; }
+                    } catch(_) {}
+                }
+
+                if (!extractedRoot) {
+                    showToast("Error: no se encontró carpeta en ZIP", "error");
+                    return;
+                }
+
+                // Copy files (skip .git, node_modules)
+                _copyDirSync(extractedRoot, extPath, "", fs, path);
+
+                // Cleanup
+                try { fs.unlinkSync(zipPath); } catch(_) {}
+                try { fs.rmSync(extractDir, { recursive: true, force: true }); } catch(_) {
+                    try { cp.execSync("rm -rf \"" + extractDir + "\""); } catch(_) {}
+                }
+
+                showToast("✅ Actualizado a v" + remoteVersion + " — recargando...", "info");
+                setTimeout(function() { location.reload(); }, 1000);
+            });
+        });
+    }
+
+    function _httpsDownload(url, destPath, https, callback, redirects) {
+        if (!redirects) redirects = 5;
+        var urlMod = require("url");
+        var fs = require("fs");
+        var parsed = urlMod.parse(url);
+        var httpMod = (parsed.protocol === "http:") ? require("http") : https;
+
+        var opts = {
+            hostname: parsed.hostname,
+            port: parsed.port || 443,
+            path: parsed.path,
+            method: "GET",
+            headers: { "User-Agent": "Platzi-Composer-Pro-Updater/1.0" },
+            timeout: 120000
+        };
+
+        var req = httpMod.request(opts, function(res) {
+            if ((res.statusCode === 301 || res.statusCode === 302) && res.headers.location && redirects > 0) {
+                return _httpsDownload(res.headers.location, destPath, https, callback, redirects - 1);
+            }
+            if (res.statusCode !== 200) {
+                return callback(new Error("HTTP " + res.statusCode));
+            }
+            var out = fs.createWriteStream(destPath);
+            res.pipe(out);
+            out.on("finish", function() { out.close(function() { callback(null); }); });
+            out.on("error", callback);
+            res.on("error", callback);
+        });
+        req.on("timeout", function() { req.destroy(); callback(new Error("Timeout")); });
+        req.on("error", callback);
+        req.end();
+    }
+
+    function _copyDirSync(src, dest, relBase, fs, path) {
+        var SKIP = [".git", "node_modules", ".DS_Store"];
+        var items;
+        try { items = fs.readdirSync(src); } catch(_) { return; }
+        for (var i = 0; i < items.length; i++) {
+            var item = items[i];
+            if (SKIP.indexOf(item) >= 0) continue;
+            var srcP = path.join(src, item);
+            var destP = path.join(dest, item);
+            var stat;
+            try { stat = fs.lstatSync(srcP); } catch(_) { continue; }
+            if (stat.isSymbolicLink()) continue;
+            if (stat.isDirectory()) {
+                try { if (!fs.existsSync(destP)) fs.mkdirSync(destP, { recursive: true }); } catch(_) {}
+                _copyDirSync(srcP, destP, relBase + "/" + item, fs, path);
+            } else {
+                try { fs.copyFileSync(srcP, destP); } catch(_) {}
+            }
+        }
     }
 
     // ─── UI helpers ──────────────────────────────────────────────
