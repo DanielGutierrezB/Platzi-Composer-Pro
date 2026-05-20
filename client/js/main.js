@@ -835,7 +835,7 @@
                 var remote = (xhr.responseText || "").replace(/\s+/g, "");
                 if (!remote) { location.reload(); return; }
                 if (compareVersions(remote, LOCAL_VERSION) > 0) {
-                    showToast("Nueva versión disponible: v" + remote + " — Actualizando...", "info");
+                    showToast("Nueva versión: v" + remote + " — Actualizando...", "info");
                     csInterface.evalScript("runGitPull()", function(result) {
                         try {
                             var data = JSON.parse(result);
