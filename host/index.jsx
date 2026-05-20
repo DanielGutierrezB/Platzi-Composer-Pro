@@ -486,7 +486,7 @@ function pcCreateLineHighlighter(style, enableGlow) {
         // Always add Glow effect (disabled if checkbox not checked)
         var glow = fxs.addProperty("ADBE Glo2");
         glow.name = "Line Glow";
-        try { glow.property("Glow Threshold").setValue(40); } catch(ex) {}
+        try { glow.property("Glow Threshold").setValue(62); } catch(ex) {}
         try { glow.property("Glow Radius").setValue(25); } catch(ex) {}
         try { glow.property("Glow Intensity").setValue(1.5); } catch(ex) {}
         glow.enabled = !!enableGlow;
@@ -522,7 +522,7 @@ function pcLineHighlighterToggleGlow(enable) {
             if (!existing) {
                 var glow = fxs.addProperty("ADBE Glo2");
                 glow.name = "Line Glow";
-                try { glow.property("Glow Threshold").setValue(40); } catch(ex) {}
+                try { glow.property("Glow Threshold").setValue(62); } catch(ex) {}
                 try { glow.property("Glow Radius").setValue(25); } catch(ex) {}
                 try { glow.property("Glow Intensity").setValue(1.5); } catch(ex) {}
             }
@@ -667,7 +667,7 @@ function pcCreateHighlightBox(mode, easeOut, easeIn, enableGlow) {
         // Glow (always present)
         var glow = fxs.addProperty("ADBE Glo2");
         glow.name = "Box Glow";
-        try { glow.property("Glow Threshold").setValue(40); } catch(ex) {}
+        try { glow.property("Glow Threshold").setValue(62); } catch(ex) {}
         try { glow.property("Glow Radius").setValue(20); } catch(ex) {}
         try { glow.property("Glow Intensity").setValue(1); } catch(ex) {}
         glow.enabled = !!enableGlow;
