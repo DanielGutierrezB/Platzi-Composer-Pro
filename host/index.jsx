@@ -702,6 +702,8 @@ function pcCreateHighlightBox(mode, easeOut, easeIn, enableGlow) {
             colorCtrl.property("Color").setValue([0.039, 0.914, 0.541]);
             var padCtrl = fxs.addProperty("ADBE Slider Control"); padCtrl.name = "Padding";
             padCtrl.property("Slider").setValue(10);
+            var roundCtrl = fxs.addProperty("ADBE Slider Control"); roundCtrl.name = "Roundness";
+            roundCtrl.property("Slider").setValue(0);
 
             // Position at box center
             if (isShapeMode) {
@@ -747,6 +749,10 @@ function pcCreateHighlightBox(mode, easeOut, easeIn, enableGlow) {
             stroke.property("Color").setValue([0.039, 0.914, 0.541]);
             try { stroke.property("Stroke Width").expression = "effect(\"Thickness\")(\"Slider\")"; } catch(ex) {}
             try { stroke.property("Color").expression = "effect(\"Color\")(\"Color\")"; } catch(ex) {}
+
+            // Round Corners operator
+            var rc = grpContents.addProperty("ADBE Vector Filter - RC");
+            try { rc.property("ADBE Vector RoundCorner Radius").expression = "effect(\"Roundness\")(\"Slider\")"; } catch(ex) {}
 
             var trim = grpContents.addProperty("ADBE Vector Filter - Trim");
             trim.property("End").setValue(100);
