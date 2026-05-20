@@ -1611,6 +1611,267 @@ function pcCornerProfesor(corner, circular, durationFrames, sizePx, animate, eas
     } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
 }
 
+// ─── TEXT HELPER ────────────────────────────────────────────────
+
+function pcTextHelper(animType, delayPerChar, enableGlow, easeOut, easeIn, applyToSelected) {
+    var comp = _pcRequireComp();
+    if (!comp) return JSON.stringify({ error: "No hay composici\u00f3n activa." });
+    try {
+        app.beginUndoGroup("Text Helper - " + animType);
+        var textLayer;
+
+        if (applyToSelected) {
+            // Apply to existing selected text layer
+            var s = _pcRequireSelected();
+            if (!s) { app.endUndoGroup(); return JSON.stringify({ error: "Selecciona una capa de texto." }); }
+            textLayer = s.layers[0];
+            if (!(textLayer instanceof TextLayer)) {
+                app.endUndoGroup();
+                return JSON.stringify({ error: "La capa seleccionada no es texto." });
+            }
+        } else {
+            // Create new text layer
+            textLayer = comp.layers.addText("Tu texto aqu\u00ed");
+            textLayer.property("Position").setValue([comp.width / 2, comp.height / 2]);
+            var textDoc = textLayer.property("ADBE Text Properties").property("ADBE Text Document").value;
+            textDoc.fontSize = 80;
+            textDoc.fillColor = [1, 1, 1];
+            textDoc.font = "Arial";
+            textDoc.justification = ParagraphJustification.CENTER_JUSTIFY;
+            textLayer.property("ADBE Text Properties").property("ADBE Text Document").setValue(textDoc);
+        }
+
+        // Access Text Animators
+        var textProp = textLayer.property("ADBE Text Properties");
+        var animators = textProp.property("ADBE Text Animators");
+
+        // Remove existing animators if applying to selected
+        if (applyToSelected) {
+            for (var a = animators.numProperties; a >= 1; a--) {
+                animators.property(a).remove();
+            }
+        }
+
+        // Add animator based on type
+        var animator = animators.addProperty("ADBE Text Animator");
+        animator.name = "PlatziAnim_" + animType;
+        var animProps = animator.property("ADBE Text Animator Properties");
+        var selectors = animator.property("ADBE Text Selectors");
+        var rangeSel = selectors.addProperty("ADBE Text Selector");
+        var advanced = rangeSel.property("ADBE Text Range Advanced");
+
+        // Set range selector to animate character by character
+        var rangeStart = rangeSel.property("ADBE Text Percent Start");
+        var rangeEnd = rangeSel.property("ADBE Text Percent End");
+
+        // Animation duration based on delay per char
+        var fps = comp.frameRate;
+        var t0 = comp.time;
+        // Get text length for timing
+        var srcText = textLayer.property("ADBE Text Properties").property("ADBE Text Document").value.text;
+        var totalDur = (srcText.length * delayPerChar) / fps;
+        var t1 = t0 + totalDur;
+
+        // Based on shape
+        try { advanced.property("ADBE Text Range Type2").setValue(2); } catch(ex) {} // Per character
+        if (animType === "word-by-word") {
+            try { advanced.property("ADBE Text Range Type2").setValue(3); } catch(ex) {} // Per word
+        }
+
+        // Animate Start from 0 to 100
+        var ks1 = rangeStart.addKey(t0); rangeStart.setValueAtKey(ks1, 0);
+        var ks2 = rangeStart.addKey(t1); rangeStart.setValueAtKey(ks2, 100);
+        try {
+            rangeStart.setInterpolationTypeAtKey(ks1, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+            rangeStart.setInterpolationTypeAtKey(ks2, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+            _pcApplyEaseScalar(rangeStart, ks1, ks2, easeOut, easeIn);
+        } catch(ex) {}
+
+        // Set animator properties based on animation type
+        if (animType === "typewriter" || animType === "word-by-word") {
+            var opacityProp = animProps.addProperty("ADBE Text Opacity");
+            opacityProp.setValue(0);
+        } else if (animType === "fade-up") {
+            var opacityProp2 = animProps.addProperty("ADBE Text Opacity");
+            opacityProp2.setValue(0);
+            var posProp = animProps.addProperty("ADBE Text Position");
+            posProp.setValue([0, 30, 0]);
+        } else if (animType === "scale-pop") {
+            var scaleProp = animProps.addProperty("ADBE Text Scale");
+            scaleProp.setValue([0, 0, 100]);
+        } else if (animType === "blur-reveal") {
+            var opacityProp3 = animProps.addProperty("ADBE Text Opacity");
+            opacityProp3.setValue(0);
+            var blurProp = animProps.addProperty("ADBE Text Blur");
+            blurProp.setValue(20);
+        } else if (animType === "slide-in") {
+            var posProp2 = animProps.addProperty("ADBE Text Position");
+            posProp2.setValue([-60, 0, 0]);
+            var opacityProp4 = animProps.addProperty("ADBE Text Opacity");
+            opacityProp4.setValue(0);
+        } else if (animType === "bounce") {
+            var posProp3 = animProps.addProperty("ADBE Text Position");
+            posProp3.setValue([0, -50, 0]);
+            var opacityProp5 = animProps.addProperty("ADBE Text Opacity");
+            opacityProp5.setValue(0);
+        }
+
+        // Add Effect Controls for editor adjustment
+        var fxs = textLayer.property("Effects");
+        var colorCtrl = fxs.addProperty("ADBE Color Control"); colorCtrl.name = "Text Color";
+        colorCtrl.property("Color").setValue([1, 1, 1]);
+
+        // Glow
+        if (enableGlow) {
+            var glow = fxs.addProperty("ADBE Glo2");
+            glow.name = "Text Glow";
+            try { glow.property("Glow Threshold").setValue(50); } catch(ex) {}
+            try { glow.property("Glow Radius").setValue(25); } catch(ex) {}
+            try { glow.property("Glow Intensity").setValue(1); } catch(ex) {}
+        }
+
+        // Link text color via expression
+        try {
+            textLayer.property("ADBE Text Properties").property("ADBE Text Document").expression =
+                "var c = thisLayer.effect(\"Text Color\")(\"Color\");" +
+                "var txt = value;" +
+                "txt.fillColor = c;" +
+                "txt;";
+        } catch(ex) {}
+
+        app.endUndoGroup();
+        return JSON.stringify({ success: true, type: animType });
+    } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
+}
+
+// ─── ANNOTATIONS ─────────────────────────────────────────────────
+
+function pcCreateAnnotation(annType, thickness, enableGlow, easeOut, easeIn) {
+    var comp = _pcRequireComp();
+    if (!comp) return JSON.stringify({ error: "No hay composici\u00f3n activa." });
+    try {
+        app.beginUndoGroup("Annotation - " + annType);
+        var layer = comp.layers.addShape();
+        layer.name = "Annotation_" + annType;
+
+        var fxs = layer.property("Effects");
+        var thkCtrl = fxs.addProperty("ADBE Slider Control"); thkCtrl.name = "Thickness";
+        thkCtrl.property("Slider").setValue(thickness);
+        var colorCtrl = fxs.addProperty("ADBE Color Control"); colorCtrl.name = "Color";
+        colorCtrl.property("Color").setValue([0.039, 0.914, 0.541]);
+
+        // Position at center
+        layer.property("Transform").property("Position").setValue([comp.width / 2, comp.height / 2]);
+
+        var contents = layer.property("Contents");
+        var grp = contents.addProperty("ADBE Vector Group"); grp.name = "AnnotGroup";
+        var grpContents = grp.property("Contents");
+
+        if (annType === "arrow") {
+            // Arrow: line + arrowhead
+            var path = grpContents.addProperty("ADBE Vector Shape - Group");
+            var pathData = new Shape();
+            pathData.vertices = [[-150, 0], [150, 0]];
+            pathData.closed = false;
+            path.property("Path").setValue(pathData);
+            var stroke = grpContents.addProperty("ADBE Vector Graphic - Stroke");
+            stroke.property("Color").setValue([0.039, 0.914, 0.541]);
+            try { stroke.property("Stroke Width").expression = "effect(\"Thickness\")(\"Slider\")"; } catch(ex) {}
+            try { stroke.property("Color").expression = "effect(\"Color\")(\"Color\")"; } catch(ex) {}
+            // Arrowhead group
+            var arrowGrp = contents.addProperty("ADBE Vector Group"); arrowGrp.name = "Arrowhead";
+            var arrowC = arrowGrp.property("Contents");
+            var arrowPath = arrowC.addProperty("ADBE Vector Shape - Group");
+            var ap = new Shape();
+            ap.vertices = [[120, -20], [150, 0], [120, 20]];
+            ap.closed = false;
+            arrowPath.property("Path").setValue(ap);
+            var arrowStroke = arrowC.addProperty("ADBE Vector Graphic - Stroke");
+            arrowStroke.property("Color").setValue([0.039, 0.914, 0.541]);
+            try { arrowStroke.property("Stroke Width").expression = "effect(\"Thickness\")(\"Slider\")"; } catch(ex) {}
+            try { arrowStroke.property("Color").expression = "effect(\"Color\")(\"Color\")"; } catch(ex) {}
+
+        } else if (annType === "circle") {
+            var ellipse = grpContents.addProperty("ADBE Vector Shape - Ellipse");
+            ellipse.property("ADBE Vector Ellipse Size").setValue([200, 200]);
+            var stroke2 = grpContents.addProperty("ADBE Vector Graphic - Stroke");
+            stroke2.property("Color").setValue([0.039, 0.914, 0.541]);
+            try { stroke2.property("Stroke Width").expression = "effect(\"Thickness\")(\"Slider\")"; } catch(ex) {}
+            try { stroke2.property("Color").expression = "effect(\"Color\")(\"Color\")"; } catch(ex) {}
+
+        } else if (annType === "callout") {
+            // Line + rectangle
+            var linePath = grpContents.addProperty("ADBE Vector Shape - Group");
+            var lp = new Shape();
+            lp.vertices = [[0, 0], [100, -80]];
+            lp.closed = false;
+            linePath.property("Path").setValue(lp);
+            var lineStroke = grpContents.addProperty("ADBE Vector Graphic - Stroke");
+            lineStroke.property("Color").setValue([0.039, 0.914, 0.541]);
+            try { lineStroke.property("Stroke Width").expression = "effect(\"Thickness\")(\"Slider\")"; } catch(ex) {}
+            try { lineStroke.property("Color").expression = "effect(\"Color\")(\"Color\")"; } catch(ex) {}
+            // Box
+            var boxGrp = contents.addProperty("ADBE Vector Group"); boxGrp.name = "CalloutBox";
+            var boxC = boxGrp.property("Contents");
+            var rect = boxC.addProperty("ADBE Vector Shape - Rect");
+            rect.property("ADBE Vector Rect Size").setValue([200, 60]);
+            rect.property("ADBE Vector Rect Roundness").setValue(8);
+            var boxStroke = boxC.addProperty("ADBE Vector Graphic - Stroke");
+            boxStroke.property("Color").setValue([0.039, 0.914, 0.541]);
+            try { boxStroke.property("Stroke Width").expression = "effect(\"Thickness\")(\"Slider\")"; } catch(ex) {}
+            try { boxStroke.property("Color").expression = "effect(\"Color\")(\"Color\")"; } catch(ex) {}
+            boxGrp.property("Transform").property("Position").setValue([200, -80]);
+
+        } else if (annType === "bracket") {
+            var bracketPath = grpContents.addProperty("ADBE Vector Shape - Group");
+            var bp = new Shape();
+            bp.vertices = [[-20, -100], [0, -100], [0, 100], [-20, 100]];
+            bp.closed = false;
+            bracketPath.property("Path").setValue(bp);
+            var bracketStroke = grpContents.addProperty("ADBE Vector Graphic - Stroke");
+            bracketStroke.property("Color").setValue([0.039, 0.914, 0.541]);
+            try { bracketStroke.property("Stroke Width").expression = "effect(\"Thickness\")(\"Slider\")"; } catch(ex) {}
+            try { bracketStroke.property("Color").expression = "effect(\"Color\")(\"Color\")"; } catch(ex) {}
+
+        } else if (annType === "underline") {
+            var ulPath = grpContents.addProperty("ADBE Vector Shape - Group");
+            var ulp = new Shape();
+            ulp.vertices = [[-150, 0], [150, 0]];
+            ulp.closed = false;
+            ulPath.property("Path").setValue(ulp);
+            var ulStroke = grpContents.addProperty("ADBE Vector Graphic - Stroke");
+            ulStroke.property("Color").setValue([0.039, 0.914, 0.541]);
+            try { ulStroke.property("Stroke Width").expression = "effect(\"Thickness\")(\"Slider\")"; } catch(ex) {}
+            try { ulStroke.property("Color").expression = "effect(\"Color\")(\"Color\")"; } catch(ex) {}
+        }
+
+        // Add Trim Paths for draw-on animation
+        var trim = grpContents.addProperty("ADBE Vector Filter - Trim");
+        var fps = comp.frameRate;
+        var dur = 20 / fps;
+        var t0 = comp.time, t1 = t0 + dur;
+        var te1 = trim.property("End").addKey(t0); trim.property("End").setValueAtKey(te1, 0);
+        var te2 = trim.property("End").addKey(t1); trim.property("End").setValueAtKey(te2, 100);
+        try { _pcApplyEaseScalar(trim.property("End"), te1, te2, easeOut, easeIn); } catch(ex) {}
+
+        // Flip Direction control
+        var flipCtrl = fxs.addProperty("ADBE Checkbox Control"); flipCtrl.name = "Flip Direction";
+        try { trim.property("ADBE Vector Trim Offset").expression = "effect(\"Flip Direction\")(\"Checkbox\") * 180"; } catch(ex) {}
+
+        // Glow
+        if (enableGlow) {
+            var glow = fxs.addProperty("ADBE Glo2");
+            glow.name = "Annotation Glow";
+            try { glow.property("Glow Threshold").setValue(158); } catch(ex) {}
+            try { glow.property("Glow Radius").setValue(20); } catch(ex) {}
+            try { glow.property("Glow Intensity").setValue(1); } catch(ex) {}
+        }
+
+        app.endUndoGroup();
+        return JSON.stringify({ success: true, type: annType });
+    } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
+}
+
 // ─── Save Log ────────────────────────────────────────────────────
 function saveLogToFile(jsonString) {
     try {

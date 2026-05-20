@@ -1185,6 +1185,31 @@
         document.getElementById("btn-mirror-keys").addEventListener("click", function() {
             callHost("pcCloneMirrorKeys()");
         });
+
+        // Text Helper
+        document.getElementById("btn-text-create").addEventListener("click", function() {
+            var animType = document.getElementById("th-anim-type").value;
+            var delay = parseInt(document.getElementById("th-delay").value) || 2;
+            var glow = document.getElementById("th-glow").checked;
+            var eo = getGlobalEaseOut(), ei = getGlobalEaseIn();
+            callHost("pcTextHelper('" + animType + "'," + delay + "," + glow + "," + eo + "," + ei + ",false)");
+        });
+        document.getElementById("btn-text-apply").addEventListener("click", function() {
+            var animType = document.getElementById("th-anim-type").value;
+            var delay = parseInt(document.getElementById("th-delay").value) || 2;
+            var glow = document.getElementById("th-glow").checked;
+            var eo = getGlobalEaseOut(), ei = getGlobalEaseIn();
+            callHost("pcTextHelper('" + animType + "'," + delay + "," + glow + "," + eo + "," + ei + ",true)");
+        });
+
+        // Annotations
+        document.getElementById("btn-ann-create").addEventListener("click", function() {
+            var annType = document.getElementById("ann-type").value;
+            var thickness = parseInt(document.getElementById("ann-thickness").value) || 4;
+            var glow = document.getElementById("ann-glow").checked;
+            var eo = getGlobalEaseOut(), ei = getGlobalEaseIn();
+            callHost("pcCreateAnnotation('" + annType + "'," + thickness + "," + glow + "," + eo + "," + ei + ")");
+        });
     }
 
     // ─── Start ───────────────────────────────────────────────────
