@@ -1427,82 +1427,131 @@ function pcMiniProfesor(side, xPct, yPct, animate, easeOut, easeIn) {
         var dir = side === "left" ? -1 : 1;
         var finalPos = [xPos + dir * (xPct / 100.0) * xThird, yCenter + (yPct / 100.0) * (comp.height / 2.0)];
 
-        var mattePos = matte.property("ADBE Transform Group").property("ADBE Position");
+        var fps = comp.frameRate;
+        var durFrames = 20;
+        var dur = durFrames / fps;
+        var t0 = comp.time;
+        var outTime = target.outPoint - dur;
 
+        // --- Place markers on matte layer ---
+        var markerProp = matte.property("ADBE Marker");
         if (animate) {
-            var t0 = comp.time, t1 = t0 + (20.0 / comp.frameRate);
-            var mk1 = mattePos.addKey(t0); mattePos.setValueAtKey(mk1, [comp.width/2, comp.height/2]);
-            var mk2 = mattePos.addKey(t1); mattePos.setValueAtKey(mk2, finalPos);
-            try {
-                mattePos.setInterpolationTypeAtKey(mk1, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
-                mattePos.setInterpolationTypeAtKey(mk2, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
-                _pcApplyEaseScalar(mattePos, mk1, mk2, easeOut, easeIn);
-            } catch(_){}
-
-            var rg = matte.property("ADBE Root Vectors Group").property("Rounded Rect");
-            if (!rg) rg = matte.property("ADBE Root Vectors Group").property(1);
-            var rc = rg.property("ADBE Vectors Group");
-            var rs = rc.property("ADBE Vector Shape - Rect");
-            var rSize = rs.property("ADBE Vector Rect Size");
-            var rRound = rs.property("ADBE Vector Rect Roundness");
-
-            var rs1 = rSize.addKey(t0); rSize.setValueAtKey(rs1, [comp.width, comp.height]);
-            var rs2 = rSize.addKey(t1); rSize.setValueAtKey(rs2, [END_W, END_H]);
-            try { _pcApplyEaseArray(rSize, rs1, rs2, easeOut, easeIn); } catch(_){}
-
-            var rr1 = rRound.addKey(t0); rRound.setValueAtKey(rr1, 0);
-            var rr2 = rRound.addKey(t1); rRound.setValueAtKey(rr2, END_R);
-            try { _pcApplyEaseScalar(rRound, rr1, rr2, easeOut, easeIn); } catch(_){}
-        } else {
-            mattePos.setValue(finalPos);
-            var rgNA = matte.property("ADBE Root Vectors Group").property("Rounded Rect");
-            if (!rgNA) rgNA = matte.property("ADBE Root Vectors Group").property(1);
-            var rcNA = rgNA.property("ADBE Vectors Group").property("ADBE Vector Shape - Rect");
-            rcNA.property("ADBE Vector Rect Size").setValue([END_W, END_H]);
-            rcNA.property("ADBE Vector Rect Roundness").setValue(END_R);
+            var mvIn = new MarkerValue("IN");
+            markerProp.setValueAtTime(t0, mvIn);
+            var mvOut = new MarkerValue("OUT");
+            markerProp.setValueAtTime(outTime, mvOut);
         }
 
-        // Shape layer starts at animation time
+        // --- Build expressions ---
+        var startPos = "[" + comp.width/2 + "," + comp.height/2 + "]";
+        var endPos = "[" + finalPos[0] + "," + finalPos[1] + "]";
+        var startSize = "[" + comp.width + "," + comp.height + "]";
+        var endSize = "[" + END_W + "," + END_H + "]";
+        var mn = matte.name;
+
+        // Position expression (matte reads own markers)
+        var posExpr = "var d = " + durFrames + " / thisComp.frameRate;\n" +
+            "var s = " + startPos + "; var e = " + endPos + ";\n" +
+            "var v = e;\n" +
+            "try { var inT = thisLayer.marker.key(\"IN\").time; v = ease(time, inT, inT + d, s, e); } catch(ex) {}\n" +
+            "try { var outT = thisLayer.marker.key(\"OUT\").time; v = ease(time, outT, outT + d, v, s); } catch(ex) {}\n" +
+            "v;";
+
+        // Size expression (reads matte markers)
+        var sizeExpr = "var d = " + durFrames + " / thisComp.frameRate;\n" +
+            "var s = " + startSize + "; var e = " + endSize + ";\n" +
+            "var v = e;\n" +
+            "try { var inT = thisComp.layer(\"" + mn + "\").marker.key(\"IN\").time; v = ease(time, inT, inT + d, s, e); } catch(ex) {}\n" +
+            "try { var outT = thisComp.layer(\"" + mn + "\").marker.key(\"OUT\").time; v = ease(time, outT, outT + d, v, s); } catch(ex) {}\n" +
+            "v;";
+
+        // Roundness expression
+        var roundExpr = "var d = " + durFrames + " / thisComp.frameRate;\n" +
+            "var s = 0; var e = " + END_R + ";\n" +
+            "var v = e;\n" +
+            "try { var inT = thisComp.layer(\"" + mn + "\").marker.key(\"IN\").time; v = ease(time, inT, inT + d, s, e); } catch(ex) {}\n" +
+            "try { var outT = thisComp.layer(\"" + mn + "\").marker.key(\"OUT\").time; v = ease(time, outT, outT + d, v, s); } catch(ex) {}\n" +
+            "v;";
+
+        // Apply to matte position
+        var mattePos = matte.property("ADBE Transform Group").property("ADBE Position");
+        if (animate) {
+            try { mattePos.expression = posExpr; } catch(ex) { mattePos.setValue(finalPos); }
+        } else {
+            mattePos.setValue(finalPos);
+        }
+
+        // Apply to rect size and roundness
+        var rg = matte.property("ADBE Root Vectors Group").property("Rounded Rect");
+        if (!rg) rg = matte.property("ADBE Root Vectors Group").property(1);
+        var rc = rg.property("ADBE Vectors Group");
+        var rs = rc.property("ADBE Vector Shape - Rect");
+        var rSize = rs.property("ADBE Vector Rect Size");
+        var rRound = rs.property("ADBE Vector Rect Roundness");
+
+        if (animate) {
+            try { rSize.expression = sizeExpr; } catch(ex) { rSize.setValue([END_W, END_H]); }
+            try { rRound.expression = roundExpr; } catch(ex) { rRound.setValue(END_R); }
+        } else {
+            rSize.setValue([END_W, END_H]);
+            rRound.setValue(END_R);
+        }
+
+        // Matte matches target duration
         matte.inPoint = target.inPoint;
+        matte.outPoint = target.outPoint;
 
         matte.moveBefore(target);
         target.parent = matte;
         _pcSetLocalPosToParentCenter(target);
 
+        // Camera scale expression
+        var fitS = _pcFitScaleToHeight(target, END_H);
         if (animate) {
             var camScale = target.property("ADBE Transform Group").property("ADBE Scale");
-            var t0c = comp.time, t1c = t0c + (20.0 / comp.frameRate);
-            var cs0 = camScale.valueAtTime(t0c, false);
-            var fitS = _pcFitScaleToHeight(target, END_H);
-            var cs1 = (camScale.propertyValueType === PropertyValueType.ThreeD) ? [fitS,fitS,fitS] : [fitS,fitS];
-            var ck1 = camScale.addKey(t0c); camScale.setValueAtKey(ck1, cs0);
-            var ck2 = camScale.addKey(t1c); camScale.setValueAtKey(ck2, cs1);
-            try { _pcApplyEaseArray(camScale, ck1, ck2, easeOut, easeIn); } catch(_){}
+            var cs0 = camScale.value;
+            var cs1Str = (camScale.propertyValueType === PropertyValueType.ThreeD) ?
+                "[" + fitS + "," + fitS + "," + fitS + "]" : "[" + fitS + "," + fitS + "]";
+            var cs0Str = (camScale.propertyValueType === PropertyValueType.ThreeD) ?
+                "[" + cs0[0] + "," + cs0[1] + "," + cs0[2] + "]" : "[" + cs0[0] + "," + cs0[1] + "]";
 
-            // Add Position keyframes on camera for editor adjustment
+            var scaleExpr = "var d = " + durFrames + " / thisComp.frameRate;\n" +
+                "var s = " + cs0Str + "; var e = " + cs1Str + ";\n" +
+                "var v = e;\n" +
+                "try { var inT = thisComp.layer(\"" + mn + "\").marker.key(\"IN\").time; v = ease(time, inT, inT + d, s, e); } catch(ex) {}\n" +
+                "try { var outT = thisComp.layer(\"" + mn + "\").marker.key(\"OUT\").time; v = ease(time, outT, outT + d, v, s); } catch(ex) {}\n" +
+                "v;";
+            try { camScale.expression = scaleExpr; } catch(ex) {
+                _pcSetUniformScale(target, fitS);
+            }
+
+            // Camera position (same value, expression-ready for editor to adjust)
             var camPos = target.property("ADBE Transform Group").property("ADBE Position");
-            var camPosVal = camPos.valueAtTime(t1c, false);
-            var cpk1 = camPos.addKey(t0c); camPos.setValueAtKey(cpk1, camPosVal);
-            var cpk2 = camPos.addKey(t1c); camPos.setValueAtKey(cpk2, camPosVal);
-            try {
-                camPos.setInterpolationTypeAtKey(cpk1, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
-                camPos.setInterpolationTypeAtKey(cpk2, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
-                _pcApplyEaseScalar(camPos, cpk1, cpk2, easeOut, easeIn);
-            } catch(_){}
+            var cpVal = camPos.value;
+            var cpStr = "[" + cpVal[0] + "," + cpVal[1] + "]";
+            var camPosExpr = "var d = " + durFrames + " / thisComp.frameRate;\n" +
+                "var s = " + cpStr + "; var e = " + cpStr + ";\n" +
+                "var v = e;\n" +
+                "try { var inT = thisComp.layer(\"" + mn + "\").marker.key(\"IN\").time; v = ease(time, inT, inT + d, s, e); } catch(ex) {}\n" +
+                "try { var outT = thisComp.layer(\"" + mn + "\").marker.key(\"OUT\").time; v = ease(time, outT, outT + d, v, s); } catch(ex) {}\n" +
+                "v;";
+            try { camPos.expression = camPosExpr; } catch(ex) {}
 
-            // Add Scale keyframes on matte (shape layer) for editor adjustment
+            // Matte scale (same value, expression-ready for editor)
             var matteScaleProp = matte.property("ADBE Transform Group").property("ADBE Scale");
-            var matteScaleVal = matteScaleProp.valueAtTime(t1c, false);
-            var msk1 = matteScaleProp.addKey(t0c); matteScaleProp.setValueAtKey(msk1, matteScaleVal);
-            var msk2 = matteScaleProp.addKey(t1c); matteScaleProp.setValueAtKey(msk2, matteScaleVal);
-            try {
-                matteScaleProp.setInterpolationTypeAtKey(msk1, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
-                matteScaleProp.setInterpolationTypeAtKey(msk2, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
-                _pcApplyEaseArray(matteScaleProp, msk1, msk2, easeOut, easeIn);
-            } catch(_){}
+            var msVal = matteScaleProp.value;
+            var msStr = "[" + msVal[0] + "," + msVal[1] + "]";
+            var matteScaleExpr = "var d = " + durFrames + " / thisComp.frameRate;\n" +
+                "var s = " + msStr + "; var e = " + msStr + ";\n" +
+                "var v = e;\n" +
+                "try { var inT = thisLayer.marker.key(\"IN\").time; v = ease(time, inT, inT + d, s, e); } catch(ex) {}\n" +
+                "try { var outT = thisLayer.marker.key(\"OUT\").time; v = ease(time, outT, outT + d, v, s); } catch(ex) {}\n" +
+                "v;";
+            try { matteScaleProp.expression = matteScaleExpr; } catch(ex) {}
         } else {
-            _pcSetUniformScale(target, _pcFitScaleToHeight(target, END_H));
+            _pcSetUniformScale(target, fitS);
         }
+
         try { target.trackMatteType = TrackMatteType.ALPHA; } catch(_){}
         app.endUndoGroup();
         return JSON.stringify({ success: true });
