@@ -159,7 +159,9 @@ html, body {
 }
 
 .ease-input {
-    width: 42px;
+    min-width: 36px;
+    width: auto;
+    max-width: 60px;
     background: var(--bg-input);
     border: 1px solid var(--border);
     color: var(--text-primary);
@@ -476,7 +478,9 @@ html, body {
 }
 
 .tool-input {
-    width: 44px;
+    min-width: 36px;
+    width: auto;
+    max-width: 70px;
     background: var(--bg-input);
     border: 1px solid var(--border);
     color: var(--text-primary);
