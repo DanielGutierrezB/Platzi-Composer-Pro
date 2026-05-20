@@ -575,14 +575,24 @@ function pcCloneMirrorKeys() {
                 var lastTime = prop.keyTime(selKeys[selKeys.length - 1]);
                 for (var k = 0; k < selKeys.length; k++) {
                     var ki = selKeys[k];
-                    var eIn = null, eOut = null;
-                    try { eIn = prop.keyInTemporalEase(ki); } catch(ex) {}
-                    try { eOut = prop.keyOutTemporalEase(ki); } catch(ex) {}
+                    var eInArr = [], eOutArr = [];
+                    try {
+                        var tmpIn = prop.keyInTemporalEase(ki);
+                        for (var ei = 0; ei < tmpIn.length; ei++) {
+                            eInArr.push({ speed: tmpIn[ei].speed, influence: tmpIn[ei].influence });
+                        }
+                    } catch(ex) {}
+                    try {
+                        var tmpOut = prop.keyOutTemporalEase(ki);
+                        for (var eo = 0; eo < tmpOut.length; eo++) {
+                            eOutArr.push({ speed: tmpOut[eo].speed, influence: tmpOut[eo].influence });
+                        }
+                    } catch(ex) {}
                     keys.push({
                         time: prop.keyTime(ki),
                         value: prop.keyValue(ki),
-                        easeIn: eIn,
-                        easeOut: eOut
+                        easeIn: eInArr,
+                        easeOut: eOutArr
                     });
                 }
 
@@ -596,10 +606,17 @@ function pcCloneMirrorKeys() {
                     try {
                         prop.setInterpolationTypeAtKey(newKey, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
                     } catch(ex) {}
-                    // Mirror ease: swap in/out from original
+                    // Apply mirrored ease: original easeOut → new easeIn, original easeIn → new easeOut
                     try {
-                        if (keys[m].easeOut && keys[m].easeIn) {
-                            prop.setTemporalEaseAtKey(newKey, keys[m].easeOut, keys[m].easeIn);
+                        if (keys[m].easeOut.length > 0 && keys[m].easeIn.length > 0) {
+                            var newIn = [], newOut = [];
+                            for (var ne = 0; ne < keys[m].easeOut.length; ne++) {
+                                newIn.push(new KeyframeEase(keys[m].easeOut[ne].speed, keys[m].easeOut[ne].influence));
+                            }
+                            for (var no = 0; no < keys[m].easeIn.length; no++) {
+                                newOut.push(new KeyframeEase(keys[m].easeIn[no].speed, keys[m].easeIn[no].influence));
+                            }
+                            prop.setTemporalEaseAtKey(newKey, newIn, newOut);
                         }
                     } catch(ex) {}
                 }
