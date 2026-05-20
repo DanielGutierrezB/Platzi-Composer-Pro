@@ -596,10 +596,14 @@ function pcCreateHighlightBox(mode, easeOut, easeIn, enableGlow) {
         var srcLayer = s.layers[0];
         var boxes = []; // Array of {centerX, centerY, boxW, boxH}
 
-        // MODE 1: Shape layer with paths — extract bounds from each group
+        // Check if layer has masks first (priority over shape contents)
+        var hasMasks = false;
+        try { hasMasks = srcLayer.property("Masks").numProperties > 0; } catch(ex) {}
+
+        // MODE 1: Shape layer with paths (only if NO masks)
         var srcContents = null;
         try { srcContents = srcLayer.property("Contents"); } catch(ex) {}
-        if (srcContents && srcContents.numProperties > 0 && !srcLayer.property("Masks").numProperties) {
+        if (!hasMasks && srcContents && srcContents.numProperties > 0) {
             for (var g = 1; g <= srcContents.numProperties; g++) {
                 var grpItem = srcContents.property(g);
                 var gc = null;
@@ -747,8 +751,8 @@ function pcCreateHighlightBox(mode, easeOut, easeIn, enableGlow) {
             createdLayers.push(layer);
         }
 
-        // Remove the reference shape layer (it was just for positioning)
-        if (srcContents && boxes.length > 0) {
+        // Remove the reference shape layer only in shape mode (not mask mode)
+        if (!hasMasks && srcContents && boxes.length > 0) {
             try { srcLayer.remove(); } catch(ex) {}
         }
 
