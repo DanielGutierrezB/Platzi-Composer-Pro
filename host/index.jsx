@@ -496,14 +496,16 @@ function pcFocusMaskAnimate(mode, easeOut, easeIn) {
 
 // ─── ZOOM FOCUS ──────────────────────────────────────────────
 
-function pcCreateZoomFocus(blurAmount, scaleFactor) {
+function pcCreateZoomFocus(blurAmount, scaleFactor, easeOut, easeIn) {
     var s = _pcRequireSelected();
     if (!s) return JSON.stringify({ error: "Selecciona una capa con máscara." });
     try {
         app.beginUndoGroup("Create Zoom Focus");
         var comp = s.comp, original = s.layers[0];
-        var ba = blurAmount || 15;
+        var ba = blurAmount || 25;
         var sf = scaleFactor || 150;
+        var eo = easeOut || 75;
+        var ei = easeIn || 75;
         var masks = original.property("Masks");
         if (!masks || masks.numProperties === 0) {
             app.endUndoGroup();
@@ -553,7 +555,7 @@ function pcCreateZoomFocus(blurAmount, scaleFactor) {
         blurProp.setValueAtTime(inPt + dur, ba);
         blurProp.setValueAtTime(outPt - dur, ba);
         blurProp.setValueAtTime(outPt, 0);
-        var kIn = new KeyframeEase(0, 75), kOut = new KeyframeEase(0, 75);
+        var kIn = new KeyframeEase(0, ei), kOut = new KeyframeEase(0, eo);
         for (var k = 1; k <= 4; k++) {
             try { posProp.setTemporalEaseAtKey(k, [kIn, kIn], [kOut, kOut]); } catch(ex) {}
             try { scaleProp.setTemporalEaseAtKey(k, [kIn, kIn], [kOut, kOut]); } catch(ex) {}

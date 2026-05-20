@@ -1039,7 +1039,13 @@
                 else if (e.shiftKey) { callHost("pcFocusMaskAnimate(\"inout\","+eo+","+ei+")"); }
             });
         });
-        on("btn-zoom-focus-create", "click", function()  { callHost("pcCreateZoomFocus(15, 150)"); });
+        document.getElementById("btn-zoom-focus-create").addEventListener("click", function() {
+            var blur = document.getElementById("zf-blur").value || 25;
+            var sf = 150;
+            var eo = document.getElementById("ease-out").value || 33;
+            var ei = document.getElementById("ease-in").value || 10;
+            callHost("pcCreateZoomFocus(" + blur + "," + sf + "," + eo + "," + ei + ")");
+        });
 
         // Universal animate — routes based on selected layer name
         function animateHighlighter(mode) {
