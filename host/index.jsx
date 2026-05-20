@@ -495,29 +495,47 @@ function pcCreateLineHighlighter(style, enableGlow) {
             try { glow.property("Glow Intensity").setValue(1.5); } catch(ex) {}
         }
 
-        // Chalk style: Roughen Edges + Noise for real chalk/tiza texture
+        // Chalk style: Roughen Edges + Turbulent Displace for real chalk/tiza texture
         if (style === "chalk") {
             // Thicker stroke for chalk look (tiza es gruesa)
             thkCtrl.property("Slider").setValue(14);
             // Round cap for organic chalk ends
-            try { stroke.property("Line Cap").setValue(2); } catch(ex) {} // Round Cap
+            try { stroke.property("ADBE Vector Stroke Line Cap").setValue(2); } catch(ex) {} // Round Cap
 
             // Roughen Edges: erodes borders like chalk on rough surface
-            var re = fxs.addProperty("ADBE Roughen Edges");
-            re.name = "Chalk Texture";
-            try { re.property("ADBE Roughen Edges-0001").setValue(4); } catch(ex) {} // Edge Type: Spiky
-            try { re.property("ADBE Roughen Edges-0002").expression = "effect(\"Chalk Border\")(\"Slider\")"; } catch(ex) {} // Border
-            try { re.property("ADBE Roughen Edges-0003").setValue(1); } catch(ex) {} // Edge Sharpness
-            try { re.property("ADBE Roughen Edges-0004").expression = "effect(\"Chalk Scale\")(\"Slider\")"; } catch(ex) {} // Fractal Influence
-            try { re.property("ADBE Roughen Edges-0005").setValue(2); } catch(ex) {} // Stretch Width/Height
-            try { re.property("ADBE Roughen Edges-0007").setValue(2); } catch(ex) {} // Complexity
+            try {
+                var re = fxs.addProperty("ADBE Roughen Edges");
+                re.name = "Chalk Texture";
+                re.property(1).setValue(4); // Edge Type: Spiky
+                re.property(2).expression = "effect(\"Chalk Border\")(\"Slider\")"; // Border
+                re.property(3).setValue(1); // Edge Sharpness
+                re.property(4).expression = "effect(\"Chalk Scale\")(\"Slider\")"; // Fractal Influence
+                re.property(6).setValue(2); // Complexity
+            } catch(ex) {
+                // Fallback: try display name
+                try {
+                    var re2 = fxs.addProperty("Roughen Edges");
+                    re2.name = "Chalk Texture";
+                    re2.property(1).setValue(4);
+                    re2.property(2).expression = "effect(\"Chalk Border\")(\"Slider\")";
+                    re2.property(3).setValue(1);
+                    re2.property(4).expression = "effect(\"Chalk Scale\")(\"Slider\")";
+                    re2.property(6).setValue(2);
+                } catch(ex2) {}
+            }
 
             // Add Noise: creates internal speckle/grain like chalk pores
-            var noise = fxs.addProperty("ADBE Noise");
-            noise.name = "Chalk Grain";
-            try { noise.property("ADBE Noise-0001").setValue(40); } catch(ex) {} // Amount of Noise
-            // Use Noise Alpha Only is not a std param; we clip noise via checkbox
-            try { noise.property("ADBE Noise-0004").setValue(1); } catch(ex) {} // Clip Result Values
+            try {
+                var noise = fxs.addProperty("ADBE Noise2");
+                noise.name = "Chalk Grain";
+                noise.property(1).setValue(40); // Noise amount
+            } catch(ex) {
+                try {
+                    var noise2 = fxs.addProperty("Noise");
+                    noise2.name = "Chalk Grain";
+                    noise2.property(1).setValue(40);
+                } catch(ex2) {}
+            }
         }
 
         app.endUndoGroup();
