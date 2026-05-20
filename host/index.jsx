@@ -676,7 +676,10 @@ function pcCreateHighlightBox(mode, easeOut, easeIn, enableGlow) {
 
         // Get source layer transform for position offset
         var srcPos = [0, 0];
-        try { srcPos = srcLayer.property("Transform").property("Position").value; } catch(ex) {}
+        var isShapeMode = (!hasMasks && srcContents && srcContents.numProperties > 0);
+        if (isShapeMode) {
+            try { srcPos = srcLayer.property("Transform").property("Position").value; } catch(ex) {}
+        }
 
         // Create one Highlight Box per extracted path
         var createdLayers = [];
@@ -696,11 +699,18 @@ function pcCreateHighlightBox(mode, easeOut, easeIn, enableGlow) {
             padCtrl.property("Slider").setValue(10);
 
             // Position at box center
-            layer.property("Transform").property("Position").setValue([srcPos[0] + box.centerX, srcPos[1] + box.centerY]);
-            layer.property("Transform").property("Anchor Point").setValue([0, 0]);
-            // Parent to srcLayer's parent if it has one, otherwise don't parent to the ref shape
-            if (srcLayer.parent) {
-                layer.parent = srcLayer.parent;
+            if (isShapeMode) {
+                // Shape mode: absolute position based on srcLayer position + shape offsets
+                layer.property("Transform").property("Position").setValue([srcPos[0] + box.centerX, srcPos[1] + box.centerY]);
+                layer.property("Transform").property("Anchor Point").setValue([0, 0]);
+                if (srcLayer.parent) {
+                    layer.parent = srcLayer.parent;
+                }
+            } else {
+                // Mask mode: parent to source layer, position relative to layer
+                layer.property("Transform").property("Position").setValue([box.centerX, box.centerY]);
+                layer.property("Transform").property("Anchor Point").setValue([0, 0]);
+                layer.parent = srcLayer;
             }
 
             var contents = layer.property("Contents");
