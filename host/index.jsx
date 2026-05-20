@@ -198,38 +198,63 @@ function pcApplyColorToSelected(color) {
     if (!s) return JSON.stringify({ error: "Selecciona una capa primero." });
     try {
         app.beginUndoGroup("Apply Color");
-        var layer = s.layers[0];
-        var fxs = layer.property("Effects");
-        // Try to find Color effect control
         var applied = false;
-        if (fxs) {
-            for (var i = 1; i <= fxs.numProperties; i++) {
-                var fx = fxs.property(i);
-                if (fx.name === "Color" && fx.matchName === "ADBE Color Control") {
-                    fx.property("Color").setValue(color);
-                    applied = true;
-                    break;
+
+        // Apply to all selected layers
+        for (var layIdx = 0; layIdx < s.layers.length; layIdx++) {
+            var layer = s.layers[layIdx];
+
+            // 1. Text Layer: change fill color
+            if (layer instanceof TextLayer) {
+                var textProp = layer.property("ADBE Text Properties").property("ADBE Text Document");
+                var textDoc = textProp.value;
+                textDoc.fillColor = color;
+                textProp.setValue(textDoc);
+                applied = true;
+                continue;
+            }
+
+            // 2. Effect Controls: find "Color" control
+            var fxs = layer.property("Effects");
+            if (fxs) {
+                for (var i = 1; i <= fxs.numProperties; i++) {
+                    var fx = fxs.property(i);
+                    if (fx.name === "Color" && fx.matchName === "ADBE Color Control") {
+                        fx.property("Color").setValue(color);
+                        applied = true;
+                        break;
+                    }
                 }
             }
-        }
-        // Also apply to stroke directly if it's a shape layer
-        if (layer.property("Contents")) {
-            var contents = layer.property("Contents");
-            for (var g = 1; g <= contents.numProperties; g++) {
-                try {
-                    var grpC = contents.property(g).property("Contents");
-                    if (grpC) {
-                        for (var p = 1; p <= grpC.numProperties; p++) {
-                            if (grpC.property(p).matchName === "ADBE Vector Graphic - Stroke") {
-                                try { grpC.property(p).property("Color").setValue(color); applied = true; } catch(ex) {}
+
+            // 3. Shape layer: apply to stroke
+            if (layer.property("Contents")) {
+                var contents = layer.property("Contents");
+                for (var g = 1; g <= contents.numProperties; g++) {
+                    try {
+                        var grpC = contents.property(g).property("Contents");
+                        if (grpC) {
+                            for (var p = 1; p <= grpC.numProperties; p++) {
+                                if (grpC.property(p).matchName === "ADBE Vector Graphic - Stroke") {
+                                    try { grpC.property(p).property("Color").setValue(color); applied = true; } catch(ex) {}
+                                }
+                                if (grpC.property(p).matchName === "ADBE Vector Graphic - Fill") {
+                                    try { grpC.property(p).property("Color").setValue(color); applied = true; } catch(ex) {}
+                                }
                             }
                         }
-                    }
-                } catch(ex) {}
+                    } catch(ex) {}
+                }
+            }
+
+            // 4. Solid layer: change source color
+            if (layer.source && layer.source instanceof FootageItem && layer.source.mainSource instanceof SolidSource) {
+                try { layer.source.mainSource.color = color; applied = true; } catch(ex) {}
             }
         }
+
         app.endUndoGroup();
-        if (!applied) return JSON.stringify({ error: "No se encontr\u00f3 control de color en la capa." });
+        if (!applied) return JSON.stringify({ error: "No se pudo aplicar color a la selecci\u00f3n." });
         return JSON.stringify({ success: true });
     } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
 }
