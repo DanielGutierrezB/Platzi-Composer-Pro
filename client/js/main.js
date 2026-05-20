@@ -995,8 +995,8 @@
                     return;
                 }
                 var mode = null;
-                if (e.shiftKey && e.ctrlKey) mode = "out";
-                else if (e.ctrlKey) mode = "in";
+                if (e.shiftKey && e.altKey) mode = "out";
+                else if (e.altKey) mode = "in";
                 else if (e.shiftKey) mode = "inout";
                 if (mode) {
                     callHost(animFn + "(\"" + mode + "\"," + eo + "," + ei + ")");
@@ -1012,8 +1012,8 @@
             var ei = document.getElementById("ease-in").value;
             csInterface.evalScript("pcCreateHighlighter()", function(res) {
                 try { if (JSON.parse(res).error) { showToast(JSON.parse(res).error,"error"); return; } } catch(x){}
-                if (e.shiftKey && (e.ctrlKey || e.metaKey)) { callHost("pcHighlighterAnimate(\"out\","+eo+","+ei+")"); }
-                else if (e.ctrlKey || e.metaKey) { callHost("pcHighlighterAnimate(\"in\","+eo+","+ei+")"); }
+                if (e.shiftKey && (e.altKey)) { callHost("pcHighlighterAnimate(\"out\","+eo+","+ei+")"); }
+                else if (e.altKey) { callHost("pcHighlighterAnimate(\"in\","+eo+","+ei+")"); }
                 else if (e.shiftKey) { callHost("pcHighlighterAnimate(\"inout\","+eo+","+ei+")"); }
             });
         });
@@ -1023,8 +1023,8 @@
             var ei = document.getElementById("ease-in").value;
             csInterface.evalScript("pcCreateLineHighlighter()", function(res) {
                 try { if (JSON.parse(res).error) { showToast(JSON.parse(res).error,"error"); return; } } catch(x){}
-                if (e.shiftKey && (e.ctrlKey || e.metaKey)) { callHost("pcLineHighlighterAnimate(\"out\","+eo+","+ei+")"); }
-                else if (e.ctrlKey || e.metaKey) { callHost("pcLineHighlighterAnimate(\"in\","+eo+","+ei+")"); }
+                if (e.shiftKey && (e.altKey)) { callHost("pcLineHighlighterAnimate(\"out\","+eo+","+ei+")"); }
+                else if (e.altKey) { callHost("pcLineHighlighterAnimate(\"in\","+eo+","+ei+")"); }
                 else if (e.shiftKey) { callHost("pcLineHighlighterAnimate(\"inout\","+eo+","+ei+")"); }
             });
         });
@@ -1034,8 +1034,8 @@
             var ei = document.getElementById("ease-in").value;
             csInterface.evalScript("pcCreateFocusMask()", function(res) {
                 try { if (JSON.parse(res).error) { showToast(JSON.parse(res).error,"error"); return; } } catch(x){}
-                if (e.shiftKey && (e.ctrlKey || e.metaKey)) { callHost("pcFocusMaskAnimate(\"out\","+eo+","+ei+")"); }
-                else if (e.ctrlKey || e.metaKey) { callHost("pcFocusMaskAnimate(\"in\","+eo+","+ei+")"); }
+                if (e.shiftKey && (e.altKey)) { callHost("pcFocusMaskAnimate(\"out\","+eo+","+ei+")"); }
+                else if (e.altKey) { callHost("pcFocusMaskAnimate(\"in\","+eo+","+ei+")"); }
                 else if (e.shiftKey) { callHost("pcFocusMaskAnimate(\"inout\","+eo+","+ei+")"); }
             });
         });
