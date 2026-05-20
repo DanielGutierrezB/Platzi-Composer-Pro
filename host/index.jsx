@@ -1658,14 +1658,11 @@ function pcTextHelper(animType, mode, animMode, delayPerUnit, enableGlow, easeOu
         var rangeStart = rangeSel.property("Start");
         var rangeEnd = rangeSel.property("End");
 
-        // Animation duration based on text length × delay
+        // Animation duration: text length × delay frames
         var fps = comp.frameRate;
         var t0 = comp.time;
         var srcText = textLayer.property("ADBE Text Properties").property("ADBE Text Document").value.text;
-        var units = srcText.length;
-        if (mode === "word") { units = srcText.split(" ").length; }
-        if (mode === "line") { units = srcText.split("\n").length || 1; }
-        var totalDur = (units * delayPerUnit) / fps;
+        var totalDur = (srcText.length * delayPerUnit) / fps;
         var t1 = t0 + totalDur;
 
         // Based On from mode: char=1, word=3, line=4
