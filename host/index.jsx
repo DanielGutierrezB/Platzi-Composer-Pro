@@ -417,9 +417,9 @@ function pcCreateLineHighlighter(style, enableGlow) {
         // Style-specific controls
         if (style === "chalk") {
             var chalkBorderCtrl = fxs.addProperty("ADBE Slider Control"); chalkBorderCtrl.name = "Chalk Border";
-            chalkBorderCtrl.property("Slider").setValue(12);
+            chalkBorderCtrl.property("Slider").setValue(4);
             var chalkScaleCtrl = fxs.addProperty("ADBE Slider Control"); chalkScaleCtrl.name = "Chalk Scale";
-            chalkScaleCtrl.property("Slider").setValue(30);
+            chalkScaleCtrl.property("Slider").setValue(10);
         } else if (style === "thunder") {
             var thunAmtCtrl = fxs.addProperty("ADBE Slider Control"); thunAmtCtrl.name = "Thunder Amount";
             thunAmtCtrl.property("Slider").setValue(3);
@@ -495,47 +495,26 @@ function pcCreateLineHighlighter(style, enableGlow) {
             try { glow.property("Glow Intensity").setValue(1.5); } catch(ex) {}
         }
 
-        // Chalk style: Roughen Edges + Turbulent Displace for real chalk/tiza texture
+        // Chalk style: Wiggle Paths with SMOOTH points + thick stroke = real chalk texture
         if (style === "chalk") {
-            // Thicker stroke for chalk look (tiza es gruesa)
+            // Thicker stroke for chalk look
             thkCtrl.property("Slider").setValue(14);
             // Round cap for organic chalk ends
-            try { stroke.property("ADBE Vector Stroke Line Cap").setValue(2); } catch(ex) {} // Round Cap
+            try { stroke.property("ADBE Vector Stroke Line Cap").setValue(2); } catch(ex) {}
 
-            // Roughen Edges: erodes borders like chalk on rough surface
-            try {
-                var re = fxs.addProperty("ADBE Roughen Edges");
-                re.name = "Chalk Texture";
-                re.property(1).setValue(4); // Edge Type: Spiky
-                re.property(2).expression = "effect(\"Chalk Border\")(\"Slider\")"; // Border
-                re.property(3).setValue(1); // Edge Sharpness
-                re.property(4).expression = "effect(\"Chalk Scale\")(\"Slider\")"; // Fractal Influence
-                re.property(6).setValue(2); // Complexity
-            } catch(ex) {
-                // Fallback: try display name
-                try {
-                    var re2 = fxs.addProperty("Roughen Edges");
-                    re2.name = "Chalk Texture";
-                    re2.property(1).setValue(4);
-                    re2.property(2).expression = "effect(\"Chalk Border\")(\"Slider\")";
-                    re2.property(3).setValue(1);
-                    re2.property(4).expression = "effect(\"Chalk Scale\")(\"Slider\")";
-                    re2.property(6).setValue(2);
-                } catch(ex2) {}
-            }
+            // Wiggle Paths with Smooth points: creates organic bumpy edges (not zigzag)
+            var chalkWiggle = grpContents.addProperty("ADBE Vector Filter - Roughen");
+            try { chalkWiggle.property("ADBE Vector Roughen Size").expression = "effect(\"Chalk Border\")(\"Slider\")"; } catch(ex) {}
+            try { chalkWiggle.property("ADBE Vector Roughen Detail").expression = "effect(\"Chalk Scale\")(\"Slider\")"; } catch(ex) {}
+            try { chalkWiggle.property("ADBE Vector Roughen Points").setValue(2); } catch(ex) {} // 2 = Smooth
+            try { chalkWiggle.property("ADBE Vector Temporal Freq").setValue(0); } catch(ex) {} // Static
 
-            // Add Noise: creates internal speckle/grain like chalk pores
-            try {
-                var noise = fxs.addProperty("ADBE Noise2");
-                noise.name = "Chalk Grain";
-                noise.property(1).setValue(40); // Noise amount
-            } catch(ex) {
-                try {
-                    var noise2 = fxs.addProperty("Noise");
-                    noise2.name = "Chalk Grain";
-                    noise2.property(1).setValue(40);
-                } catch(ex2) {}
-            }
+            // Second Wiggle Paths layer for micro-texture (finer grain)
+            var chalkMicro = grpContents.addProperty("ADBE Vector Filter - Roughen");
+            try { chalkMicro.property("ADBE Vector Roughen Size").setValue(1.5); } catch(ex) {}
+            try { chalkMicro.property("ADBE Vector Roughen Detail").setValue(15); } catch(ex) {}
+            try { chalkMicro.property("ADBE Vector Roughen Points").setValue(2); } catch(ex) {} // Smooth
+            try { chalkMicro.property("ADBE Vector Temporal Freq").setValue(0.3); } catch(ex) {} // Very subtle vibration
         }
 
         app.endUndoGroup();
