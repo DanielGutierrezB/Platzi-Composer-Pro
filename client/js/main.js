@@ -1179,13 +1179,18 @@
             })(thBtns[ti]);
         }
 
-        // Annotations
-        on("btn-ann-create", "click", function() {
-            var annType = document.getElementById("ann-type").value;
-            var thickness = parseInt(document.getElementById("ann-thickness").value) || 4;
-            var glow = document.getElementById("ann-glow").checked;
-            callHost("pcCreateAnnotation('" + annType + "'," + thickness + "," + glow + "," + easeOut() + "," + easeIn() + ")");
-        });
+        // Annotations — each button is a type
+        var annBtns = document.querySelectorAll(".btn-ann");
+        for (var ai = 0; ai < annBtns.length; ai++) {
+            (function(btn) {
+                btn.addEventListener("click", function() {
+                    var annType = btn.getAttribute("data-ann");
+                    var thickness = parseInt(document.getElementById("ann-thickness").value) || 4;
+                    var glow = document.getElementById("ann-glow").checked;
+                    callHost("pcCreateAnnotation('" + annType + "'," + thickness + "," + glow + "," + easeOut() + "," + easeIn() + ")");
+                });
+            })(annBtns[ai]);
+        }
     }
 
     // ─── Color Palette ───────────────────────────────────────────

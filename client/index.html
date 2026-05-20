@@ -346,22 +346,22 @@
                 <span class="tool-card-title">✍️ Text Helper</span>
             </div>
             <div class="tool-card-body hidden">
-                <div class="th-mode-row">
+                <div class="tool-row-flex">
                     <label class="th-radio"><input type="radio" name="th-mode" value="char" checked> 🔤 Char</label>
                     <label class="th-radio"><input type="radio" name="th-mode" value="word"> 💬 Word</label>
                     <label class="th-radio"><input type="radio" name="th-mode" value="line"> 📏 Line</label>
                 </div>
-                <div class="th-grid">
-                    <button class="btn-th" data-anim="typewriter">⌨️ Typewriter</button>
-                    <button class="btn-th" data-anim="fade-up">⬆️ Fade Up</button>
-                    <button class="btn-th" data-anim="fade-down">⬇️ Fade Down</button>
-                    <button class="btn-th" data-anim="fade-left">⬅️ Fade Left</button>
-                    <button class="btn-th" data-anim="fade-right">➡️ Fade Right</button>
-                    <button class="btn-th" data-anim="scale-pop">💥 Scale Pop</button>
-                    <button class="btn-th" data-anim="blur-reveal">🌫️ Blur Reveal</button>
-                    <button class="btn-th" data-anim="bounce">⚡ Bounce</button>
+                <div class="tool-btn-grid">
+                    <button class="btn-tool btn-th" data-anim="typewriter">⌨️ Typewriter</button>
+                    <button class="btn-tool btn-th" data-anim="fade-up">⬆️ Fade Up</button>
+                    <button class="btn-tool btn-th" data-anim="fade-down">⬇️ Fade Down</button>
+                    <button class="btn-tool btn-th" data-anim="fade-left">⬅️ Fade Left</button>
+                    <button class="btn-tool btn-th" data-anim="fade-right">➡️ Fade Right</button>
+                    <button class="btn-tool btn-th" data-anim="scale-pop">💥 Scale Pop</button>
+                    <button class="btn-tool btn-th" data-anim="blur-reveal">🌫️ Blur Reveal</button>
+                    <button class="btn-tool btn-th" data-anim="bounce">⚡ Bounce</button>
                 </div>
-                <div class="hl-type-row">
+                <div class="tool-row-flex">
                     <label>Delay <input type="number" id="th-delay" value="2" min="1" max="20" step="1" class="num-input"></label>
                     <label class="toggle-label"><input type="checkbox" id="th-glow"> Glow</label>
                 </div>
@@ -374,21 +374,16 @@
                 <span class="tool-card-title">🎯 Annotations</span>
             </div>
             <div class="tool-card-body hidden">
-                <div class="hl-type-row">
-                    <select id="ann-type">
-                        <option value="arrow">Arrow</option>
-                        <option value="callout">Callout Box</option>
-                        <option value="circle">Circle</option>
-                        <option value="bracket">Bracket</option>
-                        <option value="underline">Underline</option>
-                    </select>
+                <div class="tool-btn-grid">
+                    <button class="btn-tool btn-ann" data-ann="arrow">↗️ Arrow</button>
+                    <button class="btn-tool btn-ann" data-ann="callout">📝 Callout</button>
+                    <button class="btn-tool btn-ann" data-ann="circle">⭕ Circle</button>
+                    <button class="btn-tool btn-ann" data-ann="bracket">{ Bracket</button>
+                    <button class="btn-tool btn-ann" data-ann="underline">▁ Underline</button>
                 </div>
-                <div class="hl-type-row">
+                <div class="tool-row-flex">
                     <label>Thickness <input type="number" id="ann-thickness" value="4" min="1" max="30" step="1" class="num-input"></label>
                     <label class="toggle-label"><input type="checkbox" id="ann-glow"> Glow</label>
-                </div>
-                <div class="hl-type-row">
-                    <button id="btn-ann-create" class="btn-create">Create</button>
                 </div>
             </div>
         </div>
