@@ -501,25 +501,25 @@ function pcCreateLineHighlighter(style, enableGlow) {
 
 function pcLineHighlighterToggleGlow(enable) {
     var s = _pcRequireSelected();
-    if (!s) return JSON.stringify({ error: "Selecciona la capa Line Highlight." });
+    if (!s) return JSON.stringify({ error: "Selecciona una capa primero." });
     try {
         app.beginUndoGroup("Toggle Glow");
         var layer = s.layers[0];
-        if (layer.name.indexOf("Line Highlight") === -1) {
-            app.endUndoGroup();
-            return JSON.stringify({ error: "La capa seleccionada no es un Line Highlight." });
-        }
         var fxs = layer.property("Effects");
         if (!fxs) {
             app.endUndoGroup();
             return JSON.stringify({ error: "La capa no tiene panel de Effects." });
         }
+        // Find existing glow and toggle enabled state
+        var glowFound = null;
+        for (var i = 1; i <= fxs.numProperties; i++) {
+            if (fxs.property(i).matchName === "ADBE Glo2") { glowFound = fxs.property(i); break; }
+        }
         if (enable) {
-            var existing = null;
-            for (var i = 1; i <= fxs.numProperties; i++) {
-                if (fxs.property(i).matchName === "ADBE Glo2") { existing = fxs.property(i); break; }
-            }
-            if (!existing) {
+            if (glowFound) {
+                glowFound.enabled = true;
+            } else {
+                // Add glow if not present
                 var glow = fxs.addProperty("ADBE Glo2");
                 glow.name = "Line Glow";
                 try { glow.property("Glow Threshold").setValue(158); } catch(ex) {}
@@ -527,8 +527,8 @@ function pcLineHighlighterToggleGlow(enable) {
                 try { glow.property("Glow Intensity").setValue(1.5); } catch(ex) {}
             }
         } else {
-            for (var j = fxs.numProperties; j >= 1; j--) {
-                if (fxs.property(j).matchName === "ADBE Glo2") { fxs.property(j).remove(); break; }
+            if (glowFound) {
+                glowFound.enabled = false;
             }
         }
         app.endUndoGroup();
