@@ -1389,6 +1389,13 @@ function _pcCreateRoundedRectMatte(comp, w, h, r) {
     return sl;
 }
 
+// Limpia todos los keyframes de una propiedad para poder aplicar animación nueva
+// sin importar si ya tenía keyframes/stopwatch activado.
+function _pcClearKeys(prop) {
+    if (!prop) return;
+    try { for (var i = prop.numKeys; i >= 1; i--) { prop.removeKey(i); } } catch(_){}
+}
+
 // setValue seguro: si la propiedad ya tiene keyframes, no se puede usar setValue()
 // (AE lanza error) — se escribe el valor en cada keyframe existente.
 function _pcSafeSetValue(prop, val) {
@@ -1428,6 +1435,12 @@ function pcMiniProfesor(side, xPct, yPct, animate, easeOut, easeIn) {
     try {
         var comp = s.comp, target = s.layers[0];
         app.beginUndoGroup("Mini Profesor - " + side);
+
+        // Normaliza la capa del profesor: limpia keyframes previos de Pos/Escala
+        // para aplicar la animación sin importar el estado de keyframes previo.
+        var _tTr = target.property("ADBE Transform Group");
+        _pcClearKeys(_tTr.property("ADBE Position"));
+        _pcClearKeys(_tTr.property("ADBE Scale"));
 
         var cs = comp.height / 1080;
         var END_W = 600 * cs, END_H = 900 * cs, END_R = 100 * cs;
@@ -1528,6 +1541,12 @@ function pcCornerProfesor(corner, circular, durationFrames, sizePx, animate, eas
     try {
         var comp = s.comp, target = s.layers[0];
         app.beginUndoGroup("Corner Profesor - " + corner);
+
+        // Normaliza la capa del profesor: limpia keyframes previos de Pos/Escala
+        // para aplicar la animación sin importar el estado de keyframes previo.
+        var _tTr = target.property("ADBE Transform Group");
+        _pcClearKeys(_tTr.property("ADBE Position"));
+        _pcClearKeys(_tTr.property("ADBE Scale"));
 
         var cs = comp.height / 1080;
         var END_W = sizePx * cs, END_H = sizePx * cs;
