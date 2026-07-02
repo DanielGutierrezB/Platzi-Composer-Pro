@@ -957,6 +957,16 @@
         var zipPath = path.join(os.tmpdir(), "platzi-composer-update-" + Date.now() + ".zip");
         var extractDir = path.join(os.tmpdir(), "platzi-composer-extract-" + Date.now());
 
+        // Preflight: ¿podemos escribir en la carpeta de la extensión?
+        try {
+            var wtest = path.join(extPath, ".__update_wtest");
+            fs.writeFileSync(wtest, "ok");
+            fs.unlinkSync(wtest);
+        } catch(e) {
+            showToast("❌ Sin permiso de escritura en la carpeta de la extensión. Reinstalá el .zxp.", "error");
+            return;
+        }
+
         showToast("Descargando update...", "info");
 
         _httpsDownload(zipUrl, zipPath, https, function(dlErr) {
@@ -1002,13 +1012,28 @@
                     return;
                 }
 
-                // Copy files (skip .git, node_modules)
-                _copyDirSync(extractedRoot, extPath, "", fs, path);
+                // Copy files (skip .git, node_modules) — track failures
+                var copyResult = { copied: 0, failed: 0, errors: [] };
+                _copyDirSync(extractedRoot, extPath, "", fs, path, copyResult);
 
                 // Cleanup
                 try { fs.unlinkSync(zipPath); } catch(_) {}
                 try { fs.rmSync(extractDir, { recursive: true, force: true }); } catch(_) {
                     try { cp.execSync("rm -rf \"" + extractDir + "\""); } catch(_) {}
+                }
+
+                // Verificar: leer el VERSION realmente escrito en disco
+                var installedVersion = "";
+                try {
+                    installedVersion = (fs.readFileSync(path.join(extPath, "VERSION"), "utf8") || "").replace(/\s+/g, "");
+                } catch(_) {}
+
+                if (copyResult.failed > 0 || installedVersion !== remoteVersion) {
+                    var emsg = "❌ Update incompleto";
+                    if (copyResult.failed > 0) emsg += " — " + copyResult.failed + " archivo(s) no se pudieron escribir (permisos). Reinstalá el .zxp.";
+                    else emsg += " — VERSION en disco quedó en " + (installedVersion || "?") + ". Reinstalá el .zxp.";
+                    showToast(emsg, "error");
+                    return;
                 }
 
                 showToast("✅ Actualizado a v" + remoteVersion + " — recargando...", "info");
@@ -1051,10 +1076,12 @@
         req.end();
     }
 
-    function _copyDirSync(src, dest, relBase, fs, path) {
+    function _copyDirSync(src, dest, relBase, fs, path, result) {
+        if (!result) result = { copied: 0, failed: 0, errors: [] };
         var SKIP = [".git", "node_modules", ".DS_Store"];
         var items;
-        try { items = fs.readdirSync(src); } catch(_) { return; }
+        try { items = fs.readdirSync(src); }
+        catch(e) { result.failed++; result.errors.push(relBase + ": readdir " + e.message); return result; }
         for (var i = 0; i < items.length; i++) {
             var item = items[i];
             if (SKIP.indexOf(item) >= 0) continue;
@@ -1064,12 +1091,15 @@
             try { stat = fs.lstatSync(srcP); } catch(_) { continue; }
             if (stat.isSymbolicLink()) continue;
             if (stat.isDirectory()) {
-                try { if (!fs.existsSync(destP)) fs.mkdirSync(destP, { recursive: true }); } catch(_) {}
-                _copyDirSync(srcP, destP, relBase + "/" + item, fs, path);
+                try { if (!fs.existsSync(destP)) fs.mkdirSync(destP, { recursive: true }); }
+                catch(e) { result.failed++; result.errors.push(relBase + "/" + item + ": mkdir " + e.message); }
+                _copyDirSync(srcP, destP, relBase + "/" + item, fs, path, result);
             } else {
-                try { fs.copyFileSync(srcP, destP); } catch(_) {}
+                try { fs.copyFileSync(srcP, destP); result.copied++; }
+                catch(e) { result.failed++; result.errors.push(relBase + "/" + item + ": " + e.message); }
             }
         }
+        return result;
     }
 
     // ─── UI helpers ──────────────────────────────────────────────
