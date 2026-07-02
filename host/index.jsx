@@ -1389,11 +1389,22 @@ function _pcCreateRoundedRectMatte(comp, w, h, r) {
     return sl;
 }
 
+// setValue seguro: si la propiedad ya tiene keyframes, no se puede usar setValue()
+// (AE lanza error) — se escribe el valor en cada keyframe existente.
+function _pcSafeSetValue(prop, val) {
+    if (!prop) return;
+    if (prop.numKeys > 0) {
+        for (var i = 1; i <= prop.numKeys; i++) { prop.setValueAtKey(i, val); }
+    } else {
+        prop.setValue(val);
+    }
+}
+
 function _pcSetLocalPosToParentCenter(layer) {
     var pp = layer.property("ADBE Transform Group").property("ADBE Position");
     if (!pp) return;
     var v = pp.value;
-    pp.setValue(v instanceof Array && v.length === 3 ? [0,0,0] : [0,0]);
+    _pcSafeSetValue(pp, v instanceof Array && v.length === 3 ? [0,0,0] : [0,0]);
 }
 
 function _pcFitScaleToHeight(layer, matteH) {
@@ -1408,7 +1419,7 @@ function _pcSetUniformScale(layer, pct) {
     var sp = layer.property("ADBE Transform Group").property("ADBE Scale");
     if (!sp) return;
     var v = sp.value;
-    sp.setValue(v instanceof Array && v.length === 3 ? [pct,pct,pct] : [pct,pct]);
+    _pcSafeSetValue(sp, v instanceof Array && v.length === 3 ? [pct,pct,pct] : [pct,pct]);
 }
 
 function pcMiniProfesor(side, xPct, yPct, animate, easeOut, easeIn) {
