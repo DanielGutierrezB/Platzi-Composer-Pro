@@ -46,14 +46,35 @@
 
     function callHost(fn, cb) {
         logAction("callHost", fn);
+        _evalHost(fn, cb, false);
+    }
+
+    // Ejecuta una función del host. Si el host devuelve vacío o "EvalScript error"
+    // (típicamente porque host/index.jsx no se cargó), recarga el host y reintenta 1 vez.
+    function _evalHost(fn, cb, isRetry) {
         csInterface.evalScript(fn, function(result) {
+            var raw = (result == null) ? "" : ("" + result);
+            var clean = raw.replace(/\s+/g, "");
+
+            if (clean === "" || raw === "EvalScript error.") {
+                if (!isRetry) {
+                    var hostPath = csInterface.getSystemPath(SystemPath.EXTENSION) + "/host/index.jsx";
+                    csInterface.evalScript("$.evalFile(\"" + hostPath.replace(/\\/g, "/") + "\")", function() {
+                        _evalHost(fn, cb, true);
+                    });
+                    return;
+                }
+                showToast("El host de AE no respondió. Recargá el panel con el botón ⟳ y reintentá.", "error");
+                return;
+            }
+
             try {
-                var d = JSON.parse(result);
+                var d = JSON.parse(raw);
                 if (d.error) { showToast(d.error, "error"); return; }
                 showToast("Listo", "success");
                 if (cb) cb(d);
             } catch(e) {
-                showToast("Error: " + e.message, "error");
+                showToast("Respuesta inválida del host: " + raw.substring(0, 80), "error");
             }
         });
     }
