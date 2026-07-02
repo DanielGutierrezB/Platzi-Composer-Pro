@@ -4,3 +4,4 @@ mimetype
 dist/
 node_modules/
 *.zxp
+.tools/
