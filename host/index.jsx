@@ -857,7 +857,7 @@ function pcCreateHighlightBox(mode, easeOut, easeIn, enableGlow, roundness) {
             colorCtrl.property("Color").setValue([0.039, 0.914, 0.541]);
             var padCtrl = fxs.addProperty("ADBE Slider Control"); padCtrl.name = "Padding";
             padCtrl.property("Slider").setValue(10);
-            var roundCtrl = fxs.addProperty("ADBE Slider Control"); roundCtrl.name = "Roundness";
+            var roundCtrl = fxs.addProperty("ADBE Slider Control"); roundCtrl.name = "Redondez";
             roundCtrl.property("Slider").setValue(_rnd);
 
             // Position at box center
@@ -907,7 +907,7 @@ function pcCreateHighlightBox(mode, easeOut, easeIn, enableGlow, roundness) {
 
             // Round Corners operator
             var rc = grpContents.addProperty("ADBE Vector Filter - RC");
-            try { rc.property("ADBE Vector RoundCorner Radius").expression = "effect(\"Roundness\")(\"Slider\")"; } catch(ex) {}
+            try { rc.property("ADBE Vector RoundCorner Radius").expression = "effect(\"Redondez\")(\"Slider\")"; } catch(ex) {}
 
             var trim = grpContents.addProperty("ADBE Vector Filter - Trim");
             trim.property("End").setValue(100);
@@ -993,6 +993,25 @@ function _pcRoundMaskShape(sh, radius) {
     return out;
 }
 
+// Genera una EXPRESIÓN para el maskPath que redondea el path base según el slider
+// "Redondez" — así la redondez de la máscara queda editable después de crear.
+function _pcMaskRoundExpr(shape) {
+    var v = shape.vertices, parts = [];
+    for (var i = 0; i < v.length; i++) { parts.push("[" + v[i][0] + "," + v[i][1] + "]"); }
+    var lit = "[" + parts.join(",") + "]";
+    return "var r=effect(\"Redondez\")(\"Slider\");var vs=" + lit + ";var n=vs.length;" +
+        "if(r<=0||n<3){createPath(vs,[],[],true);}else{var K=0.5523;var nv=[],ni=[],no=[];" +
+        "for(var i=0;i<n;i++){var c=vs[i],p=vs[(i-1+n)%n],q=vs[(i+1)%n];" +
+        "var dpx=p[0]-c[0],dpy=p[1]-c[1],dnx=q[0]-c[0],dny=q[1]-c[1];" +
+        "var lp=Math.sqrt(dpx*dpx+dpy*dpy),ln=Math.sqrt(dnx*dnx+dny*dny);" +
+        "if(lp==0||ln==0){nv.push(c);ni.push([0,0]);no.push([0,0]);continue;}" +
+        "var rr=Math.min(r,lp/2,ln/2);" +
+        "var A=[c[0]+dpx/lp*rr,c[1]+dpy/lp*rr],B=[c[0]+dnx/ln*rr,c[1]+dny/ln*rr];" +
+        "nv.push(A);ni.push([0,0]);no.push([(c[0]-A[0])*K,(c[1]-A[1])*K]);" +
+        "nv.push(B);ni.push([(c[0]-B[0])*K,(c[1]-B[1])*K]);no.push([0,0]);}" +
+        "createPath(nv,ni,no,true);}";
+}
+
 // ─── FOCUS MASK ──────────────────────────────────────────────
 
 function pcCreateFocusMask(opacityVal, featherVal, roundness) {
@@ -1025,11 +1044,15 @@ function pcCreateFocusMask(opacityVal, featherVal, roundness) {
         opaCtrl.property("Slider").setValue(opa);
         var fthCtrl = fxs.addProperty("ADBE Slider Control"); fthCtrl.name = "Feather";
         fthCtrl.property("Slider").setValue(fth);
+        var rndCtrl = fxs.addProperty("ADBE Slider Control"); rndCtrl.name = "Redondez";
+        rndCtrl.property("Slider").setValue(rnd);
 
         try { dark.property("Transform").property("Opacity").expression = "effect(\"Darkness\")(\"Slider\")"; } catch(ex) {}
 
         var maskProp = dark.property("Masks").addProperty("Mask");
-        maskProp.property("maskShape").setValue(_pcRoundMaskShape(maskShapeVal, rnd));
+        maskProp.property("maskShape").setValue(maskShapeVal);
+        // Redondez editable: el path se redondea en vivo según el slider "Redondez".
+        try { maskProp.property("maskShape").expression = _pcMaskRoundExpr(maskShapeVal); } catch(ex) {}
         // maskExpansion queda en 0 (antes un slider "Roundness"=60 lo expandía y
         // agrandaba la zona clara 60px respecto a lo dibujado).
         maskProp.maskMode = MaskMode.SUBTRACT;
@@ -1116,8 +1139,6 @@ function pcCreateZoomFocus(blurAmount, scaleFactor, easeOut, easeIn, roundness) 
         var dup = original.duplicate();
         dup.name = "ZoomFocus_" + original.name;
         dup.inPoint = comp.time;
-        // Redondear las esquinas de la máscara del duplicado (recorte que hace zoom)
-        try { dup.property("Masks").property(1).property("maskShape").setValue(_pcRoundMaskShape(maskShapeVal, rnd)); } catch(ex) {}
         original.property("Masks").property(1).remove();
         // Blur on original
         var fxsOrig = original.property("Effects");
@@ -1128,37 +1149,39 @@ function pcCreateZoomFocus(blurAmount, scaleFactor, easeOut, easeIn, roundness) 
         var fxsDup = dup.property("Effects");
         var mfCtrl = fxsDup.addProperty("ADBE Slider Control"); mfCtrl.name = "Mask Feather";
         mfCtrl.property("Slider").setValue(0);
+        var rndCtrl = fxsDup.addProperty("ADBE Slider Control"); rndCtrl.name = "Redondez";
+        rndCtrl.property("Slider").setValue(rnd);
         try { dup.property("Masks").property(1).property("maskFeather").expression = "var f = effect(\"Mask Feather\")(\"Slider\"); [f, f]"; } catch(ex) {}
+        // Redondez editable: el recorte se redondea en vivo según el slider "Redondez".
+        try { dup.property("Masks").property(1).property("maskShape").expression = _pcMaskRoundExpr(maskShapeVal); } catch(ex) {}
         // maskExpansion se deja en 0 (antes un slider "Roundness"=60 lo expandía y
         // rompía el foco: agrandaba el recorte 60px y dejaba de aislar el área).
         var posProp = dup.property("Transform").property("Position");
-        var anchorProp = dup.property("Transform").property("Anchor Point");
+        var anchorVal = dup.property("Transform").property("Anchor Point").value;
         var posVal = posProp.value;
-        var anchorVal = anchorProp.value;
         var is3D = (posVal.length === 3);
+        _pcClearKeys(posProp); // por si la capa original ya traía keyframes de posición
 
-        // Anclar la capa al centro de la máscara: así el zoom escala ALREDEDOR del
-        // área enfocada (no del centro de la capa) y no se desvía hacia otro lado.
-        var newAnchor = is3D ? [maskCenterX, maskCenterY, anchorVal[2]] : [maskCenterX, maskCenterY];
-        // Compensar la posición para que la capa no salte al mover el anchor.
-        var basePos = is3D
-            ? [posVal[0] + (newAnchor[0] - anchorVal[0]), posVal[1] + (newAnchor[1] - anchorVal[1]), posVal[2]]
-            : [posVal[0] + (newAnchor[0] - anchorVal[0]), posVal[1] + (newAnchor[1] - anchorVal[1])];
-        anchorProp.setValue(newAnchor);
-        posProp.setValue(basePos);
-
-        // Objetivo del zoom: el centro de la máscara (= anchor) va al centro del comp.
-        var targetPos = is3D ? [compCenterX, compCenterY, basePos[2]] : [compCenterX, compCenterY];
+        var factor = sf / 100.0; // relación de escala final / actual
+        // Posición del centro de la máscara en el comp (a la escala actual).
+        var maskCompX = posVal[0] + (maskCenterX - anchorVal[0]);
+        var maskCompY = posVal[1] + (maskCenterY - anchorVal[1]);
+        // Al escalar a 'sf', el centro de la máscara debe caer en el centro del comp.
+        // Se COMPENSA por la escala final (el bug anterior lo calculaba a 100% y por eso
+        // el foco se desviaba). No se toca el anchor.
+        var targetPos = is3D
+            ? [compCenterX - (maskCompX - posVal[0]) * factor, compCenterY - (maskCompY - posVal[1]) * factor, posVal[2]]
+            : [compCenterX - (maskCompX - posVal[0]) * factor, compCenterY - (maskCompY - posVal[1]) * factor];
 
         var fps = comp.frameRate;
         var dur = 20 / fps;
         var inPt = comp.time;
         var outPt = dup.outPoint;
         // Position keyframes
-        var kp1 = posProp.addKey(inPt); posProp.setValueAtKey(kp1, basePos);
+        var kp1 = posProp.addKey(inPt); posProp.setValueAtKey(kp1, posVal);
         var kp2 = posProp.addKey(inPt + dur); posProp.setValueAtKey(kp2, targetPos);
         var kp3 = posProp.addKey(outPt - dur); posProp.setValueAtKey(kp3, targetPos);
-        var kp4 = posProp.addKey(outPt); posProp.setValueAtKey(kp4, basePos);
+        var kp4 = posProp.addKey(outPt); posProp.setValueAtKey(kp4, posVal);
         posProp.setInterpolationTypeAtKey(kp1, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
         posProp.setInterpolationTypeAtKey(kp2, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
         posProp.setInterpolationTypeAtKey(kp3, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
@@ -1168,6 +1191,7 @@ function pcCreateZoomFocus(blurAmount, scaleFactor, easeOut, easeIn, roundness) 
 
         // Scale keyframes
         var scaleProp = dup.property("Transform").property("Scale");
+        _pcClearKeys(scaleProp); // por si la capa original ya traía keyframes de escala
         var origScale = scaleProp.value;
         // Zoom relativo a la escala original (por si la capa no está al 100%).
         var zf = sf / 100.0;
