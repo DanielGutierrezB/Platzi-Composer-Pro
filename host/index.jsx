@@ -1188,6 +1188,7 @@ function pcCreateZoomFocus(blurAmount, scaleFactor, easeOut, easeIn) {
         // caían ANTES del playhead => toda la animación quedaba hacia atrás y el trim de
         // inPoint fallaba (inPt >= outPoint). Ahora garantizamos espacio hacia adelante:
         // si el clip original no tiene largo suficiente adelante, extendemos su outPoint.
+        var origIn = dup.inPoint;
         var origOut = dup.outPoint;
         var minSpan = 3 * dur; // in (dur) + hold (dur) + out (dur) mínimo
         var outPt;
@@ -1241,7 +1242,23 @@ function pcCreateZoomFocus(blurAmount, scaleFactor, easeOut, easeIn) {
         // movimiento (el playhead). Se hace acá, después de máscara/efectos/keyframes,
         // porque en capas linked/MOGRT setearlo al inicio no cortaba la capa y quedaba
         // extendida hacia atrás. El primer keyframe (inPt) coincide con este inPoint.
-        try { dup.inPoint = inPt; } catch(eTrim) {}
+        var trimErr = "";
+        try { dup.inPoint = inPt; } catch(eTrim) { trimErr = eTrim.toString(); }
+
+        // Diagnóstico en pantalla (build 1.5.17): imposible de perder. Muestra los
+        // tiempos reales para entender por qué el clip queda hacia atrás.
+        try {
+            alert("ZoomFocus DEBUG v1.5.17\n" +
+                "comp.time (playhead): " + comp.time + "\n" +
+                "fps: " + fps + "\n" +
+                "origIn (clip original in): " + origIn + "\n" +
+                "origOut (clip original out): " + origOut + "\n" +
+                "inPt usado: " + inPt + "\n" +
+                "outPt usado: " + outPt + "\n" +
+                "dup.inPoint FINAL: " + dup.inPoint + "\n" +
+                "dup.outPoint FINAL: " + dup.outPoint + "\n" +
+                "trimErr: " + (trimErr || "(ninguno)"));
+        } catch(eAlert) {}
 
         // Debug: volcar los tiempos reales a ~/Downloads/ para diagnosticar el corte.
         try {
