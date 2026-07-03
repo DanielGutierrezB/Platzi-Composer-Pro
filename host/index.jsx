@@ -1182,7 +1182,21 @@ function pcCreateZoomFocus(blurAmount, scaleFactor, easeOut, easeIn) {
         var fps = comp.frameRate;
         var dur = 20 / fps;
         var inPt = comp.time;
-        var outPt = dup.outPoint;
+        // El zoom es un pulso hacia ADELANTE desde el playhead: in -> hold -> out.
+        // Antes outPt = dup.outPoint (fin del clip original). Si el playhead estaba al
+        // final del clip (outPoint ~= playhead), los keyframes de hold/out (outPt - dur)
+        // caían ANTES del playhead => toda la animación quedaba hacia atrás y el trim de
+        // inPoint fallaba (inPt >= outPoint). Ahora garantizamos espacio hacia adelante:
+        // si el clip original no tiene largo suficiente adelante, extendemos su outPoint.
+        var origOut = dup.outPoint;
+        var minSpan = 3 * dur; // in (dur) + hold (dur) + out (dur) mínimo
+        var outPt;
+        if (origOut - inPt >= minSpan) {
+            outPt = origOut;                 // hay clip adelante: el hold llega hasta el fin
+        } else {
+            outPt = inPt + minSpan;          // no hay: extendemos la capa hacia adelante
+            try { dup.outPoint = outPt; } catch(eOut) {}
+        }
         // Position keyframes
         var posProp = dup.property("Transform").property("Position");
         var kp1 = posProp.addKey(inPt); posProp.setValueAtKey(kp1, posVal);
@@ -1228,6 +1242,18 @@ function pcCreateZoomFocus(blurAmount, scaleFactor, easeOut, easeIn) {
         // porque en capas linked/MOGRT setearlo al inicio no cortaba la capa y quedaba
         // extendida hacia atrás. El primer keyframe (inPt) coincide con este inPoint.
         try { dup.inPoint = inPt; } catch(eTrim) {}
+
+        // Debug: volcar los tiempos reales a ~/Downloads/ para diagnosticar el corte.
+        try {
+            var dbg = Folder("~/Downloads");
+            var dbgBase = dbg.exists ? dbg : Folder.desktop;
+            var dbgFile = new File(dbgBase.fsName + "/ZoomFocus_debug.txt");
+            dbgFile.encoding = "UTF-8"; dbgFile.open("a");
+            dbgFile.writeln("[ZoomFocus] compTime=" + comp.time + " fps=" + fps +
+                " origOut=" + origOut + " inPt=" + inPt + " outPt=" + outPt +
+                " -> dup.inPoint=" + dup.inPoint + " dup.outPoint=" + dup.outPoint);
+            dbgFile.close();
+        } catch(eDbg) {}
 
         app.endUndoGroup();
         return JSON.stringify({ success: true });
