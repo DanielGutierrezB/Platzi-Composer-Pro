@@ -1093,21 +1093,34 @@ function pcCreateZoomFocus(blurAmount, scaleFactor, easeOut, easeIn) {
         try { dup.property("Masks").property(1).property("maskFeather").expression = "var f = effect(\"Mask Feather\")(\"Slider\"); [f, f]"; } catch(ex) {}
         // maskExpansion se deja en 0 (antes un slider "Roundness"=60 lo expandía y
         // rompía el foco: agrandaba el recorte 60px y dejaba de aislar el área).
-        var posVal = dup.property("Transform").property("Position").value;
-        var anchorVal = dup.property("Transform").property("Anchor Point").value;
-        var maskCompX = posVal[0] - anchorVal[0] + maskCenterX;
-        var maskCompY = posVal[1] - anchorVal[1] + maskCenterY;
-        var targetPos = [posVal[0] + (compCenterX - maskCompX), posVal[1] + (compCenterY - maskCompY)];
+        var posProp = dup.property("Transform").property("Position");
+        var anchorProp = dup.property("Transform").property("Anchor Point");
+        var posVal = posProp.value;
+        var anchorVal = anchorProp.value;
+        var is3D = (posVal.length === 3);
+
+        // Anclar la capa al centro de la máscara: así el zoom escala ALREDEDOR del
+        // área enfocada (no del centro de la capa) y no se desvía hacia otro lado.
+        var newAnchor = is3D ? [maskCenterX, maskCenterY, anchorVal[2]] : [maskCenterX, maskCenterY];
+        // Compensar la posición para que la capa no salte al mover el anchor.
+        var basePos = is3D
+            ? [posVal[0] + (newAnchor[0] - anchorVal[0]), posVal[1] + (newAnchor[1] - anchorVal[1]), posVal[2]]
+            : [posVal[0] + (newAnchor[0] - anchorVal[0]), posVal[1] + (newAnchor[1] - anchorVal[1])];
+        anchorProp.setValue(newAnchor);
+        posProp.setValue(basePos);
+
+        // Objetivo del zoom: el centro de la máscara (= anchor) va al centro del comp.
+        var targetPos = is3D ? [compCenterX, compCenterY, basePos[2]] : [compCenterX, compCenterY];
+
         var fps = comp.frameRate;
         var dur = 20 / fps;
         var inPt = comp.time;
         var outPt = dup.outPoint;
         // Position keyframes
-        var posProp = dup.property("Transform").property("Position");
-        var kp1 = posProp.addKey(inPt); posProp.setValueAtKey(kp1, posVal);
+        var kp1 = posProp.addKey(inPt); posProp.setValueAtKey(kp1, basePos);
         var kp2 = posProp.addKey(inPt + dur); posProp.setValueAtKey(kp2, targetPos);
         var kp3 = posProp.addKey(outPt - dur); posProp.setValueAtKey(kp3, targetPos);
-        var kp4 = posProp.addKey(outPt); posProp.setValueAtKey(kp4, posVal);
+        var kp4 = posProp.addKey(outPt); posProp.setValueAtKey(kp4, basePos);
         posProp.setInterpolationTypeAtKey(kp1, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
         posProp.setInterpolationTypeAtKey(kp2, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
         posProp.setInterpolationTypeAtKey(kp3, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
@@ -1118,9 +1131,14 @@ function pcCreateZoomFocus(blurAmount, scaleFactor, easeOut, easeIn) {
         // Scale keyframes
         var scaleProp = dup.property("Transform").property("Scale");
         var origScale = scaleProp.value;
+        // Zoom relativo a la escala original (por si la capa no está al 100%).
+        var zf = sf / 100.0;
+        var zoomScale = is3D
+            ? [origScale[0]*zf, origScale[1]*zf, origScale[2]*zf]
+            : [origScale[0]*zf, origScale[1]*zf];
         var ks1 = scaleProp.addKey(inPt); scaleProp.setValueAtKey(ks1, origScale);
-        var ks2 = scaleProp.addKey(inPt + dur); scaleProp.setValueAtKey(ks2, [sf, sf]);
-        var ks3 = scaleProp.addKey(outPt - dur); scaleProp.setValueAtKey(ks3, [sf, sf]);
+        var ks2 = scaleProp.addKey(inPt + dur); scaleProp.setValueAtKey(ks2, zoomScale);
+        var ks3 = scaleProp.addKey(outPt - dur); scaleProp.setValueAtKey(ks3, zoomScale);
         var ks4 = scaleProp.addKey(outPt); scaleProp.setValueAtKey(ks4, origScale);
         scaleProp.setInterpolationTypeAtKey(ks1, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
         scaleProp.setInterpolationTypeAtKey(ks2, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
