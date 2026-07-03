@@ -1104,7 +1104,7 @@ function pcFocusMaskAnimate(mode, easeOut, easeIn) {
 
 // ─── ZOOM FOCUS ──────────────────────────────────────────────
 
-function pcCreateZoomFocus(blurAmount, scaleFactor, easeOut, easeIn) {
+function pcCreateZoomFocus(blurAmount, scaleFactor, easeOut, easeIn, roundness) {
     var s = _pcRequireSelected();
     if (!s) return JSON.stringify({ error: "Selecciona una capa con máscara." });
     try {
@@ -1161,8 +1161,11 @@ function pcCreateZoomFocus(blurAmount, scaleFactor, easeOut, easeIn) {
         var fxsDup = dup.property("Effects");
         var mfCtrl = fxsDup.addProperty("ADBE Slider Control"); mfCtrl.name = "Mask Feather";
         mfCtrl.property("Slider").setValue(0);
+        // Roundness viene de la interfaz (input "Redondez" del panel). Antes estaba
+        // hardcodeado en 60 e ignoraba el valor de la UI. Si no llega, default 0.
+        var rn = (roundness === undefined || roundness === null || isNaN(roundness)) ? 0 : roundness;
         var roundCtrlZF = fxsDup.addProperty("ADBE Slider Control"); roundCtrlZF.name = "Roundness";
-        roundCtrlZF.property("Slider").setValue(60);
+        roundCtrlZF.property("Slider").setValue(rn);
         try { dupMask.property("maskFeather").expression = "var f = effect(\"Mask Feather\")(\"Slider\"); [f, f]"; } catch(ex) {}
         try { dupMask.property("maskExpansion").expression = "effect(\"Roundness\")(\"Slider\")"; } catch(ex) {}
 
