@@ -1134,7 +1134,10 @@ function pcCreateZoomFocus(blurAmount, scaleFactor, easeOut, easeIn) {
         var compCenterY = comp.height / 2;
         var dup = original.duplicate();
         dup.name = "ZoomFocus_" + original.name;
-        dup.inPoint = comp.time;
+        // El corte (inPoint) se hace AL FINAL de la función, no acá: setearlo antes
+        // de reconstruir máscara/efectos/keyframes no "pega" en capas linked/MOGRT y
+        // la capa quedaba extendida hacia atrás (desde el inicio del clip original)
+        // en vez de cortada donde arranca el movimiento.
 
         // Reconstruir la máscara del duplicado desde cero. NO confiar en la máscara
         // copiada por duplicate(): en AE 2026 (sobre todo con precomps / linked comps
@@ -1219,6 +1222,12 @@ function pcCreateZoomFocus(blurAmount, scaleFactor, easeOut, easeIn) {
         blurProp.setInterpolationTypeAtKey(kb4, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
         _pcApplyEaseScalar(blurProp, kb1, kb2, eo, ei);
         _pcApplyEaseScalar(blurProp, kb3, kb4, eo, ei);
+
+        // Cortar el duplicado para que ARRANQUE exactamente donde empieza el
+        // movimiento (el playhead). Se hace acá, después de máscara/efectos/keyframes,
+        // porque en capas linked/MOGRT setearlo al inicio no cortaba la capa y quedaba
+        // extendida hacia atrás. El primer keyframe (inPt) coincide con este inPoint.
+        try { dup.inPoint = inPt; } catch(eTrim) {}
 
         app.endUndoGroup();
         return JSON.stringify({ success: true });
