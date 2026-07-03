@@ -14,7 +14,7 @@
             <div class="header-spacer"></div>
             <span id="comp-name" class="comp-name">Sin composición activa</span>
             <span id="layer-count" class="layer-count"></span>
-            <span id="version-badge" class="version-label">v1.5.9</span>
+            <span id="version-badge" class="version-label">v1.5.10</span>
             <button id="btn-update" class="icon-btn" title="Verificar actualización / Recargar panel">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
@@ -200,20 +200,6 @@
             <div class="tool-card-body hidden">
                 <div class="hl-hint">💡 Shift+Clic=In/Out · Alt+Clic=In · Shift+Alt=Out</div>
 
-                <!-- Redondez global (Highlight Box) -->
-                <div class="hl-type hl-type-compact">
-                    <div class="hl-type-head">
-                        <div class="hl-type-label">⬭ Redondez</div>
-                        <div class="hl-type-desc">Radio de esquinas del Highlight Box (px · 0 = cuadrado)</div>
-                    </div>
-                    <div class="tool-row hl-type-actions">
-                        <label title="Radio de redondeo de esquinas en px (0 = cuadrado)">Radio</label>
-                        <input type="number" id="hl-round" class="tool-input" value="20" min="0" max="500">
-                        <button class="btn-defaults btn-save-def" data-keys="hl-round" title="Guardar como default">💾</button>
-                        <button class="btn-defaults btn-reset-def" data-keys="hl-round" title="Restaurar defaults">↩</button>
-                    </div>
-                </div>
-
                 <!-- Type 1: Stroke -->
                 <div class="hl-type hl-type-compact">
                     <div class="hl-type-head">
@@ -221,6 +207,9 @@
                         <div class="hl-type-desc">Marcador rectangular sobre el texto</div>
                     </div>
                     <div class="tool-row hl-type-actions">
+                        <label class="tool-checkbox" title="Puntas redondeadas del marcador"><input type="checkbox" id="chk-stroke-round"> ⌒ Puntas</label>
+                        <button class="btn-defaults btn-save-def" data-keys="chk-stroke-round" title="Guardar como default">💾</button>
+                        <button class="btn-defaults btn-reset-def" data-keys="chk-stroke-round" title="Restaurar defaults">↩</button>
                         <button id="btn-hl-create" class="btn btn-tool" data-tooltip="Clic: crear | Shift: In/Out | Alt: In | Shift+Alt: Out" title="Clic: crear | Shift+Clic: crear con In/Out | Ctrl+Clic: crear con In | Shift+Ctrl: crear con Out">Create</button>
                         <button id="btn-hl-flip" class="btn btn-tool">↔ Flip</button>
                     </div>
@@ -250,6 +239,10 @@
                         <div class="hl-type-desc">Dibuja máscara primero. Oscurece todo excepto la zona enfocada</div>
                     </div>
                     <div class="tool-row hl-type-actions">
+                        <label title="Radio de redondeo de las esquinas de la máscara (px · 0 = recto)">Redondez</label>
+                        <input type="number" id="fm-round" class="tool-input" value="0" min="0" max="500">
+                        <button class="btn-defaults btn-save-def" data-keys="fm-round" title="Guardar como default">💾</button>
+                        <button class="btn-defaults btn-reset-def" data-keys="fm-round" title="Restaurar defaults">↩</button>
                         <button id="btn-focus-create" class="btn btn-tool" data-tooltip="Dibuja máscara primero | Shift: In/Out" title="Dibuja máscara primero. Clic: crear | Shift: In/Out | Alt: In | Shift+Alt: Out">Create</button>
                     </div>
                 </div>
@@ -263,6 +256,10 @@
                     <div class="tool-row hl-type-actions">
                         <label title="Cantidad de blur en el fondo (0-100)">Blur</label>
                         <input type="number" id="zf-blur" class="tool-input" value="25" min="0" max="100">
+                        <label title="Radio de redondeo de las esquinas de la máscara (px · 0 = recto)">Redondez</label>
+                        <input type="number" id="zf-round" class="tool-input" value="0" min="0" max="500">
+                        <button class="btn-defaults btn-save-def" data-keys="zf-blur,zf-round" title="Guardar como default">💾</button>
+                        <button class="btn-defaults btn-reset-def" data-keys="zf-blur,zf-round" title="Restaurar defaults">↩</button>
                         <button id="btn-zoom-focus-create" class="btn btn-tool" data-tooltip="Dibuja máscara en la capa primero">Create</button>
                     </div>
                 </div>
@@ -274,6 +271,10 @@
                         <div class="hl-type-desc">Dibuja máscara → recuadro animado emparentado</div>
                     </div>
                     <div class="tool-row hl-type-actions">
+                        <label title="Radio de redondeo de las esquinas del recuadro (px · 0 = cuadrado)">Redondez</label>
+                        <input type="number" id="box-round" class="tool-input" value="20" min="0" max="500">
+                        <button class="btn-defaults btn-save-def" data-keys="box-round" title="Guardar como default">💾</button>
+                        <button class="btn-defaults btn-reset-def" data-keys="box-round" title="Restaurar defaults">↩</button>
                         <button id="btn-box-create" class="btn btn-tool" data-tooltip="Dibuja máscara primero | Shift: In/Out | Alt: In | Shift+Alt: Out">Create</button>
                         <label class="tool-checkbox"><input type="checkbox" id="chk-box-glow"> Glow</label>
                     </div>

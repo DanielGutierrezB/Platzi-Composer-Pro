@@ -282,7 +282,7 @@ function _pcApplyEaseArray(prop, k1, k2, easeOutVal, easeInVal) {
 
 // ─── HIGHLIGHTER ─────────────────────────────────────────────
 
-function pcCreateHighlighter() {
+function pcCreateHighlighter(roundCaps) {
     var comp = _pcRequireComp();
     if (!comp) return JSON.stringify({ error: "No hay composición activa." });
     try {
@@ -320,6 +320,8 @@ function pcCreateHighlighter() {
         stroke.property("Stroke Width").setValue(30);
         try { stroke.property("Stroke Width").expression = "effect(\"Thickness\")(\"Slider\")"; } catch(ex) {}
         try { stroke.property("Color").expression = "effect(\"Color\")(\"Color\")"; } catch(ex) {}
+        // Puntas: 1=Butt (rectas), 2=Round (redondeadas)
+        try { stroke.property("ADBE Vector Stroke Line Cap").setValue(roundCaps ? 2 : 1); } catch(ex) {}
 
         var trim = rc.addProperty("ADBE Vector Filter - Trim");
         trim.property("End").setValue(100);
@@ -959,9 +961,41 @@ function pcCreateHighlightBox(mode, easeOut, easeIn, enableGlow, roundness) {
 }
 
 
+// Devuelve una copia del Shape con las esquinas redondeadas por 'radius' px.
+// Reforma el path metiendo 2 vértices por esquina + tangentes bezier (arco ~circular).
+function _pcRoundMaskShape(sh, radius) {
+    if (!radius || radius <= 0) return sh;
+    var v = sh.vertices;
+    var n = v.length;
+    if (n < 3) return sh;
+    var K = 0.5523; // aproximación de cuarto de círculo con bezier
+    var nv = [], ni = [], no = [];
+    for (var i = 0; i < n; i++) {
+        var cur = v[i];
+        var prev = v[(i - 1 + n) % n];
+        var nxt = v[(i + 1) % n];
+        var dpx = prev[0] - cur[0], dpy = prev[1] - cur[1];
+        var dnx = nxt[0] - cur[0], dny = nxt[1] - cur[1];
+        var lp = Math.sqrt(dpx*dpx + dpy*dpy);
+        var ln = Math.sqrt(dnx*dnx + dny*dny);
+        if (lp === 0 || ln === 0) { nv.push(cur); ni.push([0,0]); no.push([0,0]); continue; }
+        var r = Math.min(radius, lp / 2, ln / 2);
+        var A = [cur[0] + (dpx/lp)*r, cur[1] + (dpy/lp)*r]; // sobre la arista previa
+        var B = [cur[0] + (dnx/ln)*r, cur[1] + (dny/ln)*r]; // sobre la arista siguiente
+        nv.push(A); ni.push([0,0]); no.push([(cur[0]-A[0])*K, (cur[1]-A[1])*K]);
+        nv.push(B); ni.push([(cur[0]-B[0])*K, (cur[1]-B[1])*K]); no.push([0,0]);
+    }
+    var out = new Shape();
+    out.vertices = nv;
+    out.inTangents = ni;
+    out.outTangents = no;
+    out.closed = true;
+    return out;
+}
+
 // ─── FOCUS MASK ──────────────────────────────────────────────
 
-function pcCreateFocusMask(opacityVal, featherVal) {
+function pcCreateFocusMask(opacityVal, featherVal, roundness) {
     var s = _pcRequireSelected();
     if (!s) return JSON.stringify({ error: "Selecciona una capa con máscara." });
     try {
@@ -969,6 +1003,7 @@ function pcCreateFocusMask(opacityVal, featherVal) {
         var comp = s.comp, original = s.layers[0];
         var opa = opacityVal || 70;
         var fth = featherVal || 20;
+        var rnd = (roundness === undefined || roundness === null || isNaN(roundness)) ? 0 : roundness;
 
         var masks = original.property("Masks");
         if (!masks || masks.numProperties === 0) {
@@ -994,7 +1029,7 @@ function pcCreateFocusMask(opacityVal, featherVal) {
         try { dark.property("Transform").property("Opacity").expression = "effect(\"Darkness\")(\"Slider\")"; } catch(ex) {}
 
         var maskProp = dark.property("Masks").addProperty("Mask");
-        maskProp.property("maskShape").setValue(maskShapeVal);
+        maskProp.property("maskShape").setValue(_pcRoundMaskShape(maskShapeVal, rnd));
         // maskExpansion queda en 0 (antes un slider "Roundness"=60 lo expandía y
         // agrandaba la zona clara 60px respecto a lo dibujado).
         maskProp.maskMode = MaskMode.SUBTRACT;
@@ -1049,7 +1084,7 @@ function pcFocusMaskAnimate(mode, easeOut, easeIn) {
 
 // ─── ZOOM FOCUS ──────────────────────────────────────────────
 
-function pcCreateZoomFocus(blurAmount, scaleFactor, easeOut, easeIn) {
+function pcCreateZoomFocus(blurAmount, scaleFactor, easeOut, easeIn, roundness) {
     var s = _pcRequireSelected();
     if (!s) return JSON.stringify({ error: "Selecciona una capa con máscara." });
     try {
@@ -1059,6 +1094,7 @@ function pcCreateZoomFocus(blurAmount, scaleFactor, easeOut, easeIn) {
         var sf = scaleFactor || 150;
         var eo = easeOut || 75;
         var ei = easeIn || 75;
+        var rnd = (roundness === undefined || roundness === null || isNaN(roundness)) ? 0 : roundness;
         var masks = original.property("Masks");
         if (!masks || masks.numProperties === 0) {
             app.endUndoGroup();
@@ -1080,6 +1116,8 @@ function pcCreateZoomFocus(blurAmount, scaleFactor, easeOut, easeIn) {
         var dup = original.duplicate();
         dup.name = "ZoomFocus_" + original.name;
         dup.inPoint = comp.time;
+        // Redondear las esquinas de la máscara del duplicado (recorte que hace zoom)
+        try { dup.property("Masks").property(1).property("maskShape").setValue(_pcRoundMaskShape(maskShapeVal, rnd)); } catch(ex) {}
         original.property("Masks").property(1).remove();
         // Blur on original
         var fxsOrig = original.property("Effects");

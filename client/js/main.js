@@ -19,7 +19,7 @@
         "mp-x": 35, "mp-y": 0,
         "cp-dur": 20, "cp-size": 600,
         "zoom-dur": 20, "zoom-pct": 130,
-        "hl-round": 20
+        "box-round": 20, "fm-round": 0, "zf-round": 0, "chk-stroke-round": 0
     };
 
     var state = {
@@ -171,7 +171,9 @@
     function saveDefaults(keys) {
         keys.forEach(function(k) {
             var el = document.getElementById(k);
-            if (el) localStorage.setItem("pc_def_" + k, el.value);
+            if (!el) return;
+            if (el.type === "checkbox") localStorage.setItem("pc_def_" + k, el.checked ? "1" : "0");
+            else localStorage.setItem("pc_def_" + k, el.value);
         });
         showToast("Defaults guardados", "success");
     }
@@ -181,7 +183,9 @@
             var el = document.getElementById(k);
             var saved = localStorage.getItem("pc_def_" + k);
             var val = saved !== null ? saved : DEFAULTS[k];
-            if (el && val !== undefined) el.value = val;
+            if (!el || val === undefined) return;
+            if (el.type === "checkbox") el.checked = (val === "1" || val === 1 || val === true);
+            else el.value = val;
         });
         showToast("Defaults restaurados", "info");
     }
@@ -190,7 +194,9 @@
         Object.keys(DEFAULTS).forEach(function(k) {
             var el = document.getElementById(k);
             var saved = localStorage.getItem("pc_def_" + k);
-            if (el && saved !== null) el.value = saved;
+            if (!el || saved === null) return;
+            if (el.type === "checkbox") el.checked = (saved === "1");
+            else el.value = saved;
         });
     }
 
@@ -1259,7 +1265,8 @@
         document.getElementById("btn-hl-create").addEventListener("click", function(e) {
             var eo = document.getElementById("ease-out").value;
             var ei = document.getElementById("ease-in").value;
-            csInterface.evalScript("pcCreateHighlighter()", function(res) {
+            var rcaps = document.getElementById("chk-stroke-round").checked;
+            csInterface.evalScript("pcCreateHighlighter(" + rcaps + ")", function(res) {
                 try { if (JSON.parse(res).error) { showToast(JSON.parse(res).error,"error"); return; } } catch(x){}
                 if (e.shiftKey && (e.altKey)) { callHost("pcHighlighterAnimate(\"out\","+eo+","+ei+")"); }
                 else if (e.altKey) { callHost("pcHighlighterAnimate(\"in\","+eo+","+ei+")"); }
@@ -1284,7 +1291,8 @@
         document.getElementById("btn-focus-create").addEventListener("click", function(e) {
             var eo = document.getElementById("ease-out").value;
             var ei = document.getElementById("ease-in").value;
-            csInterface.evalScript("pcCreateFocusMask()", function(res) {
+            var fmr = parseFloat(document.getElementById("fm-round").value); if (isNaN(fmr)) fmr = 0;
+            csInterface.evalScript("pcCreateFocusMask(70, 20, " + fmr + ")", function(res) {
                 try { if (JSON.parse(res).error) { showToast(JSON.parse(res).error,"error"); return; } } catch(x){}
                 if (e.shiftKey && (e.altKey)) { callHost("pcFocusMaskAnimate(\"out\","+eo+","+ei+")"); }
                 else if (e.altKey) { callHost("pcFocusMaskAnimate(\"in\","+eo+","+ei+")"); }
@@ -1296,7 +1304,8 @@
             var sf = 150;
             var eo = document.getElementById("ease-out").value || 33;
             var ei = document.getElementById("ease-in").value || 100;
-            callHost("pcCreateZoomFocus(" + blur + "," + sf + "," + eo + "," + ei + ")");
+            var zfr = parseFloat(document.getElementById("zf-round").value); if (isNaN(zfr)) zfr = 0;
+            callHost("pcCreateZoomFocus(" + blur + "," + sf + "," + eo + "," + ei + "," + zfr + ")");
         });
 
         // Highlight Box
@@ -1304,7 +1313,7 @@
             var eo = document.getElementById("ease-out").value;
             var ei = document.getElementById("ease-in").value;
             var glow = document.getElementById("chk-box-glow").checked;
-            var rnd = parseFloat(document.getElementById("hl-round").value);
+            var rnd = parseFloat(document.getElementById("box-round").value);
             if (isNaN(rnd)) rnd = 20;
             var mode = "none";
             if (e.shiftKey && e.altKey) mode = "out";
