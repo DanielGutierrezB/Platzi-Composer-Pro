@@ -1135,25 +1135,47 @@ function pcCreateZoomFocus(blurAmount, scaleFactor, easeOut, easeIn) {
         var dup = original.duplicate();
         dup.name = "ZoomFocus_" + original.name;
         dup.inPoint = comp.time;
+
+        // Reconstruir la máscara del duplicado desde cero. NO confiar en la máscara
+        // copiada por duplicate(): en AE 2026 (sobre todo con precomps / linked comps
+        // / MOGRT como "[SR]" / "[CAM]") la máscara copiada llegaba vacía o en modo
+        // None, dejando el recorte totalmente transparente al soloear. Creamos una
+        // máscara nueva, le seteamos el shape capturado y forzamos modo ADD.
+        var dupMasks = dup.property("Masks");
+        while (dupMasks.numProperties > 0) { dupMasks.property(dupMasks.numProperties).remove(); }
+        var dupMask = dupMasks.addProperty("Mask");
+        dupMask.property("maskShape").setValue(maskShapeVal);
+        try { dupMask.maskMode = MaskMode.ADD; } catch(exMode) {}
+
+        // El original pierde su máscara y se vuelve el fondo blureado a pantalla completa.
         original.property("Masks").property(1).remove();
         // Blur on original
         var fxsOrig = original.property("Effects");
         var blur = fxsOrig.addProperty("ADBE Gaussian Blur 2");
         blur.property("Blurriness").setValue(0);
         try { blur.property("Repeat Edge Pixels").setValue(1); } catch(e) {}
-        // Mask Feather control on duplicate
+        // Mask Feather / Roundness controls on duplicate
         var fxsDup = dup.property("Effects");
         var mfCtrl = fxsDup.addProperty("ADBE Slider Control"); mfCtrl.name = "Mask Feather";
         mfCtrl.property("Slider").setValue(0);
         var roundCtrlZF = fxsDup.addProperty("ADBE Slider Control"); roundCtrlZF.name = "Roundness";
         roundCtrlZF.property("Slider").setValue(60);
-        try { dup.property("Masks").property(1).property("maskFeather").expression = "var f = effect(\"Mask Feather\")(\"Slider\"); [f, f]"; } catch(ex) {}
-        try { dup.property("Masks").property(1).property("maskExpansion").expression = "effect(\"Roundness\")(\"Slider\")"; } catch(ex) {}
+        try { dupMask.property("maskFeather").expression = "var f = effect(\"Mask Feather\")(\"Slider\"); [f, f]"; } catch(ex) {}
+        try { dupMask.property("maskExpansion").expression = "effect(\"Roundness\")(\"Slider\")"; } catch(ex) {}
+
         var posVal = dup.property("Transform").property("Position").value;
         var anchorVal = dup.property("Transform").property("Anchor Point").value;
-        var maskCompX = posVal[0] - anchorVal[0] + maskCenterX;
-        var maskCompY = posVal[1] - anchorVal[1] + maskCenterY;
-        var targetPos = [posVal[0] + (compCenterX - maskCompX), posVal[1] + (compCenterY - maskCompY)];
+        // El escalado ocurre alrededor del anchor point, así que la posición destino
+        // debe compensar por el factor de escala FINAL para que el centro de la máscara
+        // caiga en el centro del comp EN EL PICO del zoom.
+        //   compPoint = position + (layerPoint - anchor) * (scale/100)
+        //   compCenter = targetPos + (maskCenter - anchor) * k
+        //   => targetPos = compCenter - (maskCenter - anchor) * k
+        var kScale = sf / 100;
+        var targetPos = [
+            compCenterX - (maskCenterX - anchorVal[0]) * kScale,
+            compCenterY - (maskCenterY - anchorVal[1]) * kScale
+        ];
         var fps = comp.frameRate;
         var dur = 20 / fps;
         var inPt = comp.time;
