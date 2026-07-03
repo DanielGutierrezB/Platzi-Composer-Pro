@@ -1044,15 +1044,12 @@ function pcCreateFocusMask(opacityVal, featherVal, roundness) {
         opaCtrl.property("Slider").setValue(opa);
         var fthCtrl = fxs.addProperty("ADBE Slider Control"); fthCtrl.name = "Feather";
         fthCtrl.property("Slider").setValue(fth);
-        var rndCtrl = fxs.addProperty("ADBE Slider Control"); rndCtrl.name = "Redondez";
-        rndCtrl.property("Slider").setValue(rnd);
 
         try { dark.property("Transform").property("Opacity").expression = "effect(\"Darkness\")(\"Slider\")"; } catch(ex) {}
 
         var maskProp = dark.property("Masks").addProperty("Mask");
-        maskProp.property("maskShape").setValue(maskShapeVal);
-        // Redondez editable: el path se redondea en vivo según el slider "Redondez".
-        try { maskProp.property("maskShape").expression = _pcMaskRoundExpr(maskShapeVal); } catch(ex) {}
+        // Redondez horneada en el path al crear (la versión estable que sí mostraba bien la zona).
+        maskProp.property("maskShape").setValue(_pcRoundMaskShape(maskShapeVal, rnd));
         // maskExpansion queda en 0 (antes un slider "Roundness"=60 lo expandía y
         // agrandaba la zona clara 60px respecto a lo dibujado).
         maskProp.maskMode = MaskMode.SUBTRACT;
@@ -1149,11 +1146,9 @@ function pcCreateZoomFocus(blurAmount, scaleFactor, easeOut, easeIn, roundness) 
         var fxsDup = dup.property("Effects");
         var mfCtrl = fxsDup.addProperty("ADBE Slider Control"); mfCtrl.name = "Mask Feather";
         mfCtrl.property("Slider").setValue(0);
-        var rndCtrl = fxsDup.addProperty("ADBE Slider Control"); rndCtrl.name = "Redondez";
-        rndCtrl.property("Slider").setValue(rnd);
         try { dup.property("Masks").property(1).property("maskFeather").expression = "var f = effect(\"Mask Feather\")(\"Slider\"); [f, f]"; } catch(ex) {}
-        // Redondez editable: el recorte se redondea en vivo según el slider "Redondez".
-        try { dup.property("Masks").property(1).property("maskShape").expression = _pcMaskRoundExpr(maskShapeVal); } catch(ex) {}
+        // Redondez horneada en el path al crear (la expresión en vivo rompía el recorte).
+        try { dup.property("Masks").property(1).property("maskShape").setValue(_pcRoundMaskShape(maskShapeVal, rnd)); } catch(ex) {}
         // maskExpansion se deja en 0 (antes un slider "Roundness"=60 lo expandía y
         // rompía el foco: agrandaba el recorte 60px y dejaba de aislar el área).
         var posProp = dup.property("Transform").property("Position");
