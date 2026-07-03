@@ -1243,34 +1243,23 @@ function pcCreateZoomFocus(blurAmount, scaleFactor, easeOut, easeIn) {
         // porque en capas linked/MOGRT setearlo al inicio no cortaba la capa y quedaba
         // extendida hacia atrás. El primer keyframe (inPt) coincide con este inPoint.
         var trimErr = "";
-        try { dup.inPoint = inPt; } catch(eTrim) { trimErr = eTrim.toString(); }
-
-        // Diagnóstico en pantalla (build 1.5.17): imposible de perder. Muestra los
-        // tiempos reales para entender por qué el clip queda hacia atrás.
         try {
-            alert("ZoomFocus DEBUG v1.5.17\n" +
-                "comp.time (playhead): " + comp.time + "\n" +
-                "fps: " + fps + "\n" +
-                "origIn (clip original in): " + origIn + "\n" +
-                "origOut (clip original out): " + origOut + "\n" +
-                "inPt usado: " + inPt + "\n" +
-                "outPt usado: " + outPt + "\n" +
-                "dup.inPoint FINAL: " + dup.inPoint + "\n" +
-                "dup.outPoint FINAL: " + dup.outPoint + "\n" +
-                "trimErr: " + (trimErr || "(ninguno)"));
-        } catch(eAlert) {}
+            dup.inPoint = inPt;
+            // BUG AE 2026 en capas linked/MOGRT: al setear inPoint el outPoint se
+            // corrompe a un negativo gigante (ej. -1237s) y la capa queda invertida
+            // ("hacia atrás"). Lo restauramos al final correcto DESPUÉS del inPoint.
+            dup.outPoint = outPt;
+        } catch(eTrim) { trimErr = eTrim.toString(); }
 
-        // Debug: volcar los tiempos reales a ~/Downloads/ para diagnosticar el corte.
-        try {
-            var dbg = Folder("~/Downloads");
-            var dbgBase = dbg.exists ? dbg : Folder.desktop;
-            var dbgFile = new File(dbgBase.fsName + "/ZoomFocus_debug.txt");
-            dbgFile.encoding = "UTF-8"; dbgFile.open("a");
-            dbgFile.writeln("[ZoomFocus] compTime=" + comp.time + " fps=" + fps +
-                " origOut=" + origOut + " inPt=" + inPt + " outPt=" + outPt +
-                " -> dup.inPoint=" + dup.inPoint + " dup.outPoint=" + dup.outPoint);
-            dbgFile.close();
-        } catch(eDbg) {}
+        // Sanity check: solo avisa si el corte quedó inválido (outPoint <= inPoint).
+        // Si quedó bien, no molesta con popups.
+        if (dup.outPoint <= dup.inPoint) {
+            try {
+                alert("ZoomFocus v1.5.18 — outPoint aún mal:\n" +
+                    "inPoint=" + dup.inPoint + "\noutPoint=" + dup.outPoint +
+                    "\noutPt objetivo=" + outPt + "\ntrimErr=" + (trimErr || "(ninguno)"));
+            } catch(eAlert) {}
+        }
 
         app.endUndoGroup();
         return JSON.stringify({ success: true });
