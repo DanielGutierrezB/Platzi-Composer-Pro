@@ -14,7 +14,7 @@
             <div class="header-spacer"></div>
             <span id="comp-name" class="comp-name">Sin composición activa</span>
             <span id="layer-count" class="layer-count"></span>
-            <span id="version-badge" class="version-label">v1.5.7</span>
+            <span id="version-badge" class="version-label">v1.5.8</span>
             <button id="btn-update" class="icon-btn" title="Verificar actualización / Recargar panel">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
@@ -199,6 +199,20 @@
             </div>
             <div class="tool-card-body hidden">
                 <div class="hl-hint">💡 Shift+Clic=In/Out · Alt+Clic=In · Shift+Alt=Out</div>
+
+                <!-- Redondez global (Highlight Box) -->
+                <div class="hl-type hl-type-compact">
+                    <div class="hl-type-head">
+                        <div class="hl-type-label">⬭ Redondez</div>
+                        <div class="hl-type-desc">Radio de esquinas del Highlight Box (px · 0 = cuadrado)</div>
+                    </div>
+                    <div class="tool-row hl-type-actions">
+                        <label title="Radio de redondeo de esquinas en px (0 = cuadrado)">Radio</label>
+                        <input type="number" id="hl-round" class="tool-input" value="20" min="0" max="500">
+                        <button class="btn-defaults btn-save-def" data-keys="hl-round" title="Guardar como default">💾</button>
+                        <button class="btn-defaults btn-reset-def" data-keys="hl-round" title="Restaurar defaults">↩</button>
+                    </div>
+                </div>
 
                 <!-- Type 1: Stroke -->
                 <div class="hl-type hl-type-compact">

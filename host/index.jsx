@@ -738,7 +738,8 @@ function pcLineHighlighterAnimate(mode, easeOut, easeIn) {
 
 // ─── HIGHLIGHT BOX ───────────────────────────────────────────
 
-function pcCreateHighlightBox(mode, easeOut, easeIn, enableGlow) {
+function pcCreateHighlightBox(mode, easeOut, easeIn, enableGlow, roundness) {
+    var _rnd = (roundness === undefined || roundness === null || isNaN(roundness)) ? 20 : roundness;
     var comp = _pcRequireComp();
     if (!comp) return JSON.stringify({ error: "No hay composici\u00f3n activa." });
     var s = _pcRequireSelected();
@@ -855,7 +856,7 @@ function pcCreateHighlightBox(mode, easeOut, easeIn, enableGlow) {
             var padCtrl = fxs.addProperty("ADBE Slider Control"); padCtrl.name = "Padding";
             padCtrl.property("Slider").setValue(10);
             var roundCtrl = fxs.addProperty("ADBE Slider Control"); roundCtrl.name = "Roundness";
-            roundCtrl.property("Slider").setValue(60);
+            roundCtrl.property("Slider").setValue(_rnd);
 
             // Position at box center
             if (isShapeMode) {
@@ -989,14 +990,13 @@ function pcCreateFocusMask(opacityVal, featherVal) {
         opaCtrl.property("Slider").setValue(opa);
         var fthCtrl = fxs.addProperty("ADBE Slider Control"); fthCtrl.name = "Feather";
         fthCtrl.property("Slider").setValue(fth);
-        var roundCtrl = fxs.addProperty("ADBE Slider Control"); roundCtrl.name = "Roundness";
-        roundCtrl.property("Slider").setValue(60);
 
         try { dark.property("Transform").property("Opacity").expression = "effect(\"Darkness\")(\"Slider\")"; } catch(ex) {}
 
         var maskProp = dark.property("Masks").addProperty("Mask");
         maskProp.property("maskShape").setValue(maskShapeVal);
-        try { maskProp.property("maskExpansion").expression = "effect(\"Roundness\")(\"Slider\")"; } catch(ex) {}
+        // maskExpansion queda en 0 (antes un slider "Roundness"=60 lo expandía y
+        // agrandaba la zona clara 60px respecto a lo dibujado).
         maskProp.maskMode = MaskMode.SUBTRACT;
         try {
             maskProp.property("maskFeather").expression = "var f = effect(\"Feather\")(\"Slider\"); [f, f]";
@@ -1090,10 +1090,9 @@ function pcCreateZoomFocus(blurAmount, scaleFactor, easeOut, easeIn) {
         var fxsDup = dup.property("Effects");
         var mfCtrl = fxsDup.addProperty("ADBE Slider Control"); mfCtrl.name = "Mask Feather";
         mfCtrl.property("Slider").setValue(0);
-        var roundCtrlZF = fxsDup.addProperty("ADBE Slider Control"); roundCtrlZF.name = "Roundness";
-        roundCtrlZF.property("Slider").setValue(60);
         try { dup.property("Masks").property(1).property("maskFeather").expression = "var f = effect(\"Mask Feather\")(\"Slider\"); [f, f]"; } catch(ex) {}
-        try { dup.property("Masks").property(1).property("maskExpansion").expression = "effect(\"Roundness\")(\"Slider\")"; } catch(ex) {}
+        // maskExpansion se deja en 0 (antes un slider "Roundness"=60 lo expandía y
+        // rompía el foco: agrandaba el recorte 60px y dejaba de aislar el área).
         var posVal = dup.property("Transform").property("Position").value;
         var anchorVal = dup.property("Transform").property("Anchor Point").value;
         var maskCompX = posVal[0] - anchorVal[0] + maskCenterX;

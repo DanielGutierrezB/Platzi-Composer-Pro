@@ -18,7 +18,8 @@
         "ease-out": 33, "ease-in": 10, "cont-zoom-pct": 10,
         "mp-x": 35, "mp-y": 0,
         "cp-dur": 20, "cp-size": 600,
-        "zoom-dur": 20, "zoom-pct": 130
+        "zoom-dur": 20, "zoom-pct": 130,
+        "hl-round": 20
     };
 
     var state = {
@@ -1303,11 +1304,13 @@
             var eo = document.getElementById("ease-out").value;
             var ei = document.getElementById("ease-in").value;
             var glow = document.getElementById("chk-box-glow").checked;
+            var rnd = parseFloat(document.getElementById("hl-round").value);
+            if (isNaN(rnd)) rnd = 20;
             var mode = "none";
             if (e.shiftKey && e.altKey) mode = "out";
             else if (e.altKey) mode = "in";
             else if (e.shiftKey) mode = "inout";
-            callHost("pcCreateHighlightBox('" + mode + "', " + eo + ", " + ei + ", " + glow + ")");
+            callHost("pcCreateHighlightBox('" + mode + "', " + eo + ", " + ei + ", " + glow + ", " + rnd + ")");
         });
 
         // Universal animate — routes based on selected layer name
