@@ -312,14 +312,14 @@ function pcCreateHighlighter(roundCaps) {
         lineShape.closed = false;
         pathGrp.property("Path").setValue(lineShape);
         try {
-            pathGrp.property("Path").expression = "createPath([[0,0],[effect(\"Length\")(\"Slider\"),0]], [], [], false)";
+            pathGrp.property("Path").expression = "createPath([[0,0],[effect(\"Length\")(1),0]], [], [], false)";
         } catch(ex) {}
 
         var stroke = rc.addProperty("ADBE Vector Graphic - Stroke");
         stroke.property("Color").setValue([1, 1, 0]);
         stroke.property("Stroke Width").setValue(30);
-        try { stroke.property("Stroke Width").expression = "effect(\"Thickness\")(\"Slider\")"; } catch(ex) {}
-        try { stroke.property("Color").expression = "effect(\"Color\")(\"Color\")"; } catch(ex) {}
+        try { stroke.property("Stroke Width").expression = "effect(\"Thickness\")(1)"; } catch(ex) {}
+        try { stroke.property("Color").expression = "effect(\"Color\")(1)"; } catch(ex) {}
         // Puntas: 1=Butt (rectas), 2=Round (redondeadas)
         try { stroke.property("ADBE Vector Stroke Line Cap").setValue(roundCaps ? 2 : 1); } catch(ex) {}
 
@@ -444,7 +444,7 @@ function pcCreateLineHighlighter(style, enableGlow) {
         pathGrp.property("Path").setValue(lineShape);
         try {
             pathGrp.property("Path").expression =
-                "createPath([[0,0],[effect(\"Length\")(\"Slider\"),0]], [], [], false)";
+                "createPath([[0,0],[effect(\"Length\")(1),0]], [], [], false)";
         } catch(ex) {
             // createPath not available in this AE version, keep static path
         }
@@ -452,17 +452,17 @@ function pcCreateLineHighlighter(style, enableGlow) {
         // Stroke
         var stroke = grpContents.addProperty("ADBE Vector Graphic - Stroke");
         stroke.property("Color").setValue([1, 1, 0]);
-        try { stroke.property("Stroke Width").expression = "effect(\"Thickness\")(\"Slider\")"; } catch(ex) {}
-        try { stroke.property("Color").expression = "effect(\"Color\")(\"Color\")"; } catch(ex) {}
+        try { stroke.property("Stroke Width").expression = "effect(\"Thickness\")(1)"; } catch(ex) {}
+        try { stroke.property("Color").expression = "effect(\"Color\")(1)"; } catch(ex) {}
 
         // Dashed style: add dashes to stroke
         if (style === "dashed") {
             try {
                 var dashes = stroke.property("Dashes");
                 var dash = dashes.addProperty("ADBE Vector Stroke Dash 1");
-                dash.expression = "effect(\"Dash Length\")(\"Slider\")";
+                dash.expression = "effect(\"Dash Length\")(1)";
                 var gap = dashes.addProperty("ADBE Vector Stroke Gap 1");
-                gap.expression = "effect(\"Gap Length\")(\"Slider\")";
+                gap.expression = "effect(\"Gap Length\")(1)";
             } catch(ex) {
                 // Fallback: static dashes
                 try {
@@ -475,9 +475,9 @@ function pcCreateLineHighlighter(style, enableGlow) {
         // Thunder style: zigzag animated (like lightning)
         if (style === "thunder") {
             var thunPaths = grpContents.addProperty("ADBE Vector Filter - Roughen");
-            try { thunPaths.property("ADBE Vector Roughen Size").expression = "effect(\"Thunder Amount\")(\"Slider\")"; } catch(ex) {}
-            try { thunPaths.property("ADBE Vector Roughen Detail").expression = "effect(\"Thunder Detail\")(\"Slider\")"; } catch(ex) {}
-            try { thunPaths.property("ADBE Vector Temporal Freq").expression = "effect(\"Thunder Speed\")(\"Slider\")"; } catch(ex) {}
+            try { thunPaths.property("ADBE Vector Roughen Size").expression = "effect(\"Thunder Amount\")(1)"; } catch(ex) {}
+            try { thunPaths.property("ADBE Vector Roughen Detail").expression = "effect(\"Thunder Detail\")(1)"; } catch(ex) {}
+            try { thunPaths.property("ADBE Vector Temporal Freq").expression = "effect(\"Thunder Speed\")(1)"; } catch(ex) {}
         }
 
 
@@ -488,7 +488,7 @@ function pcCreateLineHighlighter(style, enableGlow) {
         try {
             var flipCtrl = fxs.addProperty("ADBE Checkbox Control"); flipCtrl.name = "Flip Direction";
             flipCtrl.property("Checkbox").setValue(0);
-            trim.property("ADBE Vector Trim Offset").expression = "effect(\"Flip Direction\")(\"Checkbox\") * 180";
+            trim.property("ADBE Vector Trim Offset").expression = "effect(\"Flip Direction\")(1) * 180";
         } catch(ex) {}
 
         // Always add Glow effect (disabled if checkbox not checked)
@@ -893,7 +893,7 @@ function pcCreateHighlightBox(mode, easeOut, easeIn, enableGlow, roundness) {
                 var rect = grpContents.addProperty("ADBE Vector Shape - Rect");
                 try {
                     rect.property("ADBE Vector Rect Size").expression =
-                        "var pad = thisLayer.effect(\"Padding\")(\"Slider\");" +
+                        "var pad = thisLayer.effect(\"Padding\")(1);" +
                         "[" + box.boxW + " + pad*2, " + box.boxH + " + pad*2]";
                 } catch(ex) {
                     rect.property("ADBE Vector Rect Size").setValue([box.boxW + 20, box.boxH + 20]);
@@ -902,12 +902,12 @@ function pcCreateHighlightBox(mode, easeOut, easeIn, enableGlow, roundness) {
 
             var stroke = grpContents.addProperty("ADBE Vector Graphic - Stroke");
             stroke.property("Color").setValue([0.039, 0.914, 0.541]);
-            try { stroke.property("Stroke Width").expression = "effect(\"Thickness\")(\"Slider\")"; } catch(ex) {}
-            try { stroke.property("Color").expression = "effect(\"Color\")(\"Color\")"; } catch(ex) {}
+            try { stroke.property("Stroke Width").expression = "effect(\"Thickness\")(1)"; } catch(ex) {}
+            try { stroke.property("Color").expression = "effect(\"Color\")(1)"; } catch(ex) {}
 
             // Round Corners operator
             var rc = grpContents.addProperty("ADBE Vector Filter - RC");
-            try { rc.property("ADBE Vector RoundCorner Radius").expression = "effect(\"Redondez\")(\"Slider\")"; } catch(ex) {}
+            try { rc.property("ADBE Vector RoundCorner Radius").expression = "effect(\"Redondez\")(1)"; } catch(ex) {}
 
             var trim = grpContents.addProperty("ADBE Vector Filter - Trim");
             trim.property("End").setValue(100);
@@ -915,7 +915,7 @@ function pcCreateHighlightBox(mode, easeOut, easeIn, enableGlow, roundness) {
             try {
                 var flipCtrl = fxs.addProperty("ADBE Checkbox Control"); flipCtrl.name = "Flip Direction";
                 flipCtrl.property("Checkbox").setValue(0);
-                trim.property("ADBE Vector Trim Offset").expression = "effect(\"Flip Direction\")(\"Checkbox\") * 180";
+                trim.property("ADBE Vector Trim Offset").expression = "effect(\"Flip Direction\")(1) * 180";
             } catch(ex) {}
 
             var glow = fxs.addProperty("ADBE Glo2");
@@ -999,7 +999,7 @@ function _pcMaskRoundExpr(shape) {
     var v = shape.vertices, parts = [];
     for (var i = 0; i < v.length; i++) { parts.push("[" + v[i][0] + "," + v[i][1] + "]"); }
     var lit = "[" + parts.join(",") + "]";
-    return "var r=effect(\"Redondez\")(\"Slider\");var vs=" + lit + ";var n=vs.length;" +
+    return "var r=effect(\"Redondez\")(1);var vs=" + lit + ";var n=vs.length;" +
         "if(r<=0||n<3){createPath(vs,[],[],true);}else{var K=0.5523;var nv=[],ni=[],no=[];" +
         "for(var i=0;i<n;i++){var c=vs[i],p=vs[(i-1+n)%n],q=vs[(i+1)%n];" +
         "var dpx=p[0]-c[0],dpy=p[1]-c[1],dnx=q[0]-c[0],dny=q[1]-c[1];" +
@@ -1045,7 +1045,7 @@ function pcCreateFocusMask(opacityVal, featherVal, roundness) {
         var fthCtrl = fxs.addProperty("ADBE Slider Control"); fthCtrl.name = "Feather";
         fthCtrl.property("Slider").setValue(fth);
 
-        try { dark.property("Transform").property("Opacity").expression = "effect(\"Darkness\")(\"Slider\")"; } catch(ex) {}
+        try { dark.property("Transform").property("Opacity").expression = "effect(\"Darkness\")(1)"; } catch(ex) {}
 
         var maskProp = dark.property("Masks").addProperty("Mask");
         // Redondez horneada en el path al crear (la versión estable que sí mostraba bien la zona).
@@ -1054,7 +1054,7 @@ function pcCreateFocusMask(opacityVal, featherVal, roundness) {
         // agrandaba la zona clara 60px respecto a lo dibujado).
         maskProp.maskMode = MaskMode.SUBTRACT;
         try {
-            maskProp.property("maskFeather").expression = "var f = effect(\"Feather\")(\"Slider\"); [f, f]";
+            maskProp.property("maskFeather").expression = "var f = effect(\"Feather\")(1); [f, f]";
         } catch(ex) {
             maskProp.property("maskFeather").setValue([fth, fth]);
         }
@@ -1166,8 +1166,8 @@ function pcCreateZoomFocus(blurAmount, scaleFactor, easeOut, easeIn, roundness) 
         var rn = (roundness === undefined || roundness === null || isNaN(roundness)) ? 0 : roundness;
         var roundCtrlZF = fxsDup.addProperty("ADBE Slider Control"); roundCtrlZF.name = "Roundness";
         roundCtrlZF.property("Slider").setValue(rn);
-        try { dupMask.property("maskFeather").expression = "var f = effect(\"Mask Feather\")(\"Slider\"); [f, f]"; } catch(ex) {}
-        try { dupMask.property("maskExpansion").expression = "effect(\"Roundness\")(\"Slider\")"; } catch(ex) {}
+        try { dupMask.property("maskFeather").expression = "var f = effect(\"Mask Feather\")(1); [f, f]"; } catch(ex) {}
+        try { dupMask.property("maskExpansion").expression = "effect(\"Roundness\")(1)"; } catch(ex) {}
 
         var posVal = dup.property("Transform").property("Position").value;
         var anchorVal = dup.property("Transform").property("Anchor Point").value;
@@ -1906,7 +1906,7 @@ function pcTextHelper(animType, mode, animMode, durationFrames, enableGlow, ease
         // Link text color via expression
         try {
             textLayer.property("ADBE Text Properties").property("ADBE Text Document").expression =
-                "var c = thisLayer.effect(\"Text Color\")(\"Color\");" +
+                "var c = thisLayer.effect(\"Text Color\")(1);" +
                 "var txt = value;" +
                 "txt.fillColor = c;" +
                 "txt;";
@@ -1949,8 +1949,8 @@ function pcCreateAnnotation(annType, thickness, enableGlow, easeOut, easeIn) {
             path.property("Path").setValue(pathData);
             var stroke = grpContents.addProperty("ADBE Vector Graphic - Stroke");
             stroke.property("Color").setValue([0.039, 0.914, 0.541]);
-            try { stroke.property("Stroke Width").expression = "effect(\"Thickness\")(\"Slider\")"; } catch(ex) {}
-            try { stroke.property("Color").expression = "effect(\"Color\")(\"Color\")"; } catch(ex) {}
+            try { stroke.property("Stroke Width").expression = "effect(\"Thickness\")(1)"; } catch(ex) {}
+            try { stroke.property("Color").expression = "effect(\"Color\")(1)"; } catch(ex) {}
             // Arrowhead group
             var arrowGrp = contents.addProperty("ADBE Vector Group"); arrowGrp.name = "Arrowhead";
             var arrowC = arrowGrp.property("Contents");
@@ -1961,16 +1961,16 @@ function pcCreateAnnotation(annType, thickness, enableGlow, easeOut, easeIn) {
             arrowPath.property("Path").setValue(ap);
             var arrowStroke = arrowC.addProperty("ADBE Vector Graphic - Stroke");
             arrowStroke.property("Color").setValue([0.039, 0.914, 0.541]);
-            try { arrowStroke.property("Stroke Width").expression = "effect(\"Thickness\")(\"Slider\")"; } catch(ex) {}
-            try { arrowStroke.property("Color").expression = "effect(\"Color\")(\"Color\")"; } catch(ex) {}
+            try { arrowStroke.property("Stroke Width").expression = "effect(\"Thickness\")(1)"; } catch(ex) {}
+            try { arrowStroke.property("Color").expression = "effect(\"Color\")(1)"; } catch(ex) {}
 
         } else if (annType === "circle") {
             var ellipse = grpContents.addProperty("ADBE Vector Shape - Ellipse");
             ellipse.property("ADBE Vector Ellipse Size").setValue([200, 200]);
             var stroke2 = grpContents.addProperty("ADBE Vector Graphic - Stroke");
             stroke2.property("Color").setValue([0.039, 0.914, 0.541]);
-            try { stroke2.property("Stroke Width").expression = "effect(\"Thickness\")(\"Slider\")"; } catch(ex) {}
-            try { stroke2.property("Color").expression = "effect(\"Color\")(\"Color\")"; } catch(ex) {}
+            try { stroke2.property("Stroke Width").expression = "effect(\"Thickness\")(1)"; } catch(ex) {}
+            try { stroke2.property("Color").expression = "effect(\"Color\")(1)"; } catch(ex) {}
 
         } else if (annType === "callout") {
             // Line + rectangle
@@ -1981,8 +1981,8 @@ function pcCreateAnnotation(annType, thickness, enableGlow, easeOut, easeIn) {
             linePath.property("Path").setValue(lp);
             var lineStroke = grpContents.addProperty("ADBE Vector Graphic - Stroke");
             lineStroke.property("Color").setValue([0.039, 0.914, 0.541]);
-            try { lineStroke.property("Stroke Width").expression = "effect(\"Thickness\")(\"Slider\")"; } catch(ex) {}
-            try { lineStroke.property("Color").expression = "effect(\"Color\")(\"Color\")"; } catch(ex) {}
+            try { lineStroke.property("Stroke Width").expression = "effect(\"Thickness\")(1)"; } catch(ex) {}
+            try { lineStroke.property("Color").expression = "effect(\"Color\")(1)"; } catch(ex) {}
             // Box
             var boxGrp = contents.addProperty("ADBE Vector Group"); boxGrp.name = "CalloutBox";
             var boxC = boxGrp.property("Contents");
@@ -1991,8 +1991,8 @@ function pcCreateAnnotation(annType, thickness, enableGlow, easeOut, easeIn) {
             rect.property("ADBE Vector Rect Roundness").setValue(8);
             var boxStroke = boxC.addProperty("ADBE Vector Graphic - Stroke");
             boxStroke.property("Color").setValue([0.039, 0.914, 0.541]);
-            try { boxStroke.property("Stroke Width").expression = "effect(\"Thickness\")(\"Slider\")"; } catch(ex) {}
-            try { boxStroke.property("Color").expression = "effect(\"Color\")(\"Color\")"; } catch(ex) {}
+            try { boxStroke.property("Stroke Width").expression = "effect(\"Thickness\")(1)"; } catch(ex) {}
+            try { boxStroke.property("Color").expression = "effect(\"Color\")(1)"; } catch(ex) {}
             boxGrp.property("Transform").property("Position").setValue([200, -80]);
 
         } else if (annType === "bracket") {
@@ -2003,8 +2003,8 @@ function pcCreateAnnotation(annType, thickness, enableGlow, easeOut, easeIn) {
             bracketPath.property("Path").setValue(bp);
             var bracketStroke = grpContents.addProperty("ADBE Vector Graphic - Stroke");
             bracketStroke.property("Color").setValue([0.039, 0.914, 0.541]);
-            try { bracketStroke.property("Stroke Width").expression = "effect(\"Thickness\")(\"Slider\")"; } catch(ex) {}
-            try { bracketStroke.property("Color").expression = "effect(\"Color\")(\"Color\")"; } catch(ex) {}
+            try { bracketStroke.property("Stroke Width").expression = "effect(\"Thickness\")(1)"; } catch(ex) {}
+            try { bracketStroke.property("Color").expression = "effect(\"Color\")(1)"; } catch(ex) {}
 
         } else if (annType === "underline") {
             var ulPath = grpContents.addProperty("ADBE Vector Shape - Group");
@@ -2014,8 +2014,8 @@ function pcCreateAnnotation(annType, thickness, enableGlow, easeOut, easeIn) {
             ulPath.property("Path").setValue(ulp);
             var ulStroke = grpContents.addProperty("ADBE Vector Graphic - Stroke");
             ulStroke.property("Color").setValue([0.039, 0.914, 0.541]);
-            try { ulStroke.property("Stroke Width").expression = "effect(\"Thickness\")(\"Slider\")"; } catch(ex) {}
-            try { ulStroke.property("Color").expression = "effect(\"Color\")(\"Color\")"; } catch(ex) {}
+            try { ulStroke.property("Stroke Width").expression = "effect(\"Thickness\")(1)"; } catch(ex) {}
+            try { ulStroke.property("Color").expression = "effect(\"Color\")(1)"; } catch(ex) {}
         }
 
         // Add Trim Paths for draw-on animation
@@ -2029,7 +2029,7 @@ function pcCreateAnnotation(annType, thickness, enableGlow, easeOut, easeIn) {
 
         // Flip Direction control
         var flipCtrl = fxs.addProperty("ADBE Checkbox Control"); flipCtrl.name = "Flip Direction";
-        try { trim.property("ADBE Vector Trim Offset").expression = "effect(\"Flip Direction\")(\"Checkbox\") * 180"; } catch(ex) {}
+        try { trim.property("ADBE Vector Trim Offset").expression = "effect(\"Flip Direction\")(1) * 180"; } catch(ex) {}
 
         // Glow
         if (enableGlow) {
