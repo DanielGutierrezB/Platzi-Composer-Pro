@@ -193,6 +193,34 @@ function pcGetSelectedLayerName() {
     return JSON.stringify({ name: s.layers[0].name || "" });
 }
 
+// Recorre un vector group (matchNames, a prueba de idioma), aplica color al
+// Fill/Stroke. Limpia cualquier expresión en el color antes de setValue (para
+// que un fill con expresión sí cambie). color3 = [r,g,b]; se pasa como 4D.
+function _pcSetVectorColor(vgroup, color3) {
+    var did = false;
+    var c4 = [color3[0], color3[1], color3[2], 1];
+    for (var i = 1; i <= vgroup.numProperties; i++) {
+        var pr = vgroup.property(i);
+        var mn = pr.matchName;
+        if (mn === "ADBE Vector Group") {
+            try { if (_pcSetVectorColor(pr.property("ADBE Vectors Group"), color3)) did = true; } catch(ex) {}
+        } else if (mn === "ADBE Vector Graphic - Fill") {
+            try {
+                var cf = pr.property("ADBE Vector Fill Color");
+                try { cf.expression = ""; } catch(ex2) {}
+                cf.setValue(c4); did = true;
+            } catch(ex) {}
+        } else if (mn === "ADBE Vector Graphic - Stroke") {
+            try {
+                var cs = pr.property("ADBE Vector Stroke Color");
+                try { cs.expression = ""; } catch(ex2) {}
+                cs.setValue(c4); did = true;
+            } catch(ex) {}
+        }
+    }
+    return did;
+}
+
 function pcApplyColorToSelected(color) {
     var s = _pcRequireSelected();
     if (!s) return JSON.stringify({ error: "Selecciona una capa primero." });
@@ -227,24 +255,11 @@ function pcApplyColorToSelected(color) {
                 }
             }
 
-            // 3. Shape layer: apply to stroke
-            if (layer.property("Contents")) {
-                var contents = layer.property("Contents");
-                for (var g = 1; g <= contents.numProperties; g++) {
-                    try {
-                        var grpC = contents.property(g).property("Contents");
-                        if (grpC) {
-                            for (var p = 1; p <= grpC.numProperties; p++) {
-                                if (grpC.property(p).matchName === "ADBE Vector Graphic - Stroke") {
-                                    try { grpC.property(p).property("Color").setValue(color); applied = true; } catch(ex) {}
-                                }
-                                if (grpC.property(p).matchName === "ADBE Vector Graphic - Fill") {
-                                    try { grpC.property(p).property("Color").setValue(color); applied = true; } catch(ex) {}
-                                }
-                            }
-                        }
-                    } catch(ex) {}
-                }
+            // 3. Shape layer: aplicar al Fill/Stroke (matchNames + limpia expresión
+            //    + color 4D). Recorre grupos anidados.
+            var vroot = layer.property("ADBE Root Vectors Group");
+            if (vroot) {
+                try { if (_pcSetVectorColor(vroot, color)) applied = true; } catch(ex) {}
             }
 
             // 4. Solid layer: change source color
@@ -2039,14 +2054,11 @@ function pcCreateTextBox(mode, withAnim, roundness, padding, bgColor, textColor,
         rect.property("ADBE Vector Rect Position").setValue([0, 0]);
         var fill = grpContents.addProperty("ADBE Vector Graphic - Fill");
 
-        // Effect Controls EDITABLES en la caja (como las otras herramientas):
-        // Box Color, Padding, Roundness. Se manejan con expresiones SIMPLES de
-        // effect (NO sourceRectAtTime) → confiables en este AE (el Box Color ya
-        // funcionaba así). El tamaño usa las medidas del texto HORNEADAS como
-        // constantes + el Padding en vivo, así se puede ajustar sin rehacer la caja.
+        // Effect Controls editables: Padding y Roundness (expresiones SIMPLES de
+        // effect, sin sourceRectAtTime). El COLOR de fondo va ESTÁTICO en el Fill
+        // (SIN expresión) para que la paleta de colores pueda cambiarlo después
+        // con un setValue directo (una expresión lo pisaría).
         var bfx = box.property("ADBE Effect Parade");
-        var bcolor = bfx.addProperty("ADBE Color Control"); bcolor.name = "Box Color";
-        bcolor.property(1).setValue(bgColor4);
         var padCtrl = bfx.addProperty("ADBE Slider Control"); padCtrl.name = "Padding";
         padCtrl.property(1).setValue(padding);
         var rndCtrl = bfx.addProperty("ADBE Slider Control"); rndCtrl.name = "Roundness";
@@ -2057,15 +2069,15 @@ function pcCreateTextBox(mode, withAnim, roundness, padding, bgColor, textColor,
         // Valores estáticos primero (respaldo si una expresión no evaluara).
         rect.property("ADBE Vector Rect Size").setValue([shapeW, shapeH]);
         try { rect.property("ADBE Vector Rect Roundness").setValue(roundness); } catch(ex) {}
-        fill.property("ADBE Vector Fill Color").setValue(bgColor4);
+        fill.property("ADBE Vector Fill Color").setValue(bgColor4); // estático, sin expresión
 
-        // Expresiones simples encima → controles vivos.
+        // Padding/Roundness vivos vía expresión simple (si el AE la corre; si no,
+        // queda el valor estático). El color NO lleva expresión (ver arriba).
         try {
             rect.property("ADBE Vector Rect Size").expression =
                 "var w=" + bwR + ", h=" + bhR + ", p=effect(\"Padding\")(1);[w+p*2, h+p*2];";
         } catch(ex) {}
         try { rect.property("ADBE Vector Rect Roundness").expression = "effect(\"Roundness\")(1);"; } catch(ex) {}
-        try { fill.property("ADBE Vector Fill Color").expression = "thisLayer.effect(\"Box Color\")(1);"; } catch(ex) {}
 
         app.endUndoGroup();
         return JSON.stringify({
