@@ -2073,21 +2073,23 @@ function pcCreateTextBox(mode, withAnim, roundness, padding, bgColor, textColor,
         boxTr.property("ADBE Position").setValue([centerX, centerY]);
         try { box.parent = textLayer; } catch(ex) {}
 
+        // TODO ESTÁTICO — sin expresiones (en este AE no aplican).
+        // IMPORTANTE: setear TODAS las props del rectángulo ANTES de agregar el
+        // Fill. Agregar otra propiedad al mismo grupo invalida la referencia
+        // previa `rect` → "ReferenceError: Object is invalid" (era el bug).
         step = "shape-contents";
         var root = box.property("ADBE Root Vectors Group");
         var grp = root.addProperty("ADBE Vector Group"); grp.name = "Box";
         var grpContents = grp.property("ADBE Vectors Group");
-        var rect = grpContents.addProperty("ADBE Vector Shape - Rect");
-        rect.property("ADBE Vector Rect Position").setValue([0, 0]);
-        var fill = grpContents.addProperty("ADBE Vector Graphic - Fill");
 
-        // TODO ESTÁTICO — sin expresiones. En este AE las expresiones (incluso las
-        // simples de effect) no aplican, así que tamaño, redondez y color van con
-        // setValue directo. Padding y redondez se toman del panel al crear; para
-        // cambiarlos, se re-crea la caja. El color se cambia con la paleta (setValue).
-        step = "static-values";
+        step = "rect";
+        var rect = grpContents.addProperty("ADBE Vector Shape - Rect");
         rect.property("ADBE Vector Rect Size").setValue([shapeW, shapeH]);
+        rect.property("ADBE Vector Rect Position").setValue([0, 0]);
         try { rect.property("ADBE Vector Rect Roundness").setValue(roundness); } catch(ex) {}
+
+        step = "fill";
+        var fill = grpContents.addProperty("ADBE Vector Graphic - Fill");
         fill.property("ADBE Vector Fill Color").setValue(bgColor4);
 
         // 6) Animación de ENTRADA de la caja (solo Shift+clic). Fade-up: sube desde
