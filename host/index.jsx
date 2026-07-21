@@ -2036,14 +2036,36 @@ function pcCreateTextBox(mode, withAnim, roundness, padding, bgColor, textColor,
         var grp = root.addProperty("ADBE Vector Group"); grp.name = "Box";
         var grpContents = grp.property("ADBE Vectors Group");
         var rect = grpContents.addProperty("ADBE Vector Shape - Rect");
-        rect.property("ADBE Vector Rect Size").setValue([shapeW, shapeH]);
         rect.property("ADBE Vector Rect Position").setValue([0, 0]);
-        try { rect.property("ADBE Vector Rect Roundness").setValue(roundness); } catch(ex) {}
         var fill = grpContents.addProperty("ADBE Vector Graphic - Fill");
 
-        // Color de fondo: ESTÁTICO en el Fill (sin expresión, por el mismo motivo
-        // que el resto — confiable en este AE). El color se elige desde el panel.
+        // Effect Controls EDITABLES en la caja (como las otras herramientas):
+        // Box Color, Padding, Roundness. Se manejan con expresiones SIMPLES de
+        // effect (NO sourceRectAtTime) → confiables en este AE (el Box Color ya
+        // funcionaba así). El tamaño usa las medidas del texto HORNEADAS como
+        // constantes + el Padding en vivo, así se puede ajustar sin rehacer la caja.
+        var bfx = box.property("ADBE Effect Parade");
+        var bcolor = bfx.addProperty("ADBE Color Control"); bcolor.name = "Box Color";
+        bcolor.property(1).setValue(bgColor4);
+        var padCtrl = bfx.addProperty("ADBE Slider Control"); padCtrl.name = "Padding";
+        padCtrl.property(1).setValue(padding);
+        var rndCtrl = bfx.addProperty("ADBE Slider Control"); rndCtrl.name = "Roundness";
+        rndCtrl.property(1).setValue(roundness);
+
+        var bwR = Math.round(txtW), bhR = Math.round(txtH);
+
+        // Valores estáticos primero (respaldo si una expresión no evaluara).
+        rect.property("ADBE Vector Rect Size").setValue([shapeW, shapeH]);
+        try { rect.property("ADBE Vector Rect Roundness").setValue(roundness); } catch(ex) {}
         fill.property("ADBE Vector Fill Color").setValue(bgColor4);
+
+        // Expresiones simples encima → controles vivos.
+        try {
+            rect.property("ADBE Vector Rect Size").expression =
+                "var w=" + bwR + ", h=" + bhR + ", p=effect(\"Padding\")(1);[w+p*2, h+p*2];";
+        } catch(ex) {}
+        try { rect.property("ADBE Vector Rect Roundness").expression = "effect(\"Roundness\")(1);"; } catch(ex) {}
+        try { fill.property("ADBE Vector Fill Color").expression = "thisLayer.effect(\"Box Color\")(1);"; } catch(ex) {}
 
         app.endUndoGroup();
         return JSON.stringify({
