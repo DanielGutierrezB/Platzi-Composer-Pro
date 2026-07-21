@@ -228,44 +228,51 @@ function pcApplyColorToSelected(color) {
         app.beginUndoGroup("Apply Color");
         var applied = false;
 
-        // Apply to all selected layers
+        var color4 = [color[0], color[1], color[2], 1];
+
+        // Apply to all selected layers. Cada capa en su propio try/catch: acceder
+        // a .source en una shape/text layer lanza "Object is invalid", y no debe
+        // tumbar toda la operación.
         for (var layIdx = 0; layIdx < s.layers.length; layIdx++) {
             var layer = s.layers[layIdx];
+            try {
+                // 1. Text Layer: change fill color
+                if (layer instanceof TextLayer) {
+                    var textProp = layer.property("ADBE Text Properties").property("ADBE Text Document");
+                    var textDoc = textProp.value;
+                    textDoc.fillColor = [color[0], color[1], color[2]];
+                    textProp.setValue(textDoc);
+                    applied = true;
+                    continue;
+                }
 
-            // 1. Text Layer: change fill color
-            if (layer instanceof TextLayer) {
-                var textProp = layer.property("ADBE Text Properties").property("ADBE Text Document");
-                var textDoc = textProp.value;
-                textDoc.fillColor = color;
-                textProp.setValue(textDoc);
-                applied = true;
-                continue;
-            }
+                // 2. Shape layer: aplicar al Fill/Stroke (matchNames + limpia
+                //    expresión + color 4D). Recorre grupos anidados.
+                var vroot = layer.property("ADBE Root Vectors Group");
+                if (vroot) {
+                    try { if (_pcSetVectorColor(vroot, color)) applied = true; } catch(ex) {}
+                }
 
-            // 2. Effect Controls: find "Color" control
-            var fxs = layer.property("Effects");
-            if (fxs) {
-                for (var i = 1; i <= fxs.numProperties; i++) {
-                    var fx = fxs.property(i);
-                    if (fx.name === "Color" && fx.matchName === "ADBE Color Control") {
-                        fx.property("Color").setValue(color);
-                        applied = true;
-                        break;
+                // 3. Effect Controls: control de color llamado "Color" o "Box Color".
+                var fxs = layer.property("ADBE Effect Parade");
+                if (fxs) {
+                    for (var i = 1; i <= fxs.numProperties; i++) {
+                        var fx = fxs.property(i);
+                        if (fx.matchName === "ADBE Color Control" && (fx.name === "Color" || fx.name === "Box Color")) {
+                            try { fx.property(1).setValue(color4); applied = true; } catch(ex) {}
+                        }
                     }
                 }
-            }
 
-            // 3. Shape layer: aplicar al Fill/Stroke (matchNames + limpia expresión
-            //    + color 4D). Recorre grupos anidados.
-            var vroot = layer.property("ADBE Root Vectors Group");
-            if (vroot) {
-                try { if (_pcSetVectorColor(vroot, color)) applied = true; } catch(ex) {}
-            }
-
-            // 4. Solid layer: change source color
-            if (layer.source && layer.source instanceof FootageItem && layer.source.mainSource instanceof SolidSource) {
-                try { layer.source.mainSource.color = color; applied = true; } catch(ex) {}
-            }
+                // 4. Solid layer: change source color (guardado: .source puede
+                //    lanzar en capas sin fuente).
+                try {
+                    if (layer.source && layer.source instanceof FootageItem && layer.source.mainSource instanceof SolidSource) {
+                        layer.source.mainSource.color = [color[0], color[1], color[2]];
+                        applied = true;
+                    }
+                } catch(ex) {}
+            } catch(exLayer) {}
         }
 
         app.endUndoGroup();
