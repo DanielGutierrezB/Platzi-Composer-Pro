@@ -1947,7 +1947,7 @@ function pcCreateTextBox(mode, withAnim, roundness, padding, bgColor, textColor,
             textLayer = sel[0];
         } else {
             textLayer = comp.layers.addText("Tu texto aquí");
-            textLayer.property("Position").setValue([comp.width / 2, comp.height / 2]);
+            textLayer.position.setValue([comp.width / 2, comp.height / 2]);
             var td = textLayer.property("ADBE Text Properties").property("ADBE Text Document").value;
             td.fontSize = 80;
             td.fillColor = textColor3;
@@ -1966,9 +1966,6 @@ function pcCreateTextBox(mode, withAnim, roundness, padding, bgColor, textColor,
                 "var c = thisLayer.effect(\"Text Color\")(1);" +
                 "var t = value; t.fillColor = c; t;";
         } catch(ex) {}
-
-        var refName = textLayer.name;
-        var refEsc = refName.replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
 
         // 2) Animación de entrada (solo el texto) fade-up por char/word/line
         if (doAnim) {
@@ -1996,19 +1993,54 @@ function pcCreateTextBox(mode, withAnim, roundness, padding, bgColor, textColor,
             } catch(ex) {}
         }
 
-        // 3) Tiempo FIJO de muestreo: fin de la animación (o tiempo actual si no anima)
-        var freezeStr = "" + (doAnim ? t1 : t0);
+        // 3) Medir el texto con sourceRectAtTime de SCRIPTING (confiable en este AE;
+        //    el log confirmó que mide bien, p.ej. 1059x65). NO usamos expresiones para
+        //    el tamaño: en este AE sourceRectAtTime en EXPRESIÓN devuelve 0 y arruinaba
+        //    la caja. Enfoque estático (como el script que funciona del compañero).
+        //    Para el caso animado muestreamos al final (t1), texto ya completo.
+        var candTimes = doAnim ? [t1, t1 + 0.001, t0, comp.time] : [t0, comp.time, t0 + 0.001, textLayer.inPoint + 0.001];
+        var srt = null;
+        for (var ci = 0; ci < candTimes.length; ci++) {
+            try {
+                var r = textLayer.sourceRectAtTime(candTimes[ci], false);
+                if (r && r.width > 0) { srt = r; break; }
+                if (r && !srt) { srt = r; }
+            } catch(ex) {}
+        }
+        if (!srt || srt.width <= 0) {
+            app.endUndoGroup();
+            return JSON.stringify({ error: "No pude medir el texto (sourceRectAtTime=0). ¿La capa tiene texto visible en el playhead?" });
+        }
 
-        // 4) Crear la shape layer del recuadro
+        var txtW = srt.width, txtH = srt.height;
+        var shapeW = txtW + padding * 2;
+        var shapeH = txtH + padding * 2;
+
+        // Centro del texto en coordenadas de COMP (sin emparentar, sin expresiones).
+        // Accesores .position/.anchorPoint son a prueba de idioma (ES/EN).
+        var txtPos = textLayer.position.value;
+        var anchor = textLayer.anchorPoint.value;
+        var centerX = txtPos[0] + (srt.left + txtW / 2) - anchor[0];
+        var centerY = txtPos[1] + (srt.top + txtH / 2) - anchor[1];
+
+        // 4) Crear la shape layer del recuadro (ESTÁTICO: tamaño y posición horneados).
         var box = comp.layers.addShape();
-        box.name = "Text Box";
+        box.name = (created ? "Text" : textLayer.name) + " Box";
+        box.moveAfter(textLayer);
+        try { box.inPoint = textLayer.inPoint; box.outPoint = textLayer.outPoint; } catch(ex) {}
+        box.position.setValue([centerX, centerY]);
+
         var root = box.property("ADBE Root Vectors Group");
         var grp = root.addProperty("ADBE Vector Group"); grp.name = "Box";
         var grpContents = grp.property("ADBE Vectors Group");
         var rect = grpContents.addProperty("ADBE Vector Shape - Rect");
+        rect.property("ADBE Vector Rect Size").setValue([shapeW, shapeH]);
+        rect.property("ADBE Vector Rect Position").setValue([0, 0]);
+        try { rect.property("ADBE Vector Rect Roundness").setValue(roundness); } catch(ex) {}
         var fill = grpContents.addProperty("ADBE Vector Graphic - Fill");
 
-        // Color de fondo vía Effect Control + expresión en el Fill
+        // Color de fondo: Effect Control "Box Color" + expresión en el Fill (editable).
+        // La expresión de color NO usa sourceRectAtTime → es confiable en este AE.
         var bfx = box.property("ADBE Effect Parade");
         var bcolor = bfx.addProperty("ADBE Color Control"); bcolor.name = "Box Color";
         bcolor.property(1).setValue(bgColor4);
@@ -2018,86 +2050,16 @@ function pcCreateTextBox(mode, withAnim, roundness, padding, bgColor, textColor,
             fill.property("ADBE Vector Fill Color").setValue(bgColor4);
         }
 
-        // Padding (slider que alimenta la expresión responsive)
-        var padCtrl = bfx.addProperty("ADBE Slider Control"); padCtrl.name = "Padding";
-        padCtrl.property(1).setValue(padding);
-
-        // Redondez
-        try { rect.property("ADBE Vector Rect Roundness").setValue(roundness); } catch(ex) {}
-
-        // 5) Emparentar la caja al texto y dejar su transform en identidad.
-        //    Parent PRIMERO y luego forzar position/anchor a [0,0]: así el origen
-        //    de la caja coincide con el anchor del texto sin importar cómo AE
-        //    recalcule al asignar el parent.
-        box.parent = textLayer;
-        box.property("ADBE Transform Group").property("ADBE Anchor Point").setValue([0, 0]);
-        box.property("ADBE Transform Group").property("ADBE Position").setValue([0, 0]);
-
-        // 5b) BASELINE ESTÁTICO horneado desde el host. Para el caso ANIMADO es el
-        //     valor final de la caja (congelado). Para el no-animado es respaldo.
-        //     sourceRectAtTime en scripting puede dar {0,0} según el frame, así que
-        //     probamos varios tiempos candidatos y tomamos el primero con ancho > 0.
-        var candTimes = doAnim ? [t1, t1 + 0.001, t0, comp.time] : [t0, comp.time, t0 + 0.001, textLayer.inPoint + 0.001];
-        var srt = null;
-        for (var ci = 0; ci < candTimes.length; ci++) {
-            try {
-                var r = textLayer.sourceRectAtTime(candTimes[ci], false);
-                if (r && r.width > 0) { srt = r; break; }
-                if (r && !srt) { srt = r; } // guardamos aunque sea 0, para diagnóstico
-            } catch(ex) {}
-        }
-        // Valores horneados (redondeados) desde el scripting, que SÍ mide bien.
-        var bw = 100, bh = 100, bl = -50, bt = -50;
-        if (srt && srt.width > 0) {
-            bw = Math.round(srt.width); bh = Math.round(srt.height);
-            bl = Math.round(srt.left);  bt = Math.round(srt.top);
-            try { rect.property("ADBE Vector Rect Size").setValue([bw + padding * 2, bh + padding * 2]); } catch(ex) {}
-            try { rect.property("ADBE Vector Rect Position").setValue([bl + bw / 2, bt + bh / 2]); } catch(ex) {}
-        }
-
-        // 5c) SIN animación → EXPRESIÓN responsive CON FALLBACK horneado.
-        //     Dato del log: en el AE de Daniel, sourceRectAtTime(time) en EXPRESIÓN
-        //     devuelve {0,0} (aunque en SCRIPTING mide 1059x65). Antes esa expresión
-        //     "sin error" pisaba el valor bueno con padding*2 en el anchor.
-        //     Fix: si la expresión mide 0, cae a los valores horneados (correctos).
-        //     Donde la expresión SÍ funciona, queda responsive de verdad.
-        //     CON animación → sin expresión: en el fade-up los chars arrancan en
-        //     opacidad 0; dejamos el tamaño horneado → caja congelada, sin temblor.
-        if (!doAnim && srt && srt.width > 0) {
-            var sizeExpr =
-                "var s = thisLayer.parent.sourceRectAtTime(time);" +
-                "var p = effect(\"Padding\")(1);" +
-                "var w = s.width, h = s.height;" +
-                "if (w < 1) { w = " + bw + "; h = " + bh + "; }" +
-                "[w + p*2, h + p*2];";
-            try { rect.property("ADBE Vector Rect Size").expression = sizeExpr; } catch(ex) {}
-
-            var rectPosExpr =
-                "var s = thisLayer.parent.sourceRectAtTime(time);" +
-                "var w = s.width, h = s.height, l = s.left, t = s.top;" +
-                "if (w < 1) { w = " + bw + "; h = " + bh + "; l = " + bl + "; t = " + bt + "; }" +
-                "[l + w/2, t + h/2];";
-            try { rect.property("ADBE Vector Rect Position").expression = rectPosExpr; } catch(ex) {}
-        }
-
-        // Dejar la caja debajo del texto (detrás en render)
-        try { box.moveAfter(textLayer); } catch(ex) {}
-
-        // Diagnóstico: reportar errores de expresión y las medidas usadas
-        var sizeErr = "", posErr = "";
-        try { sizeErr = rect.property("ADBE Vector Rect Size").expressionError || ""; } catch(ex) {}
-        try { posErr = rect.property("ADBE Vector Rect Position").expressionError || ""; } catch(ex) {}
-
         app.endUndoGroup();
         return JSON.stringify({
             success: true,
             created: created,
             animated: doAnim,
-            textLayer: refName,
-            srcWidth: srt ? Math.round(srt.width) : 0,
-            srcHeight: srt ? Math.round(srt.height) : 0,
-            sizeExprError: sizeErr,
-            posExprError: posErr
+            textLayer: textLayer.name,
+            srcWidth: Math.round(txtW),
+            srcHeight: Math.round(txtH),
+            boxW: Math.round(shapeW),
+            boxH: Math.round(shapeH)
         });
     } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
 }

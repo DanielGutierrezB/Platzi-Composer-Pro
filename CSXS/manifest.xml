@@ -2,11 +2,11 @@
 <ExtensionManifest Version="7.0"
     ExtensionBundleId="com.codigo.aespellcheck"
     ExtensionBundleName="Platzi Composer Pro"
-    ExtensionBundleVersion="1.5.25"
+    ExtensionBundleVersion="1.5.26"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 
     <ExtensionList>
-        <Extension Id="com.codigo.aespellcheck.panel" Version="1.5.25"/>
+        <Extension Id="com.codigo.aespellcheck.panel" Version="1.5.26"/>
     </ExtensionList>
 
     <ExecutionEnvironment>
