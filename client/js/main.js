@@ -41,6 +41,7 @@
     function logAction(action, params) {
         actionLog.push({
             action: action,
+            version: LOCAL_VERSION,
             timestamp: new Date().toISOString(),
             params: params == null ? null : params
         });
