@@ -1955,6 +1955,7 @@ function pcCreateTextBox(mode, withAnim, roundness, padding, bgColor, textColor,
         var totalDur = durationFrames / fps;
         var t1 = t0 + totalDur;
         var doAnim = (withAnim == 1 || withAnim === true || withAnim === "1");
+        var step = "init"; // rastreador para diagnóstico
 
         // Normaliza colores (Color Control = 4D [r,g,b,a]; fillColor de texto = 3D)
         var textColor3 = [textColor[0], textColor[1], textColor[2]];
@@ -1962,6 +1963,7 @@ function pcCreateTextBox(mode, withAnim, roundness, padding, bgColor, textColor,
         var bgColor4 = [bgColor[0], bgColor[1], bgColor[2], 1];
 
         // 1) Obtener o crear la capa de texto
+        step = "get-or-create-text";
         var textLayer;
         var created = false;
         var sel = comp.selectedLayers;
@@ -1969,7 +1971,7 @@ function pcCreateTextBox(mode, withAnim, roundness, padding, bgColor, textColor,
             textLayer = sel[0];
         } else {
             textLayer = comp.layers.addText("Tu texto aquí");
-            textLayer.position.setValue([comp.width / 2, comp.height / 2]);
+            textLayer.property("ADBE Transform Group").property("ADBE Position").setValue([comp.width / 2, comp.height / 2]);
             var td = textLayer.property("ADBE Text Properties").property("ADBE Text Document").value;
             td.fontSize = 80;
             td.fillColor = textColor3;
@@ -1981,11 +1983,14 @@ function pcCreateTextBox(mode, withAnim, roundness, padding, bgColor, textColor,
 
         // Color de texto: ESTÁTICO en el Text Document (las expresiones fallan en
         // este AE — mismo motivo que la caja). Aplica a todo el texto seleccionado.
-        var tdProp = textLayer.property("ADBE Text Properties").property("ADBE Text Document");
-        var tdVal = tdProp.value;
-        try { tdVal.applyFill = true; } catch(ex) {}
-        tdVal.fillColor = textColor3;
-        tdProp.setValue(tdVal);
+        step = "text-color";
+        try {
+            var tdProp = textLayer.property("ADBE Text Properties").property("ADBE Text Document");
+            var tdVal = tdProp.value;
+            try { tdVal.applyFill = true; } catch(ex) {}
+            tdVal.fillColor = textColor3;
+            tdProp.setValue(tdVal);
+        } catch(exTC) {}
 
         // 2) Animación de entrada (solo el texto) fade-up por char/word/line
         if (doAnim) {
@@ -2018,6 +2023,7 @@ function pcCreateTextBox(mode, withAnim, roundness, padding, bgColor, textColor,
         //    el tamaño: en este AE sourceRectAtTime en EXPRESIÓN devuelve 0 y arruinaba
         //    la caja. Enfoque estático (como el script que funciona del compañero).
         //    Para el caso animado muestreamos al final (t1), texto ya completo.
+        step = "measure";
         var candTimes = doAnim ? [t1, t1 + 0.001, t0, comp.time] : [t0, comp.time, t0 + 0.001, textLayer.inPoint + 0.001];
         var srt = null;
         for (var ci = 0; ci < candTimes.length; ci++) {
@@ -2036,14 +2042,18 @@ function pcCreateTextBox(mode, withAnim, roundness, padding, bgColor, textColor,
         var shapeW = txtW + padding * 2;
         var shapeH = txtH + padding * 2;
 
-        // Centro del texto en coordenadas de COMP (sin emparentar, sin expresiones).
-        // Accesores .position/.anchorPoint son a prueba de idioma (ES/EN).
-        var txtPos = textLayer.position.value;
-        var anchor = textLayer.anchorPoint.value;
+        // Centro del texto en coordenadas de COMP. Uso las propiedades por matchName
+        // del Transform (ADBE Transform Group) en vez de los accesores .position/
+        // .anchorPoint, que en algunas capas lanzan "Object is invalid".
+        step = "read-text-transform";
+        var txtTr = textLayer.property("ADBE Transform Group");
+        var txtPos = txtTr.property("ADBE Position").value;
+        var anchor = txtTr.property("ADBE Anchor Point").value;
         var centerX = txtPos[0] + (srt.left + txtW / 2) - anchor[0];
         var centerY = txtPos[1] + (srt.top + txtH / 2) - anchor[1];
 
         // 4) Crear la shape layer del recuadro (ESTÁTICO: tamaño y posición horneados).
+        step = "create-shape";
         var box = comp.layers.addShape();
         box.name = (created ? "Text" : textLayer.name) + " Box";
         box.moveAfter(textLayer);
@@ -2051,9 +2061,12 @@ function pcCreateTextBox(mode, withAnim, roundness, padding, bgColor, textColor,
         // Posición absoluta en comp y LUEGO emparentar al texto. El setter .parent
         // compensa la transformación (no salta), así que la caja queda en su lugar
         // y además sigue al texto si lo movés. (setParentWithJump sí saltaría.)
-        box.position.setValue([centerX, centerY]);
+        step = "position-parent";
+        var boxTr = box.property("ADBE Transform Group");
+        boxTr.property("ADBE Position").setValue([centerX, centerY]);
         try { box.parent = textLayer; } catch(ex) {}
 
+        step = "shape-contents";
         var root = box.property("ADBE Root Vectors Group");
         var grp = root.addProperty("ADBE Vector Group"); grp.name = "Box";
         var grpContents = grp.property("ADBE Vectors Group");
@@ -2065,6 +2078,7 @@ function pcCreateTextBox(mode, withAnim, roundness, padding, bgColor, textColor,
         // simples de effect) no aplican, así que tamaño, redondez y color van con
         // setValue directo. Padding y redondez se toman del panel al crear; para
         // cambiarlos, se re-crea la caja. El color se cambia con la paleta (setValue).
+        step = "static-values";
         rect.property("ADBE Vector Rect Size").setValue([shapeW, shapeH]);
         try { rect.property("ADBE Vector Rect Roundness").setValue(roundness); } catch(ex) {}
         fill.property("ADBE Vector Fill Color").setValue(bgColor4);
@@ -2074,10 +2088,11 @@ function pcCreateTextBox(mode, withAnim, roundness, padding, bgColor, textColor,
         //    arrancando en el playhead. La caja está emparentada, así que animamos
         //    su transform relativo (posición Y y opacidad). El tamaño sigue fijo.
         if (doAnim) {
-            var restPos = box.position.value; // relativo (ya emparentado)
-            var rpX = restPos[0], rpY = restPos[1];
+            step = "box-anim";
             var opP = box.property("ADBE Transform Group").property("ADBE Opacity");
             var posP = box.property("ADBE Transform Group").property("ADBE Position");
+            var restPos = posP.value; // relativo (ya emparentado)
+            var rpX = restPos[0], rpY = restPos[1];
             var ka = opP.addKey(t0);  opP.setValueAtKey(ka, 0);
             var kb = opP.addKey(t1);  opP.setValueAtKey(kb, 100);
             var kc = posP.addKey(t0); posP.setValueAtKey(kc, [rpX, rpY + 30]);
@@ -2103,7 +2118,7 @@ function pcCreateTextBox(mode, withAnim, roundness, padding, bgColor, textColor,
             boxW: Math.round(shapeW),
             boxH: Math.round(shapeH)
         });
-    } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
+    } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString(), step: step }); }
 }
 
 // ─── ANNOTATIONS ─────────────────────────────────────────────────
