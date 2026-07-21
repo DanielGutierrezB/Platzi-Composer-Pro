@@ -77,16 +77,25 @@
                     });
                     return;
                 }
+                logAction("hostResult", { fn: fn, status: "no-response", raw: raw });
                 showToast("El host de AE no respondió. Recargá el panel con el botón ⟳ y reintentá.", "error");
                 return;
             }
 
             try {
                 var d = JSON.parse(raw);
+                // Registrar SIEMPRE el resultado del host (para troubleshooting)
+                logAction("hostResult", { fn: fn, status: d.error ? "error" : "ok", result: d });
                 if (d.error) { showToast(d.error, "error"); return; }
-                showToast("Listo", "success");
+                // Aviso si una expresión quedó con error aunque la acción "funcionó"
+                if (d.sizeExprError || d.posExprError) {
+                    showToast("Caja creada, pero una expresión reportó error (ver log).", "info");
+                } else {
+                    showToast("Listo", "success");
+                }
                 if (cb) cb(d);
             } catch(e) {
+                logAction("hostResult", { fn: fn, status: "parse-error", raw: raw.substring(0, 200) });
                 showToast("Respuesta inválida del host: " + raw.substring(0, 80), "error");
             }
         });
@@ -1254,10 +1263,13 @@
             var eo = easeOut(), ei = easeIn();
             logAction("callHost", createFn);
             csInterface.evalScript(createFn, function(result) {
+                var raw = (result == null) ? "" : ("" + result);
                 try {
-                    var d = JSON.parse(result);
+                    var d = JSON.parse(raw);
+                    logAction("hostResult", { fn: createFn, status: d.error ? "error" : "ok", result: d });
                     if (d.error) { showToast(d.error, "error"); return; }
                 } catch(ex) {
+                    logAction("hostResult", { fn: createFn, status: "parse-error", raw: raw.substring(0, 200) });
                     showToast("Error: " + ex.message, "error");
                     return;
                 }
@@ -1278,11 +1290,11 @@
             var eo = document.getElementById("ease-out").value;
             var ei = document.getElementById("ease-in").value;
             var rcaps = document.getElementById("chk-stroke-round").checked;
-            csInterface.evalScript("pcCreateHighlighter(" + rcaps + ")", function(res) {
-                try { if (JSON.parse(res).error) { showToast(JSON.parse(res).error,"error"); return; } } catch(x){}
-                if (e.shiftKey && (e.altKey)) { callHost("pcHighlighterAnimate(\"out\","+eo+","+ei+")"); }
-                else if (e.altKey) { callHost("pcHighlighterAnimate(\"in\","+eo+","+ei+")"); }
-                else if (e.shiftKey) { callHost("pcHighlighterAnimate(\"inout\","+eo+","+ei+")"); }
+            var shift = e.shiftKey, alt = e.altKey;
+            callHost("pcCreateHighlighter(" + rcaps + ")", function() {
+                if (shift && alt) { callHost("pcHighlighterAnimate(\"out\","+eo+","+ei+")"); }
+                else if (alt) { callHost("pcHighlighterAnimate(\"in\","+eo+","+ei+")"); }
+                else if (shift) { callHost("pcHighlighterAnimate(\"inout\","+eo+","+ei+")"); }
             });
         });
         on("btn-hl-flip",           "click", function()  { callHost("pcFlipHorizontal()"); });
@@ -1292,8 +1304,7 @@
             var style = document.getElementById("sel-line-style").value;
             var glow = document.getElementById("chk-line-glow").checked;
             var shift = e.shiftKey, alt = e.altKey;
-            csInterface.evalScript("pcCreateLineHighlighter('" + style + "', " + glow + ")", function(res) {
-                try { if (JSON.parse(res).error) { showToast(JSON.parse(res).error,"error"); return; } } catch(x){}
+            callHost("pcCreateLineHighlighter('" + style + "', " + glow + ")", function() {
                 if (shift && alt) { callHost("pcLineHighlighterAnimate(\"out\","+eo+","+ei+")"); }
                 else if (alt) { callHost("pcLineHighlighterAnimate(\"in\","+eo+","+ei+")"); }
                 else if (shift) { callHost("pcLineHighlighterAnimate(\"inout\","+eo+","+ei+")"); }
@@ -1304,11 +1315,11 @@
             var eo = document.getElementById("ease-out").value;
             var ei = document.getElementById("ease-in").value;
             var fmr = parseFloat(document.getElementById("fm-round").value); if (isNaN(fmr)) fmr = 0;
-            csInterface.evalScript("pcCreateFocusMask(70, 20, " + fmr + ")", function(res) {
-                try { if (JSON.parse(res).error) { showToast(JSON.parse(res).error,"error"); return; } } catch(x){}
-                if (e.shiftKey && (e.altKey)) { callHost("pcFocusMaskAnimate(\"out\","+eo+","+ei+")"); }
-                else if (e.altKey) { callHost("pcFocusMaskAnimate(\"in\","+eo+","+ei+")"); }
-                else if (e.shiftKey) { callHost("pcFocusMaskAnimate(\"inout\","+eo+","+ei+")"); }
+            var shift = e.shiftKey, alt = e.altKey;
+            callHost("pcCreateFocusMask(70, 20, " + fmr + ")", function() {
+                if (shift && alt) { callHost("pcFocusMaskAnimate(\"out\","+eo+","+ei+")"); }
+                else if (alt) { callHost("pcFocusMaskAnimate(\"in\","+eo+","+ei+")"); }
+                else if (shift) { callHost("pcFocusMaskAnimate(\"inout\","+eo+","+ei+")"); }
             });
         });
         document.getElementById("btn-zoom-focus-create").addEventListener("click", function() {
@@ -1476,7 +1487,7 @@
                     for (var j = 0; j < all.length; j++) all[j].classList.remove("active");
                     swatch.classList.add("active");
                     var rgb = swatch.getAttribute("data-color");
-                    csInterface.evalScript("pcApplyColorToSelected([" + rgb + "])");
+                    callHost("pcApplyColorToSelected([" + rgb + "])");
                 });
             })(swatches[i]);
         }

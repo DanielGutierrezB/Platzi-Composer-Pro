@@ -2033,26 +2033,51 @@ function pcCreateTextBox(mode, withAnim, roundness, padding, bgColor, textColor,
         box.property("ADBE Transform Group").property("ADBE Anchor Point").setValue([0, 0]);
         box.property("ADBE Transform Group").property("ADBE Position").setValue([0, 0]);
 
-        // Tamaño responsive (muestreo en tiempo fijo -> no tiembla)
+        // 5b) BASELINE ESTÁTICO calculado desde el host (garantiza que la caja
+        //     salga bien aunque la expresión falle en runtime). sourceRectAtTime
+        //     también existe en scripting. Muestreamos en el tiempo congelado.
+        var sampleT = doAnim ? t1 : t0;
+        var srt = null;
+        try { srt = textLayer.sourceRectAtTime(sampleT, false); } catch(ex) { srt = null; }
+        if (srt && srt.width > 0) {
+            try { rect.property("ADBE Vector Rect Size").setValue([srt.width + padding * 2, srt.height + padding * 2]); } catch(ex) {}
+            try { rect.property("ADBE Vector Rect Position").setValue([srt.left + srt.width / 2, srt.top + srt.height / 2]); } catch(ex) {}
+        }
+
+        // 5c) EXPRESIÓN responsive encima del baseline. Referencia al texto vía
+        //     thisLayer.parent (no por nombre) → robusto a renombrar y a nombres
+        //     con caracteres raros. Muestreo en tiempo fijo → no tiembla bajo la
+        //     animación. Si la expresión falla, AE conserva el baseline estático.
         var sizeExpr =
-            "var t = thisComp.layer(\"" + refEsc + "\");" +
-            "var s = t.sourceRectAtTime(" + freezeStr + ", false);" +
+            "var s = thisLayer.parent.sourceRectAtTime(" + freezeStr + ", false);" +
             "var p = effect(\"Padding\")(1);" +
             "[s.width + p*2, s.height + p*2];";
         try { rect.property("ADBE Vector Rect Size").expression = sizeExpr; } catch(ex) {}
 
-        // Centrar el rectángulo sobre el bounding box del texto (mismo espacio, por parentesco)
         var rectPosExpr =
-            "var t = thisComp.layer(\"" + refEsc + "\");" +
-            "var s = t.sourceRectAtTime(" + freezeStr + ", false);" +
+            "var s = thisLayer.parent.sourceRectAtTime(" + freezeStr + ", false);" +
             "[s.left + s.width/2, s.top + s.height/2];";
         try { rect.property("ADBE Vector Rect Position").expression = rectPosExpr; } catch(ex) {}
 
         // Dejar la caja debajo del texto (detrás en render)
         try { box.moveAfter(textLayer); } catch(ex) {}
 
+        // Diagnóstico: reportar errores de expresión y las medidas usadas
+        var sizeErr = "", posErr = "";
+        try { sizeErr = rect.property("ADBE Vector Rect Size").expressionError || ""; } catch(ex) {}
+        try { posErr = rect.property("ADBE Vector Rect Position").expressionError || ""; } catch(ex) {}
+
         app.endUndoGroup();
-        return JSON.stringify({ success: true, created: created, animated: doAnim });
+        return JSON.stringify({
+            success: true,
+            created: created,
+            animated: doAnim,
+            textLayer: refName,
+            srcWidth: srt ? Math.round(srt.width) : 0,
+            srcHeight: srt ? Math.round(srt.height) : 0,
+            sizeExprError: sizeErr,
+            posExprError: posErr
+        });
     } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
 }
 
