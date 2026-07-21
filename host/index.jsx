@@ -2033,31 +2033,45 @@ function pcCreateTextBox(mode, withAnim, roundness, padding, bgColor, textColor,
         box.property("ADBE Transform Group").property("ADBE Anchor Point").setValue([0, 0]);
         box.property("ADBE Transform Group").property("ADBE Position").setValue([0, 0]);
 
-        // 5b) BASELINE ESTÁTICO calculado desde el host (garantiza que la caja
-        //     salga bien aunque la expresión falle en runtime). sourceRectAtTime
-        //     también existe en scripting. Muestreamos en el tiempo congelado.
-        var sampleT = doAnim ? t1 : t0;
+        // 5b) BASELINE ESTÁTICO horneado desde el host. Para el caso ANIMADO es el
+        //     valor final de la caja (congelado). Para el no-animado es respaldo.
+        //     sourceRectAtTime en scripting puede dar {0,0} según el frame, así que
+        //     probamos varios tiempos candidatos y tomamos el primero con ancho > 0.
+        var candTimes = doAnim ? [t1, t1 + 0.001, t0, comp.time] : [t0, comp.time, t0 + 0.001, textLayer.inPoint + 0.001];
         var srt = null;
-        try { srt = textLayer.sourceRectAtTime(sampleT, false); } catch(ex) { srt = null; }
+        for (var ci = 0; ci < candTimes.length; ci++) {
+            try {
+                var r = textLayer.sourceRectAtTime(candTimes[ci], false);
+                if (r && r.width > 0) { srt = r; break; }
+                if (r && !srt) { srt = r; } // guardamos aunque sea 0, para diagnóstico
+            } catch(ex) {}
+        }
         if (srt && srt.width > 0) {
             try { rect.property("ADBE Vector Rect Size").setValue([srt.width + padding * 2, srt.height + padding * 2]); } catch(ex) {}
             try { rect.property("ADBE Vector Rect Position").setValue([srt.left + srt.width / 2, srt.top + srt.height / 2]); } catch(ex) {}
         }
 
-        // 5c) EXPRESIÓN responsive encima del baseline. Referencia al texto vía
-        //     thisLayer.parent (no por nombre) → robusto a renombrar y a nombres
-        //     con caracteres raros. Muestreo en tiempo fijo → no tiembla bajo la
-        //     animación. Si la expresión falla, AE conserva el baseline estático.
-        var sizeExpr =
-            "var s = thisLayer.parent.sourceRectAtTime(" + freezeStr + ", false);" +
-            "var p = effect(\"Padding\")(1);" +
-            "[s.width + p*2, s.height + p*2];";
-        try { rect.property("ADBE Vector Rect Size").expression = sizeExpr; } catch(ex) {}
+        // 5c) SIN animación → EXPRESIÓN responsive en tiempo VIVO (time).
+        //     CLAVE: sourceRectAtTime(<tiempo fijo>) devuelve {0,0} en algunos AE
+        //     (era el bug de v1.5.21/22: caja de padding en el origen). time es lo
+        //     que usan todos los tutoriales que funcionan. Referencia al texto vía
+        //     thisLayer.parent (robusto a renombrar / nombres raros).
+        //     CON animación → NO ponemos expresión: en el fade-up los caracteres
+        //     arrancan en opacidad 0, así que un sourceRectAtTime en vivo colapsaría
+        //     la caja al inicio. Dejamos el tamaño horneado (estático de 5b) →
+        //     caja congelada, sin temblor (lo que pidió Daniel).
+        if (!doAnim) {
+            var sizeExpr =
+                "var s = thisLayer.parent.sourceRectAtTime(time);" +
+                "var p = effect(\"Padding\")(1);" +
+                "[s.width + p*2, s.height + p*2];";
+            try { rect.property("ADBE Vector Rect Size").expression = sizeExpr; } catch(ex) {}
 
-        var rectPosExpr =
-            "var s = thisLayer.parent.sourceRectAtTime(" + freezeStr + ", false);" +
-            "[s.left + s.width/2, s.top + s.height/2];";
-        try { rect.property("ADBE Vector Rect Position").expression = rectPosExpr; } catch(ex) {}
+            var rectPosExpr =
+                "var s = thisLayer.parent.sourceRectAtTime(time);" +
+                "[s.left + s.width/2, s.top + s.height/2];";
+            try { rect.property("ADBE Vector Rect Position").expression = rectPosExpr; } catch(ex) {}
+        }
 
         // Dejar la caja debajo del texto (detrás en render)
         try { box.moveAfter(textLayer); } catch(ex) {}
