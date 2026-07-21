@@ -1956,6 +1956,7 @@ function pcCreateTextBox(mode, withAnim, roundness, padding, bgColor, textColor,
         var t1 = t0 + totalDur;
         var doAnim = (withAnim == 1 || withAnim === true || withAnim === "1");
         var step = "init"; // rastreador para diagnóstico
+        var animErr = "", boxAnimErr = ""; // errores de animación (no fatales)
 
         // Normaliza colores (Color Control = 4D [r,g,b,a]; fillColor de texto = 3D)
         var textColor3 = [textColor[0], textColor[1], textColor[2]];
@@ -1992,30 +1993,36 @@ function pcCreateTextBox(mode, withAnim, roundness, padding, bgColor, textColor,
             tdProp.setValue(tdVal);
         } catch(exTC) {}
 
-        // 2) Animación de entrada (solo el texto) fade-up por char/word/line
+        // 2) Animación de entrada (solo el texto) fade-up por char/word/line.
+        //    Todo el bloque en try/catch: si el animador de texto falla, igual
+        //    creamos la caja (no debe tumbar toda la herramienta).
         if (doAnim) {
-            var textProp = textLayer.property("ADBE Text Properties");
-            var animators = textProp.property("ADBE Text Animators");
-            var animator = animators.addProperty("ADBE Text Animator");
-            animator.name = "PlatziBoxAnim";
-            var animProps = animator.property("ADBE Text Animator Properties");
-            var op = animProps.addProperty("ADBE Text Opacity"); op.setValue(0);
-            var posA = animProps.addProperty("ADBE Text Position 3D"); posA.setValue([0, 30, 0]);
-            var selectors = animator.property("ADBE Text Selectors");
-            var rangeSel = selectors.addProperty("ADBE Text Selector");
-            var advanced = rangeSel.property("ADBE Text Range Advanced");
-            var basedOnVal = 1; // char
-            if (mode === "word") basedOnVal = 3;
-            if (mode === "line") basedOnVal = 4;
-            try { advanced.property("Based On").setValue(basedOnVal); } catch(ex) {}
-            var rangeStart = rangeSel.property("Start");
-            var ks1 = rangeStart.addKey(t0); rangeStart.setValueAtKey(ks1, 0);
-            var ks2 = rangeStart.addKey(t1); rangeStart.setValueAtKey(ks2, 100);
+            step = "text-animator";
             try {
-                rangeStart.setInterpolationTypeAtKey(ks1, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
-                rangeStart.setInterpolationTypeAtKey(ks2, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
-                _pcApplyEaseScalar(rangeStart, ks1, ks2, easeOut, easeIn);
-            } catch(ex) {}
+                var textProp = textLayer.property("ADBE Text Properties");
+                var animators = textProp.property("ADBE Text Animators");
+                var animator = animators.addProperty("ADBE Text Animator");
+                animator.name = "PlatziBoxAnim";
+                var animProps = animator.property("ADBE Text Animator Properties");
+                var op = animProps.addProperty("ADBE Text Opacity"); op.setValue(0);
+                var posA = animProps.addProperty("ADBE Text Position 3D"); posA.setValue([0, 30, 0]);
+                var selectors = animator.property("ADBE Text Selectors");
+                var rangeSel = selectors.addProperty("ADBE Text Selector");
+                var advanced = rangeSel.property("ADBE Text Range Advanced");
+                var basedOnVal = 1; // char
+                if (mode === "word") basedOnVal = 3;
+                if (mode === "line") basedOnVal = 4;
+                try { advanced.property("Based On").setValue(basedOnVal); } catch(ex) {}
+                var rangeStart = rangeSel.property("ADBE Text Percent Start");
+                if (!rangeStart) rangeStart = rangeSel.property("Start");
+                var ks1 = rangeStart.addKey(t0); rangeStart.setValueAtKey(ks1, 0);
+                var ks2 = rangeStart.addKey(t1); rangeStart.setValueAtKey(ks2, 100);
+                try {
+                    rangeStart.setInterpolationTypeAtKey(ks1, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+                    rangeStart.setInterpolationTypeAtKey(ks2, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+                    _pcApplyEaseScalar(rangeStart, ks1, ks2, easeOut, easeIn);
+                } catch(ex) {}
+            } catch(exAnim) { animErr = exAnim.toString(); }
         }
 
         // 3) Medir el texto con sourceRectAtTime de SCRIPTING (confiable en este AE;
@@ -2089,22 +2096,24 @@ function pcCreateTextBox(mode, withAnim, roundness, padding, bgColor, textColor,
         //    su transform relativo (posición Y y opacidad). El tamaño sigue fijo.
         if (doAnim) {
             step = "box-anim";
-            var opP = box.property("ADBE Transform Group").property("ADBE Opacity");
-            var posP = box.property("ADBE Transform Group").property("ADBE Position");
-            var restPos = posP.value; // relativo (ya emparentado)
-            var rpX = restPos[0], rpY = restPos[1];
-            var ka = opP.addKey(t0);  opP.setValueAtKey(ka, 0);
-            var kb = opP.addKey(t1);  opP.setValueAtKey(kb, 100);
-            var kc = posP.addKey(t0); posP.setValueAtKey(kc, [rpX, rpY + 30]);
-            var kd = posP.addKey(t1); posP.setValueAtKey(kd, [rpX, rpY]);
             try {
-                opP.setInterpolationTypeAtKey(ka, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
-                opP.setInterpolationTypeAtKey(kb, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
-                _pcApplyEaseScalar(opP, ka, kb, easeOut, easeIn);
-                posP.setInterpolationTypeAtKey(kc, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
-                posP.setInterpolationTypeAtKey(kd, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
-                _pcApplyEaseScalar(posP, kc, kd, easeOut, easeIn);
-            } catch(ex) {}
+                var opP = box.property("ADBE Transform Group").property("ADBE Opacity");
+                var posP = box.property("ADBE Transform Group").property("ADBE Position");
+                var restPos = posP.value; // relativo (ya emparentado)
+                var rpX = restPos[0], rpY = restPos[1];
+                var ka = opP.addKey(t0);  opP.setValueAtKey(ka, 0);
+                var kb = opP.addKey(t1);  opP.setValueAtKey(kb, 100);
+                var kc = posP.addKey(t0); posP.setValueAtKey(kc, [rpX, rpY + 30]);
+                var kd = posP.addKey(t1); posP.setValueAtKey(kd, [rpX, rpY]);
+                try {
+                    opP.setInterpolationTypeAtKey(ka, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+                    opP.setInterpolationTypeAtKey(kb, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+                    _pcApplyEaseScalar(opP, ka, kb, easeOut, easeIn);
+                    posP.setInterpolationTypeAtKey(kc, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+                    posP.setInterpolationTypeAtKey(kd, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+                    _pcApplyEaseScalar(posP, kc, kd, easeOut, easeIn);
+                } catch(ex) {}
+            } catch(exBoxAnim) { boxAnimErr = exBoxAnim.toString(); }
         }
 
         app.endUndoGroup();
@@ -2116,7 +2125,9 @@ function pcCreateTextBox(mode, withAnim, roundness, padding, bgColor, textColor,
             srcWidth: Math.round(txtW),
             srcHeight: Math.round(txtH),
             boxW: Math.round(shapeW),
-            boxH: Math.round(shapeH)
+            boxH: Math.round(shapeH),
+            animErr: animErr,
+            boxAnimErr: boxAnimErr
         });
     } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString(), step: step }); }
 }
