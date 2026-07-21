@@ -2046,30 +2046,37 @@ function pcCreateTextBox(mode, withAnim, roundness, padding, bgColor, textColor,
                 if (r && !srt) { srt = r; } // guardamos aunque sea 0, para diagnóstico
             } catch(ex) {}
         }
+        // Valores horneados (redondeados) desde el scripting, que SÍ mide bien.
+        var bw = 100, bh = 100, bl = -50, bt = -50;
         if (srt && srt.width > 0) {
-            try { rect.property("ADBE Vector Rect Size").setValue([srt.width + padding * 2, srt.height + padding * 2]); } catch(ex) {}
-            try { rect.property("ADBE Vector Rect Position").setValue([srt.left + srt.width / 2, srt.top + srt.height / 2]); } catch(ex) {}
+            bw = Math.round(srt.width); bh = Math.round(srt.height);
+            bl = Math.round(srt.left);  bt = Math.round(srt.top);
+            try { rect.property("ADBE Vector Rect Size").setValue([bw + padding * 2, bh + padding * 2]); } catch(ex) {}
+            try { rect.property("ADBE Vector Rect Position").setValue([bl + bw / 2, bt + bh / 2]); } catch(ex) {}
         }
 
-        // 5c) SIN animación → EXPRESIÓN responsive en tiempo VIVO (time).
-        //     CLAVE: sourceRectAtTime(<tiempo fijo>) devuelve {0,0} en algunos AE
-        //     (era el bug de v1.5.21/22: caja de padding en el origen). time es lo
-        //     que usan todos los tutoriales que funcionan. Referencia al texto vía
-        //     thisLayer.parent (robusto a renombrar / nombres raros).
-        //     CON animación → NO ponemos expresión: en el fade-up los caracteres
-        //     arrancan en opacidad 0, así que un sourceRectAtTime en vivo colapsaría
-        //     la caja al inicio. Dejamos el tamaño horneado (estático de 5b) →
-        //     caja congelada, sin temblor (lo que pidió Daniel).
-        if (!doAnim) {
+        // 5c) SIN animación → EXPRESIÓN responsive CON FALLBACK horneado.
+        //     Dato del log: en el AE de Daniel, sourceRectAtTime(time) en EXPRESIÓN
+        //     devuelve {0,0} (aunque en SCRIPTING mide 1059x65). Antes esa expresión
+        //     "sin error" pisaba el valor bueno con padding*2 en el anchor.
+        //     Fix: si la expresión mide 0, cae a los valores horneados (correctos).
+        //     Donde la expresión SÍ funciona, queda responsive de verdad.
+        //     CON animación → sin expresión: en el fade-up los chars arrancan en
+        //     opacidad 0; dejamos el tamaño horneado → caja congelada, sin temblor.
+        if (!doAnim && srt && srt.width > 0) {
             var sizeExpr =
                 "var s = thisLayer.parent.sourceRectAtTime(time);" +
                 "var p = effect(\"Padding\")(1);" +
-                "[s.width + p*2, s.height + p*2];";
+                "var w = s.width, h = s.height;" +
+                "if (w < 1) { w = " + bw + "; h = " + bh + "; }" +
+                "[w + p*2, h + p*2];";
             try { rect.property("ADBE Vector Rect Size").expression = sizeExpr; } catch(ex) {}
 
             var rectPosExpr =
                 "var s = thisLayer.parent.sourceRectAtTime(time);" +
-                "[s.left + s.width/2, s.top + s.height/2];";
+                "var w = s.width, h = s.height, l = s.left, t = s.top;" +
+                "if (w < 1) { w = " + bw + "; h = " + bh + "; l = " + bl + "; t = " + bt + "; }" +
+                "[l + w/2, t + h/2];";
             try { rect.property("ADBE Vector Rect Position").expression = rectPosExpr; } catch(ex) {}
         }
 
