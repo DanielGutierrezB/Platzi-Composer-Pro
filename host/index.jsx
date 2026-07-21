@@ -2026,7 +2026,11 @@ function pcCreateTextBox(mode, withAnim, roundness, padding, bgColor, textColor,
         box.name = (created ? "Text" : textLayer.name) + " Box";
         box.moveAfter(textLayer);
         try { box.inPoint = textLayer.inPoint; box.outPoint = textLayer.outPoint; } catch(ex) {}
+        // Posición absoluta en comp y LUEGO emparentar al texto. El setter .parent
+        // compensa la transformación (no salta), así que la caja queda en su lugar
+        // y además sigue al texto si lo movés. (setParentWithJump sí saltaría.)
         box.position.setValue([centerX, centerY]);
+        try { box.parent = textLayer; } catch(ex) {}
 
         var root = box.property("ADBE Root Vectors Group");
         var grp = root.addProperty("ADBE Vector Group"); grp.name = "Box";
