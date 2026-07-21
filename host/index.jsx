@@ -2054,30 +2054,13 @@ function pcCreateTextBox(mode, withAnim, roundness, padding, bgColor, textColor,
         rect.property("ADBE Vector Rect Position").setValue([0, 0]);
         var fill = grpContents.addProperty("ADBE Vector Graphic - Fill");
 
-        // Effect Controls editables: Padding y Roundness (expresiones SIMPLES de
-        // effect, sin sourceRectAtTime). El COLOR de fondo va ESTÁTICO en el Fill
-        // (SIN expresión) para que la paleta de colores pueda cambiarlo después
-        // con un setValue directo (una expresión lo pisaría).
-        var bfx = box.property("ADBE Effect Parade");
-        var padCtrl = bfx.addProperty("ADBE Slider Control"); padCtrl.name = "Padding";
-        padCtrl.property(1).setValue(padding);
-        var rndCtrl = bfx.addProperty("ADBE Slider Control"); rndCtrl.name = "Roundness";
-        rndCtrl.property(1).setValue(roundness);
-
-        var bwR = Math.round(txtW), bhR = Math.round(txtH);
-
-        // Valores estáticos primero (respaldo si una expresión no evaluara).
+        // TODO ESTÁTICO — sin expresiones. En este AE las expresiones (incluso las
+        // simples de effect) no aplican, así que tamaño, redondez y color van con
+        // setValue directo. Padding y redondez se toman del panel al crear; para
+        // cambiarlos, se re-crea la caja. El color se cambia con la paleta (setValue).
         rect.property("ADBE Vector Rect Size").setValue([shapeW, shapeH]);
         try { rect.property("ADBE Vector Rect Roundness").setValue(roundness); } catch(ex) {}
-        fill.property("ADBE Vector Fill Color").setValue(bgColor4); // estático, sin expresión
-
-        // Padding/Roundness vivos vía expresión simple (si el AE la corre; si no,
-        // queda el valor estático). El color NO lleva expresión (ver arriba).
-        try {
-            rect.property("ADBE Vector Rect Size").expression =
-                "var w=" + bwR + ", h=" + bhR + ", p=effect(\"Padding\")(1);[w+p*2, h+p*2];";
-        } catch(ex) {}
-        try { rect.property("ADBE Vector Rect Roundness").expression = "effect(\"Roundness\")(1);"; } catch(ex) {}
+        fill.property("ADBE Vector Fill Color").setValue(bgColor4);
 
         // 6) Animación de ENTRADA de la caja (solo Shift+clic). Fade-up: sube desde
         //    abajo + fade in, misma duración que la entrada del texto (t0→t1) y
