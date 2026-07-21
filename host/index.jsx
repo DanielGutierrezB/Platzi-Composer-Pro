@@ -2079,6 +2079,29 @@ function pcCreateTextBox(mode, withAnim, roundness, padding, bgColor, textColor,
         } catch(ex) {}
         try { rect.property("ADBE Vector Rect Roundness").expression = "effect(\"Roundness\")(1);"; } catch(ex) {}
 
+        // 6) Animación de ENTRADA de la caja (solo Shift+clic). Fade-up: sube desde
+        //    abajo + fade in, misma duración que la entrada del texto (t0→t1) y
+        //    arrancando en el playhead. La caja está emparentada, así que animamos
+        //    su transform relativo (posición Y y opacidad). El tamaño sigue fijo.
+        if (doAnim) {
+            var restPos = box.position.value; // relativo (ya emparentado)
+            var rpX = restPos[0], rpY = restPos[1];
+            var opP = box.property("ADBE Transform Group").property("ADBE Opacity");
+            var posP = box.property("ADBE Transform Group").property("ADBE Position");
+            var ka = opP.addKey(t0);  opP.setValueAtKey(ka, 0);
+            var kb = opP.addKey(t1);  opP.setValueAtKey(kb, 100);
+            var kc = posP.addKey(t0); posP.setValueAtKey(kc, [rpX, rpY + 30]);
+            var kd = posP.addKey(t1); posP.setValueAtKey(kd, [rpX, rpY]);
+            try {
+                opP.setInterpolationTypeAtKey(ka, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+                opP.setInterpolationTypeAtKey(kb, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+                _pcApplyEaseScalar(opP, ka, kb, easeOut, easeIn);
+                posP.setInterpolationTypeAtKey(kc, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+                posP.setInterpolationTypeAtKey(kd, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+                _pcApplyEaseScalar(posP, kc, kd, easeOut, easeIn);
+            } catch(ex) {}
+        }
+
         app.endUndoGroup();
         return JSON.stringify({
             success: true,
