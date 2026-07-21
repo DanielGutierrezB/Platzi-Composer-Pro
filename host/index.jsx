@@ -1957,15 +1957,13 @@ function pcCreateTextBox(mode, withAnim, roundness, padding, bgColor, textColor,
             created = true;
         }
 
-        // Color de texto vía Effect Control (editable, referenciado por índice = a prueba de idioma)
-        var tfx = textLayer.property("ADBE Effect Parade");
-        var tcolor = tfx.addProperty("ADBE Color Control"); tcolor.name = "Text Color";
-        tcolor.property(1).setValue(textColor4);
-        try {
-            textLayer.property("ADBE Text Properties").property("ADBE Text Document").expression =
-                "var c = thisLayer.effect(\"Text Color\")(1);" +
-                "var t = value; t.fillColor = c; t;";
-        } catch(ex) {}
+        // Color de texto: ESTÁTICO en el Text Document (las expresiones fallan en
+        // este AE — mismo motivo que la caja). Aplica a todo el texto seleccionado.
+        var tdProp = textLayer.property("ADBE Text Properties").property("ADBE Text Document");
+        var tdVal = tdProp.value;
+        try { tdVal.applyFill = true; } catch(ex) {}
+        tdVal.fillColor = textColor3;
+        tdProp.setValue(tdVal);
 
         // 2) Animación de entrada (solo el texto) fade-up por char/word/line
         if (doAnim) {
@@ -2039,16 +2037,9 @@ function pcCreateTextBox(mode, withAnim, roundness, padding, bgColor, textColor,
         try { rect.property("ADBE Vector Rect Roundness").setValue(roundness); } catch(ex) {}
         var fill = grpContents.addProperty("ADBE Vector Graphic - Fill");
 
-        // Color de fondo: Effect Control "Box Color" + expresión en el Fill (editable).
-        // La expresión de color NO usa sourceRectAtTime → es confiable en este AE.
-        var bfx = box.property("ADBE Effect Parade");
-        var bcolor = bfx.addProperty("ADBE Color Control"); bcolor.name = "Box Color";
-        bcolor.property(1).setValue(bgColor4);
-        try {
-            fill.property("ADBE Vector Fill Color").expression = "thisLayer.effect(\"Box Color\")(1);";
-        } catch(ex) {
-            fill.property("ADBE Vector Fill Color").setValue(bgColor4);
-        }
+        // Color de fondo: ESTÁTICO en el Fill (sin expresión, por el mismo motivo
+        // que el resto — confiable en este AE). El color se elige desde el panel.
+        fill.property("ADBE Vector Fill Color").setValue(bgColor4);
 
         app.endUndoGroup();
         return JSON.stringify({
