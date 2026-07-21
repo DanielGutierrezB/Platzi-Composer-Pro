@@ -19,7 +19,8 @@
         "mp-x": 35, "mp-y": 0,
         "cp-dur": 20, "cp-size": 600,
         "zoom-dur": 20, "zoom-pct": 130,
-        "box-round": 20, "fm-round": 0, "zf-round": 0, "chk-stroke-round": 0
+        "box-round": 20, "fm-round": 0, "zf-round": 0, "chk-stroke-round": 0,
+        "tb-round": 20, "tb-pad": 40, "tb-bg": "#ffffff", "tb-text": "#000000"
     };
 
     var state = {
@@ -48,6 +49,17 @@
     function callHost(fn, cb) {
         logAction("callHost", fn);
         _evalHost(fn, cb, false);
+    }
+
+    // Hex "#rrggbb" -> "r,g,b" en floats 0-1 (para arrays de color de ExtendScript)
+    function hexToRgb(hex) {
+        hex = ("" + (hex || "#ffffff")).replace("#", "");
+        if (hex.length === 3) hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+        var r = parseInt(hex.substring(0, 2), 16) / 255;
+        var g = parseInt(hex.substring(2, 4), 16) / 255;
+        var b = parseInt(hex.substring(4, 6), 16) / 255;
+        if (isNaN(r) || isNaN(g) || isNaN(b)) return "1,1,1";
+        return r.toFixed(4) + "," + g.toFixed(4) + "," + b.toFixed(4);
     }
 
     // Ejecuta una función del host. Si el host devuelve vacío o "EvalScript error"
@@ -1434,6 +1446,21 @@
                     callHost("pcTextHelper('" + animType + "','" + mode + "','" + animMode + "'," + dur + "," + glow + "," + easeOut() + "," + easeIn() + ")");
                 });
             })(thBtns[ti]);
+        }
+
+        // Text Box (recuadro): clic = caja responsive; Shift+clic = caja + animación de entrada
+        var tbBtn = document.getElementById("btn-textbox");
+        if (tbBtn) {
+            tbBtn.addEventListener("click", function(evt) {
+                var mode = document.querySelector('input[name="th-mode"]:checked').value;
+                var dur = parseInt(document.getElementById("th-dur").value) || 20;
+                var round = parseFloat(document.getElementById("tb-round").value); if (isNaN(round)) round = 20;
+                var pad = parseFloat(document.getElementById("tb-pad").value); if (isNaN(pad)) pad = 40;
+                var bg = hexToRgb(document.getElementById("tb-bg").value);
+                var txt = hexToRgb(document.getElementById("tb-text").value);
+                var withAnim = evt.shiftKey ? 1 : 0;
+                callHost("pcCreateTextBox('" + mode + "'," + withAnim + "," + round + "," + pad + ",[" + bg + "],[" + txt + "]," + dur + "," + easeOut() + "," + easeIn() + ")");
+            });
         }
 
     }

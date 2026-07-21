@@ -1917,6 +1917,145 @@ function pcTextHelper(animType, mode, animMode, durationFrames, enableGlow, ease
     } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
 }
 
+// ─── TEXT BOX (recuadro responsive) ──────────────────────────────
+// Crea un recuadro (shape layer) detrás del texto, responsive vía
+// sourceRectAtTime + padding, emparentado al texto. Si withAnim=1 agrega
+// una animación de entrada fade-up (abajo->arriba) por Character/Word/Line.
+// El tamaño de la caja se muestrea en un tiempo FIJO (fin de la animación)
+// para que no tiemble mientras entran las letras.
+function pcCreateTextBox(mode, withAnim, roundness, padding, bgColor, textColor, durationFrames, easeOut, easeIn) {
+    var comp = _pcRequireComp();
+    if (!comp) return JSON.stringify({ error: "No hay composición activa." });
+    try {
+        app.beginUndoGroup("Text Box");
+        var fps = comp.frameRate;
+        var t0 = comp.time;
+        var totalDur = durationFrames / fps;
+        var t1 = t0 + totalDur;
+        var doAnim = (withAnim == 1 || withAnim === true || withAnim === "1");
+
+        // Normaliza colores (Color Control = 4D [r,g,b,a]; fillColor de texto = 3D)
+        var textColor3 = [textColor[0], textColor[1], textColor[2]];
+        var textColor4 = [textColor[0], textColor[1], textColor[2], 1];
+        var bgColor4 = [bgColor[0], bgColor[1], bgColor[2], 1];
+
+        // 1) Obtener o crear la capa de texto
+        var textLayer;
+        var created = false;
+        var sel = comp.selectedLayers;
+        if (sel && sel.length > 0 && sel[0] instanceof TextLayer) {
+            textLayer = sel[0];
+        } else {
+            textLayer = comp.layers.addText("Tu texto aquí");
+            textLayer.property("Position").setValue([comp.width / 2, comp.height / 2]);
+            var td = textLayer.property("ADBE Text Properties").property("ADBE Text Document").value;
+            td.fontSize = 80;
+            td.fillColor = textColor3;
+            td.font = "Arial";
+            td.justification = ParagraphJustification.CENTER_JUSTIFY;
+            textLayer.property("ADBE Text Properties").property("ADBE Text Document").setValue(td);
+            created = true;
+        }
+
+        // Color de texto vía Effect Control (editable, referenciado por índice = a prueba de idioma)
+        var tfx = textLayer.property("ADBE Effect Parade");
+        var tcolor = tfx.addProperty("ADBE Color Control"); tcolor.name = "Text Color";
+        tcolor.property(1).setValue(textColor4);
+        try {
+            textLayer.property("ADBE Text Properties").property("ADBE Text Document").expression =
+                "var c = thisLayer.effect(\"Text Color\")(1);" +
+                "var t = value; t.fillColor = c; t;";
+        } catch(ex) {}
+
+        var refName = textLayer.name;
+        var refEsc = refName.replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
+
+        // 2) Animación de entrada (solo el texto) fade-up por char/word/line
+        if (doAnim) {
+            var textProp = textLayer.property("ADBE Text Properties");
+            var animators = textProp.property("ADBE Text Animators");
+            var animator = animators.addProperty("ADBE Text Animator");
+            animator.name = "PlatziBoxAnim";
+            var animProps = animator.property("ADBE Text Animator Properties");
+            var op = animProps.addProperty("ADBE Text Opacity"); op.setValue(0);
+            var posA = animProps.addProperty("ADBE Text Position 3D"); posA.setValue([0, 30, 0]);
+            var selectors = animator.property("ADBE Text Selectors");
+            var rangeSel = selectors.addProperty("ADBE Text Selector");
+            var advanced = rangeSel.property("ADBE Text Range Advanced");
+            var basedOnVal = 1; // char
+            if (mode === "word") basedOnVal = 3;
+            if (mode === "line") basedOnVal = 4;
+            try { advanced.property("Based On").setValue(basedOnVal); } catch(ex) {}
+            var rangeStart = rangeSel.property("Start");
+            var ks1 = rangeStart.addKey(t0); rangeStart.setValueAtKey(ks1, 0);
+            var ks2 = rangeStart.addKey(t1); rangeStart.setValueAtKey(ks2, 100);
+            try {
+                rangeStart.setInterpolationTypeAtKey(ks1, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+                rangeStart.setInterpolationTypeAtKey(ks2, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+                _pcApplyEaseScalar(rangeStart, ks1, ks2, easeOut, easeIn);
+            } catch(ex) {}
+        }
+
+        // 3) Tiempo FIJO de muestreo: fin de la animación (o tiempo actual si no anima)
+        var freezeStr = "" + (doAnim ? t1 : t0);
+
+        // 4) Crear la shape layer del recuadro
+        var box = comp.layers.addShape();
+        box.name = "Text Box";
+        var root = box.property("ADBE Root Vectors Group");
+        var grp = root.addProperty("ADBE Vector Group"); grp.name = "Box";
+        var grpContents = grp.property("ADBE Vectors Group");
+        var rect = grpContents.addProperty("ADBE Vector Shape - Rect");
+        var fill = grpContents.addProperty("ADBE Vector Graphic - Fill");
+
+        // Color de fondo vía Effect Control + expresión en el Fill
+        var bfx = box.property("ADBE Effect Parade");
+        var bcolor = bfx.addProperty("ADBE Color Control"); bcolor.name = "Box Color";
+        bcolor.property(1).setValue(bgColor4);
+        try {
+            fill.property("ADBE Vector Fill Color").expression = "thisLayer.effect(\"Box Color\")(1);";
+        } catch(ex) {
+            fill.property("ADBE Vector Fill Color").setValue(bgColor4);
+        }
+
+        // Padding (slider que alimenta la expresión responsive)
+        var padCtrl = bfx.addProperty("ADBE Slider Control"); padCtrl.name = "Padding";
+        padCtrl.property(1).setValue(padding);
+
+        // Redondez
+        try { rect.property("ADBE Vector Rect Roundness").setValue(roundness); } catch(ex) {}
+
+        // 5) Emparentar la caja al texto y dejar su transform en identidad.
+        //    Parent PRIMERO y luego forzar position/anchor a [0,0]: así el origen
+        //    de la caja coincide con el anchor del texto sin importar cómo AE
+        //    recalcule al asignar el parent.
+        box.parent = textLayer;
+        box.property("ADBE Transform Group").property("ADBE Anchor Point").setValue([0, 0]);
+        box.property("ADBE Transform Group").property("ADBE Position").setValue([0, 0]);
+
+        // Tamaño responsive (muestreo en tiempo fijo -> no tiembla)
+        var sizeExpr =
+            "var t = thisComp.layer(\"" + refEsc + "\");" +
+            "var s = t.sourceRectAtTime(" + freezeStr + ", false);" +
+            "var p = effect(\"Padding\")(1);" +
+            "[s.width + p*2, s.height + p*2];";
+        try { rect.property("ADBE Vector Rect Size").expression = sizeExpr; } catch(ex) {}
+
+        // Centrar el rectángulo sobre el bounding box del texto (mismo espacio, por parentesco)
+        var rectPosExpr =
+            "var t = thisComp.layer(\"" + refEsc + "\");" +
+            "var s = t.sourceRectAtTime(" + freezeStr + ", false);" +
+            "[s.left + s.width/2, s.top + s.height/2];";
+        try { rect.property("ADBE Vector Rect Position").expression = rectPosExpr; } catch(ex) {}
+
+        // Dejar la caja debajo del texto (detrás en render)
+        try { box.moveAfter(textLayer); } catch(ex) {}
+
+        app.endUndoGroup();
+        return JSON.stringify({ success: true, created: created, animated: doAnim });
+    } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
+}
+
 // ─── ANNOTATIONS ─────────────────────────────────────────────────
 
 function pcCreateAnnotation(annType, thickness, enableGlow, easeOut, easeIn) {
