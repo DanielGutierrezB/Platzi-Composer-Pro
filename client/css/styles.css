@@ -387,7 +387,7 @@ html, body {
 /* ─── Tool Cards ─── */
 
 .tools-container {
-    padding: 6px 8px;
+    padding: 6px 8px 76px; /* el bottom deja lugar a la paleta + curve drawer */
     display: flex;
     flex-direction: column;
     gap: 0;
@@ -1144,24 +1144,6 @@ html, body {
     .tool-grid-2x2 { grid-template-columns: 1fr; }
 }
 
-/* ─── Números de atajo en las pestañas ─── */
-.tab-num {
-    display: inline-block;
-    margin-right: 3px;
-    padding: 0 3px;
-    font-size: 8px;
-    line-height: 12px;
-    border: 1px solid var(--border);
-    border-radius: 3px;
-    color: var(--text-secondary, #999);
-    opacity: 0.7;
-}
-.tools-tab.active .tab-num {
-    border-color: var(--accent);
-    color: var(--accent);
-    opacity: 1;
-}
-
 /* ─── Animate (estilo KeyFast) ─── */
 .an-grid {
     display: grid;
@@ -1316,7 +1298,7 @@ html, body {
     border: 1px solid var(--border);
     border-radius: var(--radius-sm, 4px);
     padding: 3px 6px;
-    margin-left: auto;
+    margin-left: 8px;
     white-space: nowrap;
 }
 .btn-apply-ease {

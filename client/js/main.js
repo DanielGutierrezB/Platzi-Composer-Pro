@@ -1237,42 +1237,9 @@
             activateTab("zoomer");
         }
 
-        // ─── Shortcuts: Cmd+Shift+1…7 cambia de pestaña ──────────────
-        // Los números solos son atajos de herramientas de AE (Orbit Camera,
-        // Pan, Dolly…), así que usamos Cmd+Shift+1…7, que están libres.
-        // CEP solo entrega teclas con el panel enfocado y si se registró
-        // interés en la combinación exacta (metaKey = Cmd en Mac).
-        var TAB_ORDER = ["zoomer", "animate", "highlighter", "text-helper", "profesor-views", "solid", "spellcheck"];
-
-        document.addEventListener("keydown", function(e) {
-            var kc = e.keyCode;
-            var n = -1;
-            if (kc >= 49 && kc <= 55) n = kc - 49;        // fila de números 1-7
-            else if (kc >= 97 && kc <= 103) n = kc - 97;  // numpad 1-7
-            // Diagnóstico: quedará en el log 🗎
-            logAction("keydown", { keyCode: kc, ctrl: e.ctrlKey, shift: e.shiftKey, alt: e.altKey, meta: e.metaKey });
-            if (n < 0) return;
-            if (!e.metaKey || !e.shiftKey || e.altKey || e.ctrlKey) return;
-            e.preventDefault();
-            activateTab(TAB_ORDER[n]);
-            logAction("tabShortcut", { tab: TAB_ORDER[n] });
-        });
-
-        // Registrar interés en Cmd+Shift+1…7 para que AE las enrute al
-        // panel. Keycodes NATIVOS de macOS para la fila 1-7:
-        // kVK_ANSI_1..7 = 18,19,20,21,23,22,26 (sí, 5/6 van cruzados).
-        // Y numpad 1-7: 83,84,85,86,87,88,89.
-        try {
-            var macKeys = [18, 19, 20, 21, 23, 22, 26, 83, 84, 85, 86, 87, 88, 89];
-            var interest = [];
-            for (var ki = 0; ki < macKeys.length; ki++) {
-                interest.push({ keyCode: macKeys[ki], metaKey: true, shiftKey: true });
-            }
-            csInterface.registerKeyEventsInterest(JSON.stringify(interest));
-            logAction("registerKeyEventsInterest", { combo: "Cmd+Shift+1..7", keys: interest.length });
-        } catch(ex) {
-            logAction("registerKeyEventsInterest", { error: ex.message });
-        }
+        // Nota: se intentaron shortcuts de teclado para las pestañas
+        // (Ctrl+1..7, números solos, Cmd+Shift+1..7) pero CEP no entrega
+        // las teclas de forma confiable en este AE/Mac. Se quitaron.
     }
 
     function expandSpellCheck() {
@@ -1507,9 +1474,11 @@
                 callHost("pcApplyEaseToSelected('" + type + "', " + easeOut() + ", " + easeIn() + ", 0, 0, 0, 0, " + anEaseParam(type) + ")");
             }
         });
-        on("btn-an-stagger", "click", function(evt) {
-            var reverse = evt.altKey ? "true" : "false";
-            callHost("pcStaggerKeys(" + anStagger() + ", " + reverse + ")");
+        on("btn-an-stagger", "click", function() {
+            callHost("pcStaggerKeys(" + anStagger() + ", false)");
+        });
+        on("btn-an-stagger-rev", "click", function() {
+            callHost("pcStaggerKeys(" + anStagger() + ", true)");
         });
 
         // Anchor Point 3x3 (estilo Motion Tools)
@@ -1688,19 +1657,33 @@
             try { localStorage.setItem("pc_curve_presets", JSON.stringify(list)); } catch(_) {}
         }
 
+        // Rango Y visible: se expande cuando los handles salen de 0..1
+        // (como Flow). Se congela durante el drag para que la vista no
+        // salte bajo el mouse; al soltar se re-encuadra.
+        var view = { lo: -0.1, hi: 1.1 };
+        function updateView() {
+            var lo = Math.min(0, cur.y1, cur.y2);
+            var hi = Math.max(1, cur.y1, cur.y2);
+            var margin = (hi - lo) * 0.08 + 0.02;
+            view = { lo: lo - margin, hi: hi + margin };
+        }
         function toPx(x, y) {
-            return { x: PAD + x * (W - 2 * PAD), y: H - PAD - y * (H - 2 * PAD) };
+            return {
+                x: PAD + x * (W - 2 * PAD),
+                y: H - PAD - ((y - view.lo) / (view.hi - view.lo)) * (H - 2 * PAD)
+            };
         }
         function fromPx(px, py) {
             return {
                 x: (px - PAD) / (W - 2 * PAD),
-                y: (H - PAD - py) / (H - 2 * PAD)
+                y: view.lo + ((H - PAD - py) / (H - 2 * PAD)) * (view.hi - view.lo)
             };
         }
 
         function draw() {
             if (!ctx) return;
             load();
+            if (!dragging) updateView();
             ctx.clearRect(0, 0, W, H);
             // Fondo
             ctx.fillStyle = "#151519";
@@ -1854,17 +1837,17 @@
                 var m = mousePos(e);
                 var pt = fromPx(m.x, m.y);
                 var nx = clamp(pt.x, 0, 1);
-                var ny = clamp(pt.y, -0.5, 1.5);
+                var ny = clamp(pt.y, -2, 3);
                 if (dragging === "p1") { cur.x1 = nx; cur.y1 = ny; }
                 else { cur.x2 = nx; cur.y2 = ny; }
                 draw();
             });
             document.addEventListener("mouseup", function() {
-                if (dragging) { dragging = null; persist(); }
+                if (dragging) { dragging = null; persist(); draw(); }
             });
 
             // Inputs numéricos editables → actualizan la curva
-            var numMap = [["curve-x1", "x1", 0, 1], ["curve-y1", "y1", -0.5, 1.5], ["curve-x2", "x2", 0, 1], ["curve-y2", "y2", -0.5, 1.5]];
+            var numMap = [["curve-x1", "x1", 0, 1], ["curve-y1", "y1", -2, 3], ["curve-x2", "x2", 0, 1], ["curve-y2", "y2", -2, 3]];
             for (var ni = 0; ni < numMap.length; ni++) {
                 (function(m) {
                     var el = document.getElementById(m[0]);

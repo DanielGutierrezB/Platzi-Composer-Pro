@@ -14,7 +14,7 @@
             <div class="header-spacer"></div>
             <span id="comp-name" class="comp-name">Sin composición activa</span>
             <span id="layer-count" class="layer-count"></span>
-            <span id="version-badge" class="version-label">v1.8.0</span>
+            <span id="version-badge" class="version-label">v1.8.1</span>
             <button id="btn-update" class="icon-btn" title="Verificar actualización / Recargar panel">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
@@ -94,13 +94,13 @@
 
         <!-- Tab Bar -->
         <div class="tools-tab-bar">
-            <button class="tools-tab" data-tool="zoomer"><span class="tab-num">1</span>🟠 Zoomer</button>
-            <button class="tools-tab" data-tool="animate"><span class="tab-num">2</span>🎬 Animate</button>
-            <button class="tools-tab" data-tool="highlighter"><span class="tab-num">3</span>✨ Highlighter</button>
-            <button class="tools-tab" data-tool="text-helper"><span class="tab-num">4</span>✍️ Text</button>
-            <button class="tools-tab" data-tool="profesor-views"><span class="tab-num">5</span>🧑‍🏫 Profesor</button>
-            <button class="tools-tab" data-tool="solid"><span class="tab-num">6</span>⬛ Solid</button>
-            <button class="tools-tab" data-tool="spellcheck"><span class="tab-num">7</span>🔍 SpellCheck</button>
+            <button class="tools-tab" data-tool="zoomer">🟠 Zoomer</button>
+            <button class="tools-tab" data-tool="animate">🎬 Animate</button>
+            <button class="tools-tab" data-tool="highlighter">✨ Highlighter</button>
+            <button class="tools-tab" data-tool="text-helper">✍️ Text</button>
+            <button class="tools-tab" data-tool="profesor-views">🧑‍🏫 Profesor</button>
+            <button class="tools-tab" data-tool="solid">⬛ Solid</button>
+            <button class="tools-tab" data-tool="spellcheck">🔍 SpellCheck</button>
         </div>
 
         <!-- 1. SPELLCHECK IA -->
@@ -259,10 +259,23 @@
                         <svg class="th-svg" viewBox="0 0 20 20"><path d="M10 4 L10 15 M6 11 L10 15 L14 11" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
                         <span class="th-label">Down</span>
                     </button>
-                    <button class="an-btn" id="btn-an-stagger" data-tooltip="Desplaza keyframes entre capas (orden de selección) · Alt=inverso">
+                    <button class="an-btn" id="btn-an-stagger" data-tooltip="Desplaza keyframes entre capas: la primera queda fija, las demás se retrasan en cascada">
                         <svg class="th-svg" viewBox="0 0 20 20"><rect x="3" y="4" width="9" height="2.5" rx="1" fill="currentColor" opacity=".9"/><rect x="6" y="9" width="9" height="2.5" rx="1" fill="currentColor" opacity=".6"/><rect x="9" y="14" width="9" height="2.5" rx="1" fill="currentColor" opacity=".35"/></svg>
-                        <span class="th-label">Stagger</span>
+                        <span class="th-label">Stagger →</span>
                     </button>
+                    <button class="an-btn" id="btn-an-stagger-rev" data-tooltip="Stagger inverso: la última capa queda fija y las primeras se retrasan">
+                        <svg class="th-svg" viewBox="0 0 20 20"><rect x="8" y="4" width="9" height="2.5" rx="1" fill="currentColor" opacity=".35"/><rect x="5" y="9" width="9" height="2.5" rx="1" fill="currentColor" opacity=".6"/><rect x="2" y="14" width="9" height="2.5" rx="1" fill="currentColor" opacity=".9"/></svg>
+                        <span class="th-label">Stagger ←</span>
+                    </button>
+                </div>
+
+                <div class="tool-inline-row">
+                    <label title="Duración de la animación en frames">Dur</label><input type="number" id="an-dur" class="tool-input" value="16" min="1" max="300" title="Frames">
+                    <label title="Distancia del slide en píxeles">Slide</label><input type="number" id="an-slide" class="tool-input" value="200" min="1" title="px">
+                    <label title="Grados de rotación">Rot</label><input type="number" id="an-rot" class="tool-input" value="90" min="1" title="Grados">
+                    <label title="Frames de desplazamiento entre capas para Stagger">Stag</label><input type="number" id="an-stagger" class="tool-input" value="5" min="1" title="Frames">
+                    <button class="btn-defaults btn-save-def" data-keys="an-dur,an-slide,an-rot,an-stagger,an-ovs,an-bounces,an-spring" title="Guardar como default">💾</button>
+                    <button class="btn-defaults btn-reset-def" data-keys="an-dur,an-slide,an-rot,an-stagger,an-ovs,an-bounces,an-spring" title="Restaurar defaults">↩</button>
                 </div>
 
                 <div class="hl-divider"></div>
@@ -286,16 +299,6 @@
                     </div>
                 </div>
 
-                <div class="hl-divider"></div>
-
-                <div class="tool-inline-row">
-                    <label title="Duración de la animación en frames">Dur</label><input type="number" id="an-dur" class="tool-input" value="16" min="1" max="300" title="Frames">
-                    <label title="Distancia del slide en píxeles">Slide</label><input type="number" id="an-slide" class="tool-input" value="200" min="1" title="px">
-                    <label title="Grados de rotación">Rot</label><input type="number" id="an-rot" class="tool-input" value="90" min="1" title="Grados">
-                    <label title="Frames de desplazamiento entre capas para Stagger">Stag</label><input type="number" id="an-stagger" class="tool-input" value="5" min="1" title="Frames">
-                    <button class="btn-defaults btn-save-def" data-keys="an-dur,an-slide,an-rot,an-stagger,an-ovs,an-bounces,an-spring" title="Guardar como default">💾</button>
-                    <button class="btn-defaults btn-reset-def" data-keys="an-dur,an-slide,an-rot,an-stagger,an-ovs,an-bounces,an-spring" title="Restaurar defaults">↩</button>
-                </div>
             </div>
         </div>
 
@@ -533,9 +536,9 @@
             <canvas id="curve-canvas" width="260" height="220"></canvas>
             <div class="curve-values">
                 <input type="number" id="curve-x1" class="tool-input curve-num" step="0.01" min="0" max="1" title="x1 (0-1)">
-                <input type="number" id="curve-y1" class="tool-input curve-num" step="0.01" min="-0.5" max="1.5" title="y1">
+                <input type="number" id="curve-y1" class="tool-input curve-num" step="0.01" min="-2" max="3" title="y1">
                 <input type="number" id="curve-x2" class="tool-input curve-num" step="0.01" min="0" max="1" title="x2 (0-1)">
-                <input type="number" id="curve-y2" class="tool-input curve-num" step="0.01" min="-0.5" max="1.5" title="y2">
+                <input type="number" id="curve-y2" class="tool-input curve-num" step="0.01" min="-2" max="3" title="y2">
             </div>
             <div class="curve-preset-save">
                 <input type="text" id="curve-preset-name" class="text-input" placeholder="Nombre del preset...">
