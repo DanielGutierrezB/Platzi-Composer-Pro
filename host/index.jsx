@@ -1815,10 +1815,10 @@ function _pcFindBoxForText(comp, textLayer) {
     return null;
 }
 
-// Aplica / re-sincroniza la animación de ENTRADA de la caja: fade-up
-// (abajo→arriba) + fade in, duración = 1ra unidad (durationFrames/unidades),
-// arrancando en t0. Keyframes (no expresiones). Limpia lo previo.
-function _pcAnimateBoxEntrance(box, txtStr, mode, animType, durationFrames, t0, fps, easeOut, easeIn) {
+// Aplica / re-sincroniza la animación de ENTRADA de la caja según animType,
+// con una DURACIÓN propia en frames (boxDurFrames), arrancando en t0.
+// Keyframes (no expresiones). Limpia lo previo.
+function _pcAnimateBoxEntrance(box, animType, boxDurFrames, t0, fps, easeOut, easeIn) {
     try {
         var tg = box.property("ADBE Transform Group");
         var opP = tg.property("ADBE Opacity");
@@ -1832,10 +1832,7 @@ function _pcAnimateBoxEntrance(box, txtStr, mode, animType, durationFrames, t0, 
         try { scP.setValue(restSc); } catch(ex) {}
         var rx = restPos[0], ry = restPos[1];
 
-        var units = _pcCountUnits(txtStr, mode);
-        var boxDurFrames = Math.round(durationFrames / units);
-        if (boxDurFrames < 3) boxDurFrames = 3;
-        if (boxDurFrames > durationFrames) boxDurFrames = durationFrames;
+        if (!boxDurFrames || boxDurFrames < 1) boxDurFrames = 20;
         var t1b = t0 + boxDurFrames / fps;
 
         // Fade in (siempre).
@@ -1879,7 +1876,7 @@ function _pcAnimateBoxEntrance(box, txtStr, mode, animType, durationFrames, t0, 
 
 // ─── TEXT HELPER ────────────────────────────────────────────────
 
-function pcTextHelper(animType, mode, animMode, durationFrames, enableGlow, easeOut, easeIn) {
+function pcTextHelper(animType, mode, animMode, durationFrames, enableGlow, easeOut, easeIn, boxAnimFrames) {
     var comp = _pcRequireComp();
     if (!comp) return JSON.stringify({ error: "No hay composici\u00f3n activa." });
     try {
@@ -2045,7 +2042,7 @@ function pcTextHelper(animType, mode, animMode, durationFrames, enableGlow, ease
             if (boxLayer) {
                 var txtStrRB = "";
                 try { txtStrRB = textLayer.property("ADBE Text Properties").property("ADBE Text Document").value.text; } catch(ex) {}
-                _pcAnimateBoxEntrance(boxLayer, txtStrRB, mode, animType, durationFrames, t0, fps, easeOut, easeIn);
+                _pcAnimateBoxEntrance(boxLayer, animType, boxAnimFrames, t0, fps, easeOut, easeIn);
             }
         }
 
@@ -2060,7 +2057,7 @@ function pcTextHelper(animType, mode, animMode, durationFrames, enableGlow, ease
 // una animación de entrada fade-up (abajo->arriba) por Character/Word/Line.
 // El tamaño de la caja se muestrea en un tiempo FIJO (fin de la animación)
 // para que no tiemble mientras entran las letras.
-function pcCreateTextBox(mode, withAnim, roundness, padding, bgColor, textColor, durationFrames, easeOut, easeIn) {
+function pcCreateTextBox(mode, withAnim, roundness, padding, bgColor, textColor, durationFrames, easeOut, easeIn, boxAnimFrames) {
     var comp = _pcRequireComp();
     if (!comp) return JSON.stringify({ error: "No hay composición activa." });
     try {
@@ -2216,7 +2213,7 @@ function pcCreateTextBox(mode, withAnim, roundness, padding, bgColor, textColor,
             try {
                 var txtStr = "";
                 try { txtStr = textLayer.property("ADBE Text Properties").property("ADBE Text Document").value.text; } catch(exT) {}
-                _pcAnimateBoxEntrance(box, txtStr, mode, "fade-up", durationFrames, t0, fps, easeOut, easeIn);
+                _pcAnimateBoxEntrance(box, "fade-up", boxAnimFrames, t0, fps, easeOut, easeIn);
             } catch(exBoxAnim) { boxAnimErr = exBoxAnim.toString(); }
         }
 

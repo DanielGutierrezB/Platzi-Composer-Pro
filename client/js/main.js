@@ -20,7 +20,7 @@
         "cp-dur": 20, "cp-size": 600,
         "zoom-dur": 20, "zoom-pct": 130,
         "box-round": 20, "fm-round": 0, "zf-round": 0, "chk-stroke-round": 0,
-        "tb-round": 20, "tb-pad": 40, "tb-bg": "#ffffff", "tb-text": "#000000"
+        "tb-round": 20, "tb-pad": 40, "tb-anim-dur": 20, "tb-bg": "#ffffff", "tb-text": "#000000"
     };
 
     var state = {
@@ -1455,7 +1455,8 @@
                     var animMode = "inout";
                     if (evt.shiftKey && evt.altKey) animMode = "out";
                     else if (evt.shiftKey) animMode = "in";
-                    callHost("pcTextHelper('" + animType + "','" + mode + "','" + animMode + "'," + dur + "," + glow + "," + easeOut() + "," + easeIn() + ")");
+                    var boxDur = parseInt(document.getElementById("tb-anim-dur").value) || 20;
+                    callHost("pcTextHelper('" + animType + "','" + mode + "','" + animMode + "'," + dur + "," + glow + "," + easeOut() + "," + easeIn() + "," + boxDur + ")");
                 });
             })(thBtns[ti]);
         }
@@ -1470,8 +1471,9 @@
                 var pad = parseFloat(document.getElementById("tb-pad").value); if (isNaN(pad)) pad = 40;
                 var bg = hexToRgb(document.getElementById("tb-bg").value);
                 var txt = hexToRgb(document.getElementById("tb-text").value);
+                var boxDur = parseInt(document.getElementById("tb-anim-dur").value) || 20;
                 var withAnim = evt.shiftKey ? 1 : 0;
-                callHost("pcCreateTextBox('" + mode + "'," + withAnim + "," + round + "," + pad + ",[" + bg + "],[" + txt + "]," + dur + "," + easeOut() + "," + easeIn() + ")");
+                callHost("pcCreateTextBox('" + mode + "'," + withAnim + "," + round + "," + pad + ",[" + bg + "],[" + txt + "]," + dur + "," + easeOut() + "," + easeIn() + "," + boxDur + ")");
             });
         }
 
