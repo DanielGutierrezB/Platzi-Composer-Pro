@@ -21,7 +21,8 @@
         "zoom-dur": 20, "zoom-pct": 130,
         "box-round": 20, "fm-round": 0, "zf-round": 0, "chk-stroke-round": 0,
         "tb-round": 20, "tb-pad": 40, "tb-anim-dur": 20, "tb-bg": "#ffffff", "tb-text": "#000000",
-        "an-dur": 16, "an-slide": 200, "an-rot": 90, "an-stagger": 5
+        "an-dur": 16, "an-slide": 200, "an-rot": 90, "an-stagger": 5,
+        "an-ovs": 10, "an-bounces": 2, "an-spring": 15
     };
 
     var state = {
@@ -119,6 +120,7 @@
         loadDefaults();
         bindEvents();
         bindColorPalette();
+        pcCurve.bind();
         refreshProviderUI();
         updateAIStatus();
 
@@ -1427,16 +1429,25 @@
         function anRot()     { return parseFloat(document.getElementById("an-rot").value) || 90; }
         function anStagger() { return parseFloat(document.getElementById("an-stagger").value) || 5; }
 
-        // Tipo de easing seleccionado → args extra para las funciones pcAnim*.
-        // "custom" manda la curva bezier actual del editor.
-        function anEaseArgs() {
+        // Tipo de easing seleccionado + su parámetro (p1) → args extra para
+        // las funciones pcAnim*. "custom" manda la curva bezier del editor.
+        function anEaseType() {
             var sel = document.querySelector('input[name="an-ease"]:checked');
-            var type = sel ? sel.value : "default";
+            return sel ? sel.value : "default";
+        }
+        function anEaseParam(type) {
+            if (type === "overshoot") return parseFloat(document.getElementById("an-ovs").value) || 10;
+            if (type === "bounce") return parseFloat(document.getElementById("an-bounces").value) || 2;
+            if (type === "spring") return parseFloat(document.getElementById("an-spring").value) || 15;
+            return 0;
+        }
+        function anEaseArgs() {
+            var type = anEaseType();
             if (type === "custom") {
                 var c = pcCurve.current();
-                return ", 'bezier', " + c.x1 + ", " + c.y1 + ", " + c.x2 + ", " + c.y2;
+                return ", 'bezier', " + c.x1 + ", " + c.y1 + ", " + c.x2 + ", " + c.y2 + ", 0";
             }
-            return ", '" + type + "', 0, 0, 0, 0";
+            return ", '" + type + "', 0, 0, 0, 0, " + anEaseParam(type);
         }
 
         on("btn-an-fade", "click", function(evt) {
@@ -1457,18 +1468,45 @@
             });
         });
 
-        // Radio "Custom ✎" abre el editor de curvas (también si ya está activo)
+        // Cambio de tipo: muestra el parámetro del tipo, actualiza el label
+        // de la barra inferior, y "Custom ✎" despliega el editor de curvas.
+        var EASE_LABELS = { "default": "Default", "overshoot": "Overshoot", "bounce": "Bounce", "spring": "Spring", "custom": "Custom" };
+        function refreshEaseUI() {
+            var type = anEaseType();
+            var params = { "overshoot": "an-param-overshoot", "bounce": "an-param-bounce", "spring": "an-param-spring" };
+            for (var key in params) {
+                if (!params.hasOwnProperty(key)) continue;
+                var el = document.getElementById(params[key]);
+                if (el) el.classList.toggle("hidden", key !== type);
+            }
+            var lbl = document.getElementById("ease-type-label");
+            if (lbl) lbl.textContent = EASE_LABELS[type] || type;
+        }
         (function() {
             var radios = document.querySelectorAll(".an-ease-radio");
             for (var r = 0; r < radios.length; r++) {
-                (function(lbl) {
-                    lbl.addEventListener("click", function() {
-                        var inp = lbl.querySelector("input");
+                (function(lblEl) {
+                    lblEl.addEventListener("click", function() {
+                        refreshEaseUI();
+                        var inp = lblEl.querySelector("input");
                         if (inp && inp.value === "custom") pcCurve.open();
                     });
                 })(radios[r]);
             }
+            refreshEaseUI();
         })();
+
+        // Apply Keyframes (barra inferior): aplica el tipo de animación
+        // actual a los keyframes seleccionados, sin ir a la pestaña Animate.
+        on("btn-apply-ease", "click", function() {
+            var type = anEaseType();
+            if (type === "custom") {
+                var c = pcCurve.current();
+                callHost("pcApplyEaseToSelected('bezier', " + easeOut() + ", " + easeIn() + ", " + c.x1 + ", " + c.y1 + ", " + c.x2 + ", " + c.y2 + ", 0)");
+            } else {
+                callHost("pcApplyEaseToSelected('" + type + "', " + easeOut() + ", " + easeIn() + ", 0, 0, 0, 0, " + anEaseParam(type) + ")");
+            }
+        });
         on("btn-an-stagger", "click", function(evt) {
             var reverse = evt.altKey ? "true" : "false";
             callHost("pcStaggerKeys(" + anStagger() + ", " + reverse + ")");
@@ -1614,12 +1652,14 @@
 
     }
 
-    // ─── Curve Editor (estilo Flow) ──────────────────────────────
-    // Editor de cubic-bezier (x1,y1,x2,y2) con presets nombrados por grupos
-    // en localStorage. La curva actual la usan los botones de Animate cuando
-    // el tipo es "Custom", y APPLY la aplica a keyframes seleccionados.
+    // ─── Curve Editor (drawer estilo Flow) ───────────────────────
+    // Editor de cubic-bezier (x1,y1,x2,y2) con valores editables a mano y
+    // presets nombrados por grupos en localStorage. Vive como drawer
+    // desplegable arriba de la paleta (siempre accesible). La curva actual
+    // la usan los botones de Animate (tipo Custom) y el botón Apply
+    // Keyframes de la barra inferior.
     var pcCurve = (function() {
-        var W = 260, H = 260, PAD = 26;
+        var W = 260, H = 220, PAD = 24;
         var cur = null;
         var inited = false;
         var canvas = null, ctx = null;
@@ -1705,9 +1745,12 @@
         }
 
         function updateReadout() {
-            var el = document.getElementById("curve-readout");
-            if (el) {
-                el.textContent = cur.x1.toFixed(2) + ", " + cur.y1.toFixed(2) + ", " + cur.x2.toFixed(2) + ", " + cur.y2.toFixed(2);
+            // Sincroniza los 4 inputs numéricos (editables a mano).
+            var ids = ["curve-x1", "curve-y1", "curve-x2", "curve-y2"];
+            var vals = [cur.x1, cur.y1, cur.x2, cur.y2];
+            for (var i = 0; i < ids.length; i++) {
+                var el = document.getElementById(ids[i]);
+                if (el && document.activeElement !== el) el.value = Math.round(vals[i] * 100) / 100;
             }
         }
 
@@ -1820,15 +1863,21 @@
                 if (dragging) { dragging = null; persist(); }
             });
 
-            var closeBtn = document.getElementById("curve-close");
-            if (closeBtn) closeBtn.addEventListener("click", function() {
-                document.getElementById("curve-panel").classList.add("hidden");
-            });
-
-            var applyBtn = document.getElementById("curve-apply");
-            if (applyBtn) applyBtn.addEventListener("click", function() {
-                callHost("pcApplyCurveToSelected(" + cur.x1 + ", " + cur.y1 + ", " + cur.x2 + ", " + cur.y2 + ")");
-            });
+            // Inputs numéricos editables → actualizan la curva
+            var numMap = [["curve-x1", "x1", 0, 1], ["curve-y1", "y1", -0.5, 1.5], ["curve-x2", "x2", 0, 1], ["curve-y2", "y2", -0.5, 1.5]];
+            for (var ni = 0; ni < numMap.length; ni++) {
+                (function(m) {
+                    var el = document.getElementById(m[0]);
+                    if (!el) return;
+                    el.addEventListener("input", function() {
+                        var v = parseFloat(el.value);
+                        if (isNaN(v)) return;
+                        cur[m[1]] = clamp(v, m[2], m[3]);
+                        persist();
+                        draw();
+                    });
+                })(numMap[ni]);
+            }
 
             var saveBtn = document.getElementById("curve-preset-savebtn");
             if (saveBtn) saveBtn.addEventListener("click", function() {
@@ -1849,16 +1898,28 @@
             });
         }
 
-        function open() {
+        function setDrawer(openIt) {
             ensureInit();
-            var panel = document.getElementById("curve-panel");
-            if (panel) panel.classList.remove("hidden");
-            draw();
-            renderPresets();
+            var body = document.getElementById("curve-drawer-body");
+            var arrow = document.getElementById("curve-drawer-arrow");
+            if (!body) return;
+            body.classList.toggle("hidden", !openIt);
+            if (arrow) arrow.textContent = openIt ? "▾" : "▸";
+            if (openIt) { draw(); renderPresets(); }
+        }
+
+        function bindDrawer() {
+            var hdr = document.getElementById("curve-drawer-header");
+            if (!hdr) return;
+            hdr.addEventListener("click", function() {
+                var body = document.getElementById("curve-drawer-body");
+                setDrawer(body ? body.classList.contains("hidden") : true);
+            });
         }
 
         return {
-            open: open,
+            open: function() { setDrawer(true); },
+            bind: bindDrawer,
             current: function() { return load(); }
         };
     })();

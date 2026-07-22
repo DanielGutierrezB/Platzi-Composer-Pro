@@ -56,7 +56,7 @@ html, body {
     -webkit-font-smoothing: antialiased;
     display: flex;
     flex-direction: column;
-    padding-bottom: 34px;
+    padding-bottom: 64px; /* paleta + header del curve drawer */
 }
 
 ::-webkit-scrollbar { width: 5px; }
@@ -1240,51 +1240,96 @@ html, body {
     box-shadow: 0 0 0 2px rgba(153, 153, 153, 0.25);
 }
 
-/* ─── Curve Editor (estilo Flow) ─── */
-.curve-panel {
+/* ─── Curve Editor (drawer estilo Flow) ─── */
+.curve-drawer {
     position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0, 0, 0, 0.65);
-    z-index: 900;
-    display: flex;
-    align-items: flex-start;
-    justify-content: center;
-    padding: 20px 10px;
+    bottom: 31px; /* justo encima de la paleta de colores */
+    left: 0;
+    right: 0;
+    z-index: 99;
+    border-top: 1px solid var(--border);
+    background: var(--bg-secondary, #1a1a1a);
+    box-shadow: 0 -6px 16px rgba(0, 0, 0, 0.4);
+}
+.curve-drawer-body {
+    max-height: 60vh;
     overflow-y: auto;
 }
-.curve-panel.hidden { display: none; }
-.curve-card {
-    background: var(--bg-surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 12px;
-    width: 288px;
+.curve-drawer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 12px;
+    cursor: pointer;
+    user-select: none;
+}
+.curve-drawer-header:hover { background: var(--bg-hover); }
+.curve-title {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-secondary);
+}
+.curve-drawer-body {
+    padding: 8px 12px 12px;
     display: flex;
     flex-direction: column;
     gap: 8px;
 }
-.curve-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-.curve-title {
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: var(--text-primary);
-}
+.curve-drawer-body.hidden { display: none; }
 #curve-canvas {
     border-radius: var(--radius-sm, 4px);
     cursor: crosshair;
     align-self: center;
 }
-.curve-readout {
+.curve-values {
+    display: flex;
+    gap: 4px;
+    justify-content: center;
+}
+.curve-num {
+    width: 52px;
     text-align: center;
-    font-size: 11px;
-    color: var(--text-secondary);
     font-family: monospace;
+}
+.an-ease-params {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 6px;
+    min-height: 0;
+}
+.an-param {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    color: var(--text-secondary);
+}
+.an-param.hidden { display: none; }
+.ease-type-label {
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: var(--accent);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm, 4px);
+    padding: 3px 6px;
+    margin-left: auto;
+    white-space: nowrap;
+}
+.btn-apply-ease {
+    width: auto;
+    height: 18px;
+    font-size: 9px;
+    font-weight: 600;
+    white-space: nowrap;
+    padding: 0 8px;
+}
+@media (max-width: 360px) {
+    .btn-apply-ease { padding: 0 5px; font-size: 8px; }
+    .ease-type-label { display: none; }
 }
 .curve-preset-save {
     display: flex;

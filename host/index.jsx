@@ -2449,10 +2449,30 @@ function _pcSetEase0(prop, k, infIn, infOut) {
 
 // Perfiles de animación "física": muestras [tNorm, pNorm, sharp].
 // p puede pasar de 1 (overshoot). sharp=1 → LINEAR (contactos del bounce).
-function _pcAnimProfile(type) {
-    if (type === "overshoot") return [[0, 0, 0], [0.6, 1.1, 0], [1, 1, 0]];
-    if (type === "bounce") return [[0, 0, 0], [0.4, 1, 1], [0.6, 0.78, 0], [0.78, 1, 1], [0.9, 0.94, 0], [1, 1, 1]];
-    if (type === "spring") return [[0, 0, 0], [0.3, 1.12, 0], [0.5, 0.94, 0], [0.68, 1.03, 0], [0.84, 0.99, 0], [1, 1, 0]];
+// p1 es el parámetro del tipo: % overshoot, # de rebotes, % spring.
+function _pcAnimProfile(type, p1) {
+    var i;
+    if (type === "overshoot") {
+        var amt = (typeof p1 === "number" && p1 > 0) ? p1 / 100 : 0.1;
+        return [[0, 0, 0], [0.6, 1 + amt, 0], [1, 1, 0]];
+    }
+    if (type === "bounce") {
+        var n = (typeof p1 === "number" && p1 >= 1) ? Math.round(p1) : 2;
+        if (n > 6) n = 6;
+        var prof = [[0, 0, 0], [0.4, 1, 1]];
+        var seg = 0.6 / n;
+        var amp = 0.25;
+        for (i = 0; i < n; i++) {
+            prof.push([0.4 + seg * (i + 0.5), 1 - amp, 0]);
+            prof.push([0.4 + seg * (i + 1), 1, 1]);
+            amp *= 0.45;
+        }
+        return prof;
+    }
+    if (type === "spring") {
+        var A = (typeof p1 === "number" && p1 > 0) ? p1 / 100 : 0.15;
+        return [[0, 0, 0], [0.3, 1 + A, 0], [0.5, 1 - A * 0.55, 0], [0.68, 1 + A * 0.3, 0], [0.84, 1 - A * 0.12, 0], [1, 1, 0]];
+    }
     return null;
 }
 
@@ -2476,7 +2496,7 @@ function _pcLerpVal(a, b, p, minV, maxV) {
 // Hornea un perfil físico como keyframes editables entre tA y tB.
 // reverse=true lo espeja (para OUT: anticipación y salida).
 function _pcAnimApplyProfile(prop, tA, tB, vFrom, vTo, type, reverse, spec) {
-    var prof = _pcAnimProfile(type);
+    var prof = _pcAnimProfile(type, spec.p1);
     if (!prof) return;
     var samples = [], i;
     if (!reverse) {
@@ -2521,12 +2541,14 @@ function _pcAnimSegment(prop, tA, tB, vFrom, vTo, isArray, spec, reverse) {
 }
 
 // Construye el spec de easing desde los args planos del panel (ES3-safe,
-// sin JSON.parse). x1..y2 solo aplican para type "bezier".
-function _pcAnimSpec(easeType, eo, ei, x1, y1, x2, y2) {
+// sin JSON.parse). x1..y2 solo aplican para "bezier"; p1 es el parámetro
+// del tipo físico (% overshoot, # rebotes, % spring).
+function _pcAnimSpec(easeType, eo, ei, x1, y1, x2, y2, p1) {
     return {
         type: easeType || "default",
         eo: eo, ei: ei,
         x1: x1, y1: y1, x2: x2, y2: y2,
+        p1: p1,
         minV: null, maxV: null
     };
 }
@@ -2549,12 +2571,12 @@ function _pcAnimApplyMode(prop, mode, comp, layer, durFrames, fromVal, curVal, t
     }
 }
 
-function pcAnimFade(mode, durFrames, eo, ei, easeType, x1, y1, x2, y2) {
+function pcAnimFade(mode, durFrames, eo, ei, easeType, x1, y1, x2, y2, p1) {
     var s = _pcRequireSelected();
     if (!s) return JSON.stringify({ error: "Selecciona al menos una capa." });
     try {
         app.beginUndoGroup("Animate Fade");
-        var spec = _pcAnimSpec(easeType, eo, ei, x1, y1, x2, y2);
+        var spec = _pcAnimSpec(easeType, eo, ei, x1, y1, x2, y2, p1);
         spec.minV = 0; spec.maxV = 100; // Opacity no admite valores fuera de rango
         var done = 0;
         for (var i = 0; i < s.layers.length; i++) {
@@ -2575,12 +2597,12 @@ function pcAnimFade(mode, durFrames, eo, ei, easeType, x1, y1, x2, y2) {
 
 // direction = dirección del MOVIMIENTO al entrar: "right" = entra moviéndose
 // a la derecha (desde la izquierda). El OUT sale continuando esa dirección.
-function pcAnimSlide(direction, mode, durFrames, amountPx, eo, ei, easeType, x1, y1, x2, y2) {
+function pcAnimSlide(direction, mode, durFrames, amountPx, eo, ei, easeType, x1, y1, x2, y2, p1) {
     var s = _pcRequireSelected();
     if (!s) return JSON.stringify({ error: "Selecciona al menos una capa." });
     try {
         app.beginUndoGroup("Animate Slide " + direction);
-        var spec = _pcAnimSpec(easeType, eo, ei, x1, y1, x2, y2);
+        var spec = _pcAnimSpec(easeType, eo, ei, x1, y1, x2, y2, p1);
         var dx = 0, dy = 0;
         if (direction === "right") dx = amountPx;
         else if (direction === "left") dx = -amountPx;
@@ -2607,12 +2629,12 @@ function pcAnimSlide(direction, mode, durFrames, amountPx, eo, ei, easeType, x1,
     } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
 }
 
-function pcAnimScale(mode, durFrames, eo, ei, easeType, x1, y1, x2, y2) {
+function pcAnimScale(mode, durFrames, eo, ei, easeType, x1, y1, x2, y2, p1) {
     var s = _pcRequireSelected();
     if (!s) return JSON.stringify({ error: "Selecciona al menos una capa." });
     try {
         app.beginUndoGroup("Animate Scale");
-        var spec = _pcAnimSpec(easeType, eo, ei, x1, y1, x2, y2);
+        var spec = _pcAnimSpec(easeType, eo, ei, x1, y1, x2, y2, p1);
         var done = 0;
         for (var i = 0; i < s.layers.length; i++) {
             try {
@@ -2633,12 +2655,12 @@ function pcAnimScale(mode, durFrames, eo, ei, easeType, x1, y1, x2, y2) {
 }
 
 // dirSign: 1 = horario (CW), -1 = antihorario (CCW).
-function pcAnimRotate(dirSign, mode, durFrames, degrees, eo, ei, easeType, x1, y1, x2, y2) {
+function pcAnimRotate(dirSign, mode, durFrames, degrees, eo, ei, easeType, x1, y1, x2, y2, p1) {
     var s = _pcRequireSelected();
     if (!s) return JSON.stringify({ error: "Selecciona al menos una capa." });
     try {
         app.beginUndoGroup("Animate Rotate");
-        var spec = _pcAnimSpec(easeType, eo, ei, x1, y1, x2, y2);
+        var spec = _pcAnimSpec(easeType, eo, ei, x1, y1, x2, y2, p1);
         var delta = dirSign * degrees;
         var done = 0;
         for (var i = 0; i < s.layers.length; i++) {
@@ -2657,14 +2679,64 @@ function pcAnimRotate(dirSign, mode, durFrames, degrees, eo, ei, easeType, x1, y
     } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
 }
 
-// Aplica una curva bezier a los KEYFRAMES SELECCIONADOS (como el APPLY de
-// Flow): por cada propiedad con 2+ keys seleccionados, aplica la curva a
-// cada par consecutivo.
-function pcApplyCurveToSelected(x1, y1, x2, y2) {
+// Ease clásico por influencia (speed 0) en un par de keys, dim-aware,
+// preservando el lado contrario de cada key.
+function _pcApplyInfluencePair(prop, kA, kB, eo, ei) {
+    var dim = _pcEaseDim(prop);
+    var aOut = [], aIn = [];
+    for (var m = 0; m < dim; m++) {
+        aOut.push(new KeyframeEase(0, _pcClampNum(eo, 0.1, 100)));
+        aIn.push(new KeyframeEase(0, _pcClampNum(ei, 0.1, 100)));
+    }
+    prop.setInterpolationTypeAtKey(kA, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+    prop.setInterpolationTypeAtKey(kB, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+    var prevInA;
+    try { prevInA = prop.keyInTemporalEase(kA); } catch(eA) { prevInA = aOut; }
+    var prevOutB;
+    try { prevOutB = prop.keyOutTemporalEase(kB); } catch(eB) { prevOutB = aIn; }
+    prop.setTemporalEaseAtKey(kA, prevInA, aOut);
+    prop.setTemporalEaseAtKey(kB, aIn, prevOutB);
+}
+
+// Hornea un perfil físico ENTRE dos keys existentes (por tiempos, porque
+// insertar keys corre los índices): agrega los keys intermedios del perfil
+// y suaviza los extremos.
+function _pcBakeProfileBetween(prop, tA, tB, type, spec) {
+    var kA = prop.nearestKeyIndex(tA), kB = prop.nearestKeyIndex(tB);
+    var vA = prop.keyValue(kA), vB = prop.keyValue(kB);
+    var prof = _pcAnimProfile(type, spec.p1);
+    if (!prof) return;
+    var i;
+    for (i = 0; i < prof.length; i++) {
+        if (prof[i][0] <= 0.0001 || prof[i][0] >= 0.9999) continue; // extremos ya existen
+        var t = tA + (tB - tA) * prof[i][0];
+        var v = _pcLerpVal(vA, vB, prof[i][1], spec.minV, spec.maxV);
+        var k = prop.addKey(t);
+        prop.setValueAtKey(k, v);
+        if (prof[i][2] === 1) {
+            prop.setInterpolationTypeAtKey(k, KeyframeInterpolationType.LINEAR, KeyframeInterpolationType.LINEAR);
+        } else {
+            prop.setInterpolationTypeAtKey(k, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+            _pcSetEase0(prop, k, 33, 33);
+        }
+    }
+    // Extremos: recomputar índices (se corrieron al insertar) y suavizar.
+    kA = prop.nearestKeyIndex(tA); kB = prop.nearestKeyIndex(tB);
+    prop.setInterpolationTypeAtKey(kA, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+    prop.setInterpolationTypeAtKey(kB, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+    _pcSetEase0(prop, kA, spec.eo, spec.eo);
+    _pcSetEase0(prop, kB, spec.ei, spec.ei);
+}
+
+// Aplica el tipo de animación actual a los KEYFRAMES SELECCIONADOS (como
+// el APPLY de Flow, pero para todos los tipos): por cada propiedad con 2+
+// keys seleccionados, aplica a cada par consecutivo.
+function pcApplyEaseToSelected(easeType, eo, ei, x1, y1, x2, y2, p1) {
     var s = _pcRequireSelected();
     if (!s) return JSON.stringify({ error: "Selecciona una capa con keyframes seleccionados." });
     try {
-        app.beginUndoGroup("Apply Curve");
+        app.beginUndoGroup("Apply Ease (" + easeType + ")");
+        var spec = _pcAnimSpec(easeType, eo, ei, x1, y1, x2, y2, p1);
         var pairs = 0;
         for (var i = 0; i < s.layers.length; i++) {
             var props = [];
@@ -2676,8 +2748,20 @@ function pcApplyCurveToSelected(x1, y1, x2, y2) {
                     var sel = p.selectedKeys;
                     if (!sel || sel.length < 2) continue;
                     sel.sort(function(a, b) { return a - b; });
-                    for (var k = 0; k < sel.length - 1; k++) {
-                        _pcApplyCurvePair(p, sel[k], sel[k + 1], x1, y1, x2, y2);
+                    // Opacity no admite valores fuera de 0-100 (para perfiles)
+                    var sp = _pcAnimSpec(easeType, eo, ei, x1, y1, x2, y2, p1);
+                    if (p.matchName === "ADBE Opacity") { sp.minV = 0; sp.maxV = 100; }
+                    // Capturar tiempos ANTES (insertar keys corre los índices)
+                    var times = [];
+                    for (var q = 0; q < sel.length; q++) times.push(p.keyTime(sel[q]));
+                    for (var k = 0; k < times.length - 1; k++) {
+                        if (easeType === "bezier") {
+                            _pcApplyCurvePair(p, p.nearestKeyIndex(times[k]), p.nearestKeyIndex(times[k + 1]), x1, y1, x2, y2);
+                        } else if (easeType === "overshoot" || easeType === "bounce" || easeType === "spring") {
+                            _pcBakeProfileBetween(p, times[k], times[k + 1], easeType, sp);
+                        } else { // default
+                            _pcApplyInfluencePair(p, p.nearestKeyIndex(times[k]), p.nearestKeyIndex(times[k + 1]), eo, ei);
+                        }
                         pairs++;
                     }
                 } catch(exP) {}

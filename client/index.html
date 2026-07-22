@@ -14,7 +14,7 @@
             <div class="header-spacer"></div>
             <span id="comp-name" class="comp-name">Sin composición activa</span>
             <span id="layer-count" class="layer-count"></span>
-            <span id="version-badge" class="version-label">v1.7.1</span>
+            <span id="version-badge" class="version-label">v1.8.0</span>
             <button id="btn-update" class="icon-btn" title="Verificar actualización / Recargar panel">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
@@ -203,11 +203,27 @@
 
                 <!-- Tipo de animación (easing) -->
                 <div class="th-mode-bar an-ease-bar">
-                    <label class="th-radio an-ease-radio active"><input type="radio" name="an-ease" value="default" checked>Default</label>
-                    <label class="th-radio an-ease-radio"><input type="radio" name="an-ease" value="overshoot">Overshoot</label>
-                    <label class="th-radio an-ease-radio"><input type="radio" name="an-ease" value="bounce">Bounce</label>
-                    <label class="th-radio an-ease-radio"><input type="radio" name="an-ease" value="spring">Spring</label>
-                    <label class="th-radio an-ease-radio"><input type="radio" name="an-ease" value="custom">Custom ✎</label>
+                    <label class="th-radio an-ease-radio active" data-tooltip="Ease clásico por influencia (usa Out/In del header)"><input type="radio" name="an-ease" value="default" checked>Default</label>
+                    <label class="th-radio an-ease-radio" data-tooltip="Se pasa del valor final y asienta suave (% configurable)"><input type="radio" name="an-ease" value="overshoot">Overshoot</label>
+                    <label class="th-radio an-ease-radio" data-tooltip="Rebota contra el valor final, rebotes decrecientes (# configurable)"><input type="radio" name="an-ease" value="bounce">Bounce</label>
+                    <label class="th-radio an-ease-radio" data-tooltip="Oscila alrededor del valor final con amortiguación (% configurable)"><input type="radio" name="an-ease" value="spring">Spring</label>
+                    <label class="th-radio an-ease-radio" data-tooltip="Curva bezier del editor 〜 de abajo (clic para desplegarlo)"><input type="radio" name="an-ease" value="custom">Custom ✎</label>
+                </div>
+
+                <!-- Parámetro del tipo seleccionado (solo aparece si aplica) -->
+                <div class="an-ease-params">
+                    <span id="an-param-overshoot" class="an-param hidden">
+                        <label title="Cuánto se pasa del valor final (%)">Overshoot %</label>
+                        <input type="number" id="an-ovs" class="tool-input" value="10" min="1" max="100" step="1">
+                    </span>
+                    <span id="an-param-bounce" class="an-param hidden">
+                        <label title="Cantidad de rebotes">Rebotes</label>
+                        <input type="number" id="an-bounces" class="tool-input" value="2" min="1" max="6" step="1">
+                    </span>
+                    <span id="an-param-spring" class="an-param hidden">
+                        <label title="Amplitud de la oscilación (%)">Spring %</label>
+                        <input type="number" id="an-spring" class="tool-input" value="15" min="1" max="100" step="1">
+                    </span>
                 </div>
 
                 <div class="an-grid">
@@ -277,8 +293,8 @@
                     <label title="Distancia del slide en píxeles">Slide</label><input type="number" id="an-slide" class="tool-input" value="200" min="1" title="px">
                     <label title="Grados de rotación">Rot</label><input type="number" id="an-rot" class="tool-input" value="90" min="1" title="Grados">
                     <label title="Frames de desplazamiento entre capas para Stagger">Stag</label><input type="number" id="an-stagger" class="tool-input" value="5" min="1" title="Frames">
-                    <button class="btn-defaults btn-save-def" data-keys="an-dur,an-slide,an-rot,an-stagger" title="Guardar como default">💾</button>
-                    <button class="btn-defaults btn-reset-def" data-keys="an-dur,an-slide,an-rot,an-stagger" title="Restaurar defaults">↩</button>
+                    <button class="btn-defaults btn-save-def" data-keys="an-dur,an-slide,an-rot,an-stagger,an-ovs,an-bounces,an-spring" title="Guardar como default">💾</button>
+                    <button class="btn-defaults btn-reset-def" data-keys="an-dur,an-slide,an-rot,an-stagger,an-ovs,an-bounces,an-spring" title="Restaurar defaults">↩</button>
                 </div>
             </div>
         </div>
@@ -507,6 +523,30 @@
     </div>
 
     <!-- Color Palette (always visible) -->
+    <!-- Curve Editor (drawer estilo Flow, siempre desplegable) -->
+    <div id="curve-drawer" class="curve-drawer">
+        <div id="curve-drawer-header" class="curve-drawer-header">
+            <span class="curve-title">〜 Curva Custom</span>
+            <span id="curve-drawer-arrow" class="toggle-icon">▸</span>
+        </div>
+        <div id="curve-drawer-body" class="curve-drawer-body hidden">
+            <canvas id="curve-canvas" width="260" height="220"></canvas>
+            <div class="curve-values">
+                <input type="number" id="curve-x1" class="tool-input curve-num" step="0.01" min="0" max="1" title="x1 (0-1)">
+                <input type="number" id="curve-y1" class="tool-input curve-num" step="0.01" min="-0.5" max="1.5" title="y1">
+                <input type="number" id="curve-x2" class="tool-input curve-num" step="0.01" min="0" max="1" title="x2 (0-1)">
+                <input type="number" id="curve-y2" class="tool-input curve-num" step="0.01" min="-0.5" max="1.5" title="y2">
+            </div>
+            <div class="curve-preset-save">
+                <input type="text" id="curve-preset-name" class="text-input" placeholder="Nombre del preset...">
+                <input type="text" id="curve-preset-group" class="text-input" placeholder="Grupo" list="curve-groups">
+                <datalist id="curve-groups"></datalist>
+                <button id="curve-preset-savebtn" class="btn btn-sm btn-ghost">💾</button>
+            </div>
+            <div id="curve-preset-list" class="curve-preset-list"></div>
+        </div>
+    </div>
+
     <div id="color-palette" class="color-palette">
         <div class="color-swatch" data-color="0.04,0.08,0.08" style="background:#141515" data-tooltip="#141515"></div>
         <div class="color-swatch" data-color="0.969,0.984,0.973" style="background:#F7FBF8" data-tooltip="#F7FBF8"></div>
@@ -518,28 +558,8 @@
         <div class="color-swatch" data-color="0.961,0.353,0" style="background:#F55A00" data-tooltip="#F55A00"></div>
         <div class="color-swatch" data-color="1,0.380,0.886" style="background:#FF61E2" data-tooltip="#FF61E2"></div>
         <button id="btn-mirror-keys" class="btn-palette-action" data-tooltip="Clone & Mirror Keys al playhead">⇄</button>
-    </div>
-
-    <!-- Curve Editor (estilo Flow) -->
-    <div id="curve-panel" class="curve-panel hidden">
-        <div class="curve-card">
-            <div class="curve-header">
-                <span class="curve-title">Curva Custom</span>
-                <button id="curve-close" class="icon-btn" title="Cerrar">✕</button>
-            </div>
-            <canvas id="curve-canvas" width="260" height="260"></canvas>
-            <div class="curve-readout" id="curve-readout">0.33, 0.00, 0.30, 1.00</div>
-            <div class="curve-actions">
-                <button id="curve-apply" class="btn btn-tool btn-full" data-tooltip="Aplica la curva a los keyframes seleccionados en AE (como el APPLY de Flow)">APPLY a keys seleccionados</button>
-            </div>
-            <div class="curve-preset-save">
-                <input type="text" id="curve-preset-name" class="text-input" placeholder="Nombre del preset...">
-                <input type="text" id="curve-preset-group" class="text-input" placeholder="Grupo" list="curve-groups">
-                <datalist id="curve-groups"></datalist>
-                <button id="curve-preset-savebtn" class="btn btn-sm btn-ghost">💾</button>
-            </div>
-            <div id="curve-preset-list" class="curve-preset-list"></div>
-        </div>
+        <span id="ease-type-label" class="ease-type-label" data-tooltip="Tipo de animación seleccionado en Animate">Default</span>
+        <button id="btn-apply-ease" class="btn-palette-action btn-apply-ease" data-tooltip="Aplica el tipo de animación actual a los keyframes seleccionados">Apply Keyframes</button>
     </div>
 
     <!-- Toast -->
