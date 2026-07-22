@@ -2824,18 +2824,21 @@ function _pcWalkShiftKeys(group, offset) {
 // Stagger: capa 1 = 0 frames, capa 2 = N, capa 3 = 2N… (orden de selección).
 // Si hay propiedades seleccionadas, solo desplaza esas; si no, toda la capa.
 // reverse invierte el orden (la última capa queda sin offset).
-function pcStaggerKeys(frames, reverse) {
+function pcStaggerKeys(frames, reverse, groupSize) {
     var s = _pcRequireSelected();
     if (!s) return JSON.stringify({ error: "Selecciona al menos 2 capas." });
     if (s.layers.length < 2) return JSON.stringify({ error: "Selecciona al menos 2 capas para el stagger." });
     try {
         app.beginUndoGroup("Stagger Keys");
+        // groupSize = cada cuántos clips avanza el paso (default 1).
+        // Ej: frames=5, groupSize=2 → capas 1-2 sin offset, 3-4 = 5f, 5-6 = 10f…
+        var grp = (typeof groupSize === "number" && groupSize >= 1) ? Math.round(groupSize) : 1;
         var fps = s.comp.frameRate;
         var total = s.layers.length;
         var shifted = 0;
         for (var i = 0; i < total; i++) {
             var order = reverse ? (total - 1 - i) : i;
-            var offset = (order * frames) / fps;
+            var offset = (Math.floor(order / grp) * frames) / fps;
             if (offset === 0) continue;
             var layer = s.layers[i];
             var props = [];

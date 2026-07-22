@@ -21,7 +21,7 @@
         "zoom-dur": 20, "zoom-pct": 130,
         "box-round": 20, "fm-round": 0, "zf-round": 0, "chk-stroke-round": 0,
         "tb-round": 20, "tb-pad": 40, "tb-anim-dur": 20, "tb-bg": "#ffffff", "tb-text": "#000000",
-        "an-dur": 16, "an-slide": 200, "an-rot": 90, "an-stagger": 5,
+        "an-dur": 16, "an-slide": 200, "an-rot": 90, "an-stagger": 5, "an-stagger-every": 1,
         "an-ovs": 10, "an-bounces": 2, "an-spring": 15
     };
 
@@ -1474,11 +1474,15 @@
                 callHost("pcApplyEaseToSelected('" + type + "', " + easeOut() + ", " + easeIn() + ", 0, 0, 0, 0, " + anEaseParam(type) + ")");
             }
         });
+        function anStaggerEvery() {
+            var v = parseFloat(document.getElementById("an-stagger-every").value);
+            return (isNaN(v) || v < 1) ? 1 : Math.round(v);
+        }
         on("btn-an-stagger", "click", function() {
-            callHost("pcStaggerKeys(" + anStagger() + ", false)");
+            callHost("pcStaggerKeys(" + anStagger() + ", false, " + anStaggerEvery() + ")");
         });
         on("btn-an-stagger-rev", "click", function() {
-            callHost("pcStaggerKeys(" + anStagger() + ", true)");
+            callHost("pcStaggerKeys(" + anStagger() + ", true, " + anStaggerEvery() + ")");
         });
 
         // Anchor Point 3x3 (estilo Motion Tools)

@@ -14,7 +14,7 @@
             <div class="header-spacer"></div>
             <span id="comp-name" class="comp-name">Sin composición activa</span>
             <span id="layer-count" class="layer-count"></span>
-            <span id="version-badge" class="version-label">v1.8.1</span>
+            <span id="version-badge" class="version-label">v1.8.2</span>
             <button id="btn-update" class="icon-btn" title="Verificar actualización / Recargar panel">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
@@ -259,11 +259,11 @@
                         <svg class="th-svg" viewBox="0 0 20 20"><path d="M10 4 L10 15 M6 11 L10 15 L14 11" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
                         <span class="th-label">Down</span>
                     </button>
-                    <button class="an-btn" id="btn-an-stagger" data-tooltip="Desplaza keyframes entre capas: la primera queda fija, las demás se retrasan en cascada">
+                    <button class="an-btn" id="btn-an-stagger" data-tooltip="Desplaza keyframes en cascada: Stag frames por paso, 'Cada' agrupa clips (ej. 5 frames cada 2 clips)">
                         <svg class="th-svg" viewBox="0 0 20 20"><rect x="3" y="4" width="9" height="2.5" rx="1" fill="currentColor" opacity=".9"/><rect x="6" y="9" width="9" height="2.5" rx="1" fill="currentColor" opacity=".6"/><rect x="9" y="14" width="9" height="2.5" rx="1" fill="currentColor" opacity=".35"/></svg>
                         <span class="th-label">Stagger →</span>
                     </button>
-                    <button class="an-btn" id="btn-an-stagger-rev" data-tooltip="Stagger inverso: la última capa queda fija y las primeras se retrasan">
+                    <button class="an-btn" id="btn-an-stagger-rev" data-tooltip="Stagger inverso: la última capa queda fija. 'Cada' agrupa clips (ej. 5 frames cada 2 clips)">
                         <svg class="th-svg" viewBox="0 0 20 20"><rect x="8" y="4" width="9" height="2.5" rx="1" fill="currentColor" opacity=".35"/><rect x="5" y="9" width="9" height="2.5" rx="1" fill="currentColor" opacity=".6"/><rect x="2" y="14" width="9" height="2.5" rx="1" fill="currentColor" opacity=".9"/></svg>
                         <span class="th-label">Stagger ←</span>
                     </button>
@@ -274,8 +274,9 @@
                     <label title="Distancia del slide en píxeles">Slide</label><input type="number" id="an-slide" class="tool-input" value="200" min="1" title="px">
                     <label title="Grados de rotación">Rot</label><input type="number" id="an-rot" class="tool-input" value="90" min="1" title="Grados">
                     <label title="Frames de desplazamiento entre capas para Stagger">Stag</label><input type="number" id="an-stagger" class="tool-input" value="5" min="1" title="Frames">
-                    <button class="btn-defaults btn-save-def" data-keys="an-dur,an-slide,an-rot,an-stagger,an-ovs,an-bounces,an-spring" title="Guardar como default">💾</button>
-                    <button class="btn-defaults btn-reset-def" data-keys="an-dur,an-slide,an-rot,an-stagger,an-ovs,an-bounces,an-spring" title="Restaurar defaults">↩</button>
+                    <label title="Cada cuántos clips avanza el paso del stagger (ej. 2 = de a pares)">Cada</label><input type="number" id="an-stagger-every" class="tool-input" value="1" min="1" max="20" title="Cada cuántos clips avanza el paso del stagger">
+                    <button class="btn-defaults btn-save-def" data-keys="an-dur,an-slide,an-rot,an-stagger,an-stagger-every,an-ovs,an-bounces,an-spring" title="Guardar como default">💾</button>
+                    <button class="btn-defaults btn-reset-def" data-keys="an-dur,an-slide,an-rot,an-stagger,an-stagger-every,an-ovs,an-bounces,an-spring" title="Restaurar defaults">↩</button>
                 </div>
 
                 <div class="hl-divider"></div>
