@@ -14,7 +14,7 @@
             <div class="header-spacer"></div>
             <span id="comp-name" class="comp-name">Sin composición activa</span>
             <span id="layer-count" class="layer-count"></span>
-            <span id="version-badge" class="version-label">v1.9.2</span>
+            <span id="version-badge" class="version-label">v1.10.0</span>
             <button id="btn-update" class="icon-btn" title="Verificar actualización / Recargar panel">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
@@ -37,20 +37,61 @@
                 </svg>
             </button>
         </div>
-        <!-- Ease + Zoom bar -->
+        <!-- Barra unificada: Easing + Zoom + Paleta + Apply + Curva -->
         <div class="global-ease-bar">
-            <button id="btn-easing-toggle" class="btn btn-sm btn-ghost" title="Tipo de easing global (aplica a Animate y Apply Keyframes)">Easing: Default ▾</button>
+            <button id="btn-easing-toggle" class="btn btn-sm btn-ghost" title="Tipo de easing global (aplica a todas las herramientas)">Easing: Default ▾</button>
             <div class="ease-divider"></div>
             <div class="ease-group">
                 <label title="Porcentaje de zoom por defecto para Quick Scale">Zoom</label>
                 <input type="number" id="cont-zoom-pct" class="ease-input" value="10" min="0" title="Zoom %">
             </div>
-            <button id="btn-cont-zoom" class="btn btn-sm btn-ghost">Apply In</button>
-            <button id="btn-cont-zoom-ph" class="btn btn-sm btn-ghost">Apply on Playhead</button>
+            <button id="btn-cont-zoom" class="btn btn-sm btn-ghost" data-tooltip="Clic: zoom continuo desde el inicio del clip · Shift+Clic: desde el playhead">Apply</button>
             <button class="btn-defaults btn-save-def" data-keys="ease-out,ease-in,cont-zoom-pct" title="Guardar como default">💾</button>
             <button class="btn-defaults btn-reset-def" data-keys="ease-out,ease-in,cont-zoom-pct" title="Restaurar defaults">↩</button>
+            <div class="ease-divider"></div>
+            <div id="color-palette" class="color-palette">
+                <div class="color-swatch" data-color="0.04,0.08,0.08" style="background:#141515" data-tooltip="#141515"></div>
+                <div class="color-swatch" data-color="0.969,0.984,0.973" style="background:#F7FBF8" data-tooltip="#F7FBF8"></div>
+                <div class="color-swatch" data-color="0.039,0.914,0.541" style="background:#0AE98A" data-tooltip="#0AE98A"></div>
+                <div class="color-swatch" data-color="0.039,0.710,0.914" style="background:#0AB5E9" data-tooltip="#0AB5E9"></div>
+                <div class="color-swatch" data-color="0.647,0.380,1" style="background:#A561FF" data-tooltip="#A561FF"></div>
+                <div class="color-swatch" data-color="0.898,0.196,0.337" style="background:#E53256" data-tooltip="#E53256"></div>
+                <div class="color-swatch" data-color="0.961,0.831,0" style="background:#F5D400" data-tooltip="#F5D400"></div>
+                <div class="color-swatch" data-color="0.961,0.353,0" style="background:#F55A00" data-tooltip="#F55A00"></div>
+                <div class="color-swatch" data-color="1,0.380,0.886" style="background:#FF61E2" data-tooltip="#FF61E2"></div>
+                <button id="btn-mirror-keys" class="btn-palette-action" data-tooltip="Clone & Mirror Keys al playhead">⇄</button>
+            </div>
+            <div class="ease-divider"></div>
+            <span id="ease-type-label" class="ease-type-label" data-tooltip="Tipo de easing global activo">Default</span>
+            <button id="btn-apply-ease" class="btn-palette-action btn-apply-ease" data-tooltip="Aplica el easing actual a los keyframes seleccionados">Apply Keyframes</button>
+            <button id="btn-curve-toggle" class="btn btn-sm btn-ghost" data-tooltip="Editor de curva custom · Shift al arrastrar = snap a la cuadrícula">〜 Curva ▸</button>
         </div>
     </header>
+
+    <!-- Curve Editor (se despliega hacia abajo desde la barra) -->
+    <div id="curve-drawer" class="curve-drawer hidden">
+        <div id="curve-drawer-body" class="curve-drawer-body">
+            <div class="curve-col curve-col-editor">
+                <canvas id="curve-canvas" width="260" height="220"></canvas>
+                <div class="curve-values">
+                    <input type="number" id="curve-x1" class="tool-input curve-num" step="0.01" min="0" max="1" title="x1 (0-1)">
+                    <input type="number" id="curve-y1" class="tool-input curve-num" step="0.01" min="-2" max="3" title="y1">
+                    <input type="number" id="curve-x2" class="tool-input curve-num" step="0.01" min="0" max="1" title="x2 (0-1)">
+                    <input type="number" id="curve-y2" class="tool-input curve-num" step="0.01" min="-2" max="3" title="y2">
+                </div>
+                <div class="curve-hint">Shift = snap a la cuadrícula</div>
+            </div>
+            <div class="curve-col curve-col-presets">
+                <div class="curve-preset-save">
+                    <input type="text" id="curve-preset-name" class="text-input" placeholder="Nombre del preset...">
+                    <input type="text" id="curve-preset-group" class="text-input" placeholder="Grupo" list="curve-groups">
+                    <datalist id="curve-groups"></datalist>
+                    <button id="curve-preset-savebtn" class="btn btn-sm btn-ghost">💾</button>
+                </div>
+                <div id="curve-preset-list" class="curve-preset-list"></div>
+            </div>
+        </div>
+    </div>
 
     <!-- Global Easing Panel (desplegable desde el botón Easing) -->
     <div id="easing-panel" class="easing-panel hidden">
@@ -279,7 +320,7 @@
                 </div>
 
                 <div class="tool-inline-row">
-                    <label title="Duración de la animación en frames">Dur</label><input type="number" id="an-dur" class="tool-input" value="16" min="1" max="300" title="Frames">
+                    <label title="Duración de la animación en frames">Dur</label><input type="number" id="an-dur" class="tool-input" value="20" min="1" max="300" title="Frames">
                     <label title="Distancia del slide en píxeles">Slide</label><input type="number" id="an-slide" class="tool-input" value="200" min="1" title="px">
                     <label title="Grados que giran los botones Rot ⟳/⟲ (ej. 90 = entra rotando desde −90°)">Rot °</label><input type="number" id="an-rot" class="tool-input" value="90" min="1" title="Grados que giran los botones Rot ⟳/⟲ (ej. 90 = entra rotando desde −90°)">
                     <button class="btn-defaults btn-save-def" data-keys="an-dur,an-slide,an-rot,an-stagger,an-stagger-every,an-ovs,an-bounces,an-spring" title="Guardar como default">💾</button>
@@ -531,51 +572,6 @@
 
 
 
-    </div>
-
-    <!-- Color Palette (always visible) -->
-    <!-- Curve Editor (drawer estilo Flow, siempre desplegable) -->
-    <div id="curve-drawer" class="curve-drawer">
-        <div id="curve-drawer-header" class="curve-drawer-header">
-            <span class="curve-title">〜 Curva Custom</span>
-            <span class="curve-hint">Shift = snap a la cuadrícula</span>
-            <span id="curve-drawer-arrow" class="toggle-icon">▸</span>
-        </div>
-        <div id="curve-drawer-body" class="curve-drawer-body hidden">
-            <div class="curve-col curve-col-editor">
-                <canvas id="curve-canvas" width="260" height="220"></canvas>
-                <div class="curve-values">
-                    <input type="number" id="curve-x1" class="tool-input curve-num" step="0.01" min="0" max="1" title="x1 (0-1)">
-                    <input type="number" id="curve-y1" class="tool-input curve-num" step="0.01" min="-2" max="3" title="y1">
-                    <input type="number" id="curve-x2" class="tool-input curve-num" step="0.01" min="0" max="1" title="x2 (0-1)">
-                    <input type="number" id="curve-y2" class="tool-input curve-num" step="0.01" min="-2" max="3" title="y2">
-                </div>
-            </div>
-            <div class="curve-col curve-col-presets">
-                <div class="curve-preset-save">
-                    <input type="text" id="curve-preset-name" class="text-input" placeholder="Nombre del preset...">
-                    <input type="text" id="curve-preset-group" class="text-input" placeholder="Grupo" list="curve-groups">
-                    <datalist id="curve-groups"></datalist>
-                    <button id="curve-preset-savebtn" class="btn btn-sm btn-ghost">💾</button>
-                </div>
-                <div id="curve-preset-list" class="curve-preset-list"></div>
-            </div>
-        </div>
-    </div>
-
-    <div id="color-palette" class="color-palette">
-        <div class="color-swatch" data-color="0.04,0.08,0.08" style="background:#141515" data-tooltip="#141515"></div>
-        <div class="color-swatch" data-color="0.969,0.984,0.973" style="background:#F7FBF8" data-tooltip="#F7FBF8"></div>
-        <div class="color-swatch" data-color="0.039,0.914,0.541" style="background:#0AE98A" data-tooltip="#0AE98A"></div>
-        <div class="color-swatch" data-color="0.039,0.710,0.914" style="background:#0AB5E9" data-tooltip="#0AB5E9"></div>
-        <div class="color-swatch" data-color="0.647,0.380,1" style="background:#A561FF" data-tooltip="#A561FF"></div>
-        <div class="color-swatch" data-color="0.898,0.196,0.337" style="background:#E53256" data-tooltip="#E53256"></div>
-        <div class="color-swatch" data-color="0.961,0.831,0" style="background:#F5D400" data-tooltip="#F5D400"></div>
-        <div class="color-swatch" data-color="0.961,0.353,0" style="background:#F55A00" data-tooltip="#F55A00"></div>
-        <div class="color-swatch" data-color="1,0.380,0.886" style="background:#FF61E2" data-tooltip="#FF61E2"></div>
-        <button id="btn-mirror-keys" class="btn-palette-action" data-tooltip="Clone & Mirror Keys al playhead">⇄</button>
-        <span id="ease-type-label" class="ease-type-label" data-tooltip="Tipo de animación seleccionado en Animate">Default</span>
-        <button id="btn-apply-ease" class="btn-palette-action btn-apply-ease" data-tooltip="Aplica el tipo de animación actual a los keyframes seleccionados">Apply Keyframes</button>
     </div>
 
     <!-- Toast -->

@@ -21,7 +21,7 @@
         "zoom-dur": 20, "zoom-pct": 130,
         "box-round": 20, "fm-round": 0, "zf-round": 0, "chk-stroke-round": 0,
         "tb-round": 20, "tb-pad": 40, "tb-anim-dur": 20, "tb-bg": "#ffffff", "tb-text": "#000000",
-        "an-dur": 16, "an-slide": 200, "an-rot": 90, "an-stagger": 5, "an-stagger-every": 1,
+        "an-dur": 20, "an-slide": 200, "an-rot": 90, "an-stagger": 5, "an-stagger-every": 1,
         "an-ovs": 10, "an-bounces": 2, "an-spring": 15
     };
 
@@ -1523,14 +1523,10 @@
             }
         })();
 
-        // Continuous Zoom
-        on("btn-cont-zoom", "click", function() {
+        // Continuous Zoom: clic = desde el inicio del clip · Shift = playhead
+        on("btn-cont-zoom", "click", function(evt) {
             var zpct = parseFloat(document.getElementById("cont-zoom-pct").value) || 10;
-            callHost("pcContinuousZoom(" + zpct + ", false)");
-        });
-        on("btn-cont-zoom-ph", "click", function() {
-            var zpct = parseFloat(document.getElementById("cont-zoom-pct").value) || 10;
-            callHost("pcContinuousZoom(" + zpct + ", true)");
+            callHost("pcContinuousZoom(" + zpct + ", " + (evt.shiftKey ? "true" : "false") + ")");
         });
 
         // Solid Creator (Shift+Click or checkbox → animate)
@@ -1915,20 +1911,23 @@
 
         function setDrawer(openIt) {
             ensureInit();
-            var body = document.getElementById("curve-drawer-body");
-            var arrow = document.getElementById("curve-drawer-arrow");
-            if (!body) return;
-            body.classList.toggle("hidden", !openIt);
-            if (arrow) arrow.textContent = openIt ? "▾" : "▸";
+            var drawer = document.getElementById("curve-drawer");
+            var btn = document.getElementById("btn-curve-toggle");
+            if (!drawer) return;
+            drawer.classList.toggle("hidden", !openIt);
+            if (btn) {
+                btn.textContent = openIt ? "〜 Curva ▾" : "〜 Curva ▸";
+                btn.classList.toggle("active", openIt);
+            }
             if (openIt) { draw(); renderPresets(); }
         }
 
         function bindDrawer() {
-            var hdr = document.getElementById("curve-drawer-header");
-            if (!hdr) return;
-            hdr.addEventListener("click", function() {
-                var body = document.getElementById("curve-drawer-body");
-                setDrawer(body ? body.classList.contains("hidden") : true);
+            var btn = document.getElementById("btn-curve-toggle");
+            if (!btn) return;
+            btn.addEventListener("click", function() {
+                var drawer = document.getElementById("curve-drawer");
+                setDrawer(drawer ? drawer.classList.contains("hidden") : true);
             });
         }
 

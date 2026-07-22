@@ -2047,6 +2047,33 @@ function pcTextHelper(animType, mode, animMode, durationFrames, enableGlow, ease
             posBounce.setValue([0, -50, 0]);
             var opBounce = animProps.addProperty("ADBE Text Opacity");
             opBounce.setValue(0);
+
+            // Rebote REAL por unidad: segundo animator con offset hacia abajo
+            // (+12px) cuyo range selector barre RETRASADO respecto al primero.
+            // Cada palabra cae desde -50, se pasa 12px por debajo de su lugar
+            // y vuelve a subir → drop + overshoot + settle. Solo keyframes,
+            // sin expresiones. (Un solo animator no puede rebotar: el offset
+            // por unidad es una transición monótona del selector.)
+            if (animMode === "in" || animMode === "inout") {
+                var anim2 = animators.addProperty("ADBE Text Animator");
+                anim2.name = "PlatziAnim_bounce_rebote";
+                var anim2Props = anim2.property("ADBE Text Animator Properties");
+                var sel2 = anim2.property("ADBE Text Selectors");
+                var range2 = sel2.addProperty("ADBE Text Selector");
+                var adv2 = range2.property("ADBE Text Range Advanced");
+                try { adv2.property("Based On").setValue(basedOnVal); } catch(exA2) {}
+                var pos2 = anim2Props.addProperty("ADBE Text Position 3D");
+                pos2.setValue([0, 12, 0]);
+                var start2 = range2.property("Start");
+                var reboteDelay = Math.max(2 / fps, totalDur * 0.3);
+                var kr1 = start2.addKey(t0 + reboteDelay); start2.setValueAtKey(kr1, 0);
+                var kr2 = start2.addKey(t1 + reboteDelay); start2.setValueAtKey(kr2, 100);
+                try {
+                    start2.setInterpolationTypeAtKey(kr1, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+                    start2.setInterpolationTypeAtKey(kr2, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+                    _pcApplyEaseScalar(start2, kr1, kr2, easeOut, easeIn);
+                } catch(exR) {}
+            }
         }
 
         // Glow (dedup): quitar Glow/Color previos antes de re-agregar, para no
