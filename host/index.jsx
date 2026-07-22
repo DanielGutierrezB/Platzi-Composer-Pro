@@ -1818,34 +1818,62 @@ function _pcFindBoxForText(comp, textLayer) {
 // Aplica / re-sincroniza la animación de ENTRADA de la caja: fade-up
 // (abajo→arriba) + fade in, duración = 1ra unidad (durationFrames/unidades),
 // arrancando en t0. Keyframes (no expresiones). Limpia lo previo.
-function _pcAnimateBoxEntrance(box, txtStr, mode, durationFrames, t0, fps, easeOut, easeIn) {
+function _pcAnimateBoxEntrance(box, txtStr, mode, animType, durationFrames, t0, fps, easeOut, easeIn) {
     try {
-        var opP = box.property("ADBE Transform Group").property("ADBE Opacity");
-        var posP = box.property("ADBE Transform Group").property("ADBE Position");
+        var tg = box.property("ADBE Transform Group");
+        var opP = tg.property("ADBE Opacity");
+        var posP = tg.property("ADBE Position");
+        var scP = tg.property("ADBE Scale");
         // Reposo: último keyframe si ya animaba; si no, el valor actual.
-        var rest;
-        if (posP.numKeys > 0) rest = posP.keyValue(posP.numKeys);
-        else rest = posP.value;
-        _pcClearKeys(posP); _pcClearKeys(opP);
-        try { posP.setValue(rest); } catch(ex) {}
-        var rx = rest[0], ry = rest[1];
+        var restPos = (posP.numKeys > 0) ? posP.keyValue(posP.numKeys) : posP.value;
+        var restSc = (scP.numKeys > 0) ? scP.keyValue(scP.numKeys) : scP.value;
+        _pcClearKeys(opP); _pcClearKeys(posP); _pcClearKeys(scP);
+        try { posP.setValue(restPos); } catch(ex) {}
+        try { scP.setValue(restSc); } catch(ex) {}
+        var rx = restPos[0], ry = restPos[1];
+
         var units = _pcCountUnits(txtStr, mode);
         var boxDurFrames = Math.round(durationFrames / units);
         if (boxDurFrames < 3) boxDurFrames = 3;
         if (boxDurFrames > durationFrames) boxDurFrames = durationFrames;
         var t1b = t0 + boxDurFrames / fps;
+
+        // Fade in (siempre).
         var ka = opP.addKey(t0);   opP.setValueAtKey(ka, 0);
         var kb = opP.addKey(t1b);  opP.setValueAtKey(kb, 100);
-        var kc = posP.addKey(t0);  posP.setValueAtKey(kc, [rx, ry + 30]);
-        var kd = posP.addKey(t1b); posP.setValueAtKey(kd, [rx, ry]);
         try {
             opP.setInterpolationTypeAtKey(ka, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
             opP.setInterpolationTypeAtKey(kb, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
             _pcApplyEaseScalar(opP, ka, kb, easeOut, easeIn);
-            posP.setInterpolationTypeAtKey(kc, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
-            posP.setInterpolationTypeAtKey(kd, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
-            _pcApplyEaseScalar(posP, kc, kd, easeOut, easeIn);
         } catch(ex) {}
+
+        // Dirección según la animación del texto (copia el tipo).
+        var dx = 0, dy = 0, doScale = false;
+        if (animType === "fade-up") dy = 30;
+        else if (animType === "fade-down") dy = -30;
+        else if (animType === "fade-left") dx = 40;
+        else if (animType === "fade-right") dx = -40;
+        else if (animType === "bounce") dy = 50;
+        else if (animType === "scale-pop") doScale = true;
+        // typewriter / blur-reveal / otros → solo fade (sin desplazamiento)
+
+        if (doScale) {
+            var s0 = scP.addKey(t0);  scP.setValueAtKey(s0, [0, 0]);
+            var s1 = scP.addKey(t1b); scP.setValueAtKey(s1, restSc);
+            try {
+                scP.setInterpolationTypeAtKey(s0, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+                scP.setInterpolationTypeAtKey(s1, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+                _pcApplyEaseArray(scP, s0, s1, easeOut, easeIn);
+            } catch(ex) {}
+        } else if (dx !== 0 || dy !== 0) {
+            var kc = posP.addKey(t0);  posP.setValueAtKey(kc, [rx + dx, ry + dy]);
+            var kd = posP.addKey(t1b); posP.setValueAtKey(kd, [rx, ry]);
+            try {
+                posP.setInterpolationTypeAtKey(kc, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+                posP.setInterpolationTypeAtKey(kd, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+                _pcApplyEaseScalar(posP, kc, kd, easeOut, easeIn);
+            } catch(ex) {}
+        }
     } catch(exB) {}
 }
 
@@ -2017,7 +2045,7 @@ function pcTextHelper(animType, mode, animMode, durationFrames, enableGlow, ease
             if (boxLayer) {
                 var txtStrRB = "";
                 try { txtStrRB = textLayer.property("ADBE Text Properties").property("ADBE Text Document").value.text; } catch(ex) {}
-                _pcAnimateBoxEntrance(boxLayer, txtStrRB, mode, durationFrames, t0, fps, easeOut, easeIn);
+                _pcAnimateBoxEntrance(boxLayer, txtStrRB, mode, animType, durationFrames, t0, fps, easeOut, easeIn);
             }
         }
 
@@ -2188,7 +2216,7 @@ function pcCreateTextBox(mode, withAnim, roundness, padding, bgColor, textColor,
             try {
                 var txtStr = "";
                 try { txtStr = textLayer.property("ADBE Text Properties").property("ADBE Text Document").value.text; } catch(exT) {}
-                _pcAnimateBoxEntrance(box, txtStr, mode, durationFrames, t0, fps, easeOut, easeIn);
+                _pcAnimateBoxEntrance(box, txtStr, mode, "fade-up", durationFrames, t0, fps, easeOut, easeIn);
             } catch(exBoxAnim) { boxAnimErr = exBoxAnim.toString(); }
         }
 
