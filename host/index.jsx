@@ -281,7 +281,37 @@ function pcApplyColorToSelected(color) {
     } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
 }
 
+// ─── Ease global de sesión ───────────────────────────────────────
+// Si el panel manda tipo "bezier" (curva Custom del editor), TODAS las
+// tools que pasan por _pcApplyEaseScalar/_pcApplyEaseArray la aplican.
+// Los tipos físicos (overshoot/bounce/spring) NO se propagan a las tools
+// que no son Animate (highlighters, zoom, text, profesor…) para no cambiar
+// su comportamiento de forma sorpresiva: en esas caen al ease clásico por
+// influencia Out/In. Cada función pública setea esto al entrar (evita que
+// quede pegado el estado de una llamada anterior).
+var _pcCurEase = null;
+function _pcSetGlobalEase(easeType, ex1, ey1, ex2, ey2) {
+    if (typeof easeType === "string" && easeType === "bezier" &&
+        typeof ex1 === "number" && typeof ey2 === "number") {
+        _pcCurEase = { type: "bezier", x1: ex1, y1: ey1, x2: ex2, y2: ey2 };
+    } else {
+        _pcCurEase = null;
+    }
+}
+
+// Helper central: aplica el ease de sesión (curva bezier) o influencia.
+function _pcEasePair(prop, k1, k2, easeOutVal, easeInVal) {
+    if (_pcCurEase && _pcCurEase.type === "bezier") {
+        try {
+            _pcApplyCurvePair(prop, k1, k2, _pcCurEase.x1, _pcCurEase.y1, _pcCurEase.x2, _pcCurEase.y2);
+            return true;
+        } catch(e) {}
+    }
+    return false;
+}
+
 function _pcApplyEaseScalar(prop, k1, k2, easeOutVal, easeInVal) {
+    if (_pcEasePair(prop, k1, k2, easeOutVal, easeInVal)) return;
     var eIn = new KeyframeEase(0, easeInVal);
     var eOut = new KeyframeEase(0, easeOutVal);
     prop.setTemporalEaseAtKey(k1, [eIn], [eOut]);
@@ -289,6 +319,7 @@ function _pcApplyEaseScalar(prop, k1, k2, easeOutVal, easeInVal) {
 }
 
 function _pcApplyEaseArray(prop, k1, k2, easeOutVal, easeInVal) {
+    if (_pcEasePair(prop, k1, k2, easeOutVal, easeInVal)) return;
     var eIn = new KeyframeEase(0, easeInVal);
     var eOut = new KeyframeEase(0, easeOutVal);
     var si = [eIn, eIn], so = [eOut, eOut];
@@ -367,7 +398,8 @@ function pcFlipHorizontal() {
     } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
 }
 
-function pcHighlighterAnimate(mode, easeOut, easeIn) {
+function pcHighlighterAnimate(mode, easeOut, easeIn, easeType, ex1, ey1, ex2, ey2) {
+    _pcSetGlobalEase(easeType, ex1, ey1, ex2, ey2);
     var s = _pcRequireSelected();
     if (!s) return JSON.stringify({ error: "Selecciona una capa de highlight." });
     try {
@@ -712,7 +744,8 @@ function pcFlipTrimAnimation() {
     } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
 }
 
-function pcLineHighlighterAnimate(mode, easeOut, easeIn) {
+function pcLineHighlighterAnimate(mode, easeOut, easeIn, easeType, ex1, ey1, ex2, ey2) {
+    _pcSetGlobalEase(easeType, ex1, ey1, ex2, ey2);
     var s = _pcRequireSelected();
     if (!s) return JSON.stringify({ error: "Selecciona una capa Line Highlight." });
     try {
@@ -762,7 +795,8 @@ function pcLineHighlighterAnimate(mode, easeOut, easeIn) {
 
 // ─── HIGHLIGHT BOX ───────────────────────────────────────────
 
-function pcCreateHighlightBox(mode, easeOut, easeIn, enableGlow, roundness) {
+function pcCreateHighlightBox(mode, easeOut, easeIn, enableGlow, roundness, easeType, ex1, ey1, ex2, ey2) {
+    _pcSetGlobalEase(easeType, ex1, ey1, ex2, ey2);
     var _rnd = (roundness === undefined || roundness === null || isNaN(roundness)) ? 20 : roundness;
     var comp = _pcRequireComp();
     if (!comp) return JSON.stringify({ error: "No hay composici\u00f3n activa." });
@@ -1086,7 +1120,8 @@ function pcCreateFocusMask(opacityVal, featherVal, roundness) {
     } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
 }
 
-function pcFocusMaskAnimate(mode, easeOut, easeIn) {
+function pcFocusMaskAnimate(mode, easeOut, easeIn, easeType, ex1, ey1, ex2, ey2) {
+    _pcSetGlobalEase(easeType, ex1, ey1, ex2, ey2);
     var s = _pcRequireSelected();
     if (!s) return JSON.stringify({ error: "Selecciona la capa Focus Mask." });
     try {
@@ -1126,7 +1161,8 @@ function pcFocusMaskAnimate(mode, easeOut, easeIn) {
 
 // ─── ZOOM FOCUS ──────────────────────────────────────────────
 
-function pcCreateZoomFocus(blurAmount, scaleFactor, easeOut, easeIn, roundness) {
+function pcCreateZoomFocus(blurAmount, scaleFactor, easeOut, easeIn, roundness, easeType, ex1, ey1, ex2, ey2) {
+    _pcSetGlobalEase(easeType, ex1, ey1, ex2, ey2);
     var s = _pcRequireSelected();
     if (!s) return JSON.stringify({ error: "Selecciona una capa con máscara." });
     try {
@@ -1311,7 +1347,8 @@ function pcQuickScale(percentage) {
     } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
 }
 
-function pcZoomToCorner(corner, durationFrames, zoomPercent, easeOut, easeIn) {
+function pcZoomToCorner(corner, durationFrames, zoomPercent, easeOut, easeIn, easeType, ex1, ey1, ex2, ey2) {
+    _pcSetGlobalEase(easeType, ex1, ey1, ex2, ey2);
     var s = _pcRequireSelected();
     if (!s) return JSON.stringify({ error: "Selecciona al menos una capa." });
     try {
@@ -1386,7 +1423,8 @@ function pcContinuousZoom(zoomPercent, fromPlayhead) {
 
 // ─── SOLID CREATOR ───────────────────────────────────────────
 
-function pcSolidOrLayer(position, animate, durationFrames, easeOut, easeIn) {
+function pcSolidOrLayer(position, animate, durationFrames, easeOut, easeIn, easeType, ex1, ey1, ex2, ey2) {
+    _pcSetGlobalEase(easeType, ex1, ey1, ex2, ey2);
     var comp = _pcRequireComp();
     if (!comp) return JSON.stringify({ error: "No hay composición activa." });
     try {
@@ -1475,7 +1513,8 @@ function pcSolidOrLayer(position, animate, durationFrames, easeOut, easeIn) {
     } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
 }
 
-function pcAnimateMaskIn(durationFrames, easeOut, easeIn) {
+function pcAnimateMaskIn(durationFrames, easeOut, easeIn, easeType, ex1, ey1, ex2, ey2) {
+    _pcSetGlobalEase(easeType, ex1, ey1, ex2, ey2);
     var s = _pcRequireSelected();
     if (!s) return JSON.stringify({ error: "Selecciona una capa con máscara." });
     try {
@@ -1572,7 +1611,8 @@ function _pcSetUniformScale(layer, pct) {
     _pcSafeSetValue(sp, v instanceof Array && v.length === 3 ? [pct,pct,pct] : [pct,pct]);
 }
 
-function pcMiniProfesor(side, xPct, yPct, animate, easeOut, easeIn) {
+function pcMiniProfesor(side, xPct, yPct, animate, easeOut, easeIn, easeType, ex1, ey1, ex2, ey2) {
+    _pcSetGlobalEase(easeType, ex1, ey1, ex2, ey2);
     var s = _pcRequireSelected();
     if (!s) return JSON.stringify({ error: "Selecciona la capa del profesor." });
     try {
@@ -1678,7 +1718,8 @@ function pcMiniProfesor(side, xPct, yPct, animate, easeOut, easeIn) {
 
 // ─── CORNER PROFESOR ─────────────────────────────────────────
 
-function pcCornerProfesor(corner, circular, durationFrames, sizePx, animate, easeOut, easeIn) {
+function pcCornerProfesor(corner, circular, durationFrames, sizePx, animate, easeOut, easeIn, easeType, ex1, ey1, ex2, ey2) {
+    _pcSetGlobalEase(easeType, ex1, ey1, ex2, ey2);
     var s = _pcRequireSelected();
     if (!s) return JSON.stringify({ error: "Selecciona la capa del profesor." });
     try {
@@ -1876,7 +1917,8 @@ function _pcAnimateBoxEntrance(box, animType, boxDurFrames, t0, fps, easeOut, ea
 
 // ─── TEXT HELPER ────────────────────────────────────────────────
 
-function pcTextHelper(animType, mode, animMode, durationFrames, enableGlow, easeOut, easeIn, boxAnimFrames) {
+function pcTextHelper(animType, mode, animMode, durationFrames, enableGlow, easeOut, easeIn, boxAnimFrames, easeType, ex1, ey1, ex2, ey2) {
+    _pcSetGlobalEase(easeType, ex1, ey1, ex2, ey2);
     var comp = _pcRequireComp();
     if (!comp) return JSON.stringify({ error: "No hay composici\u00f3n activa." });
     try {
@@ -2057,7 +2099,8 @@ function pcTextHelper(animType, mode, animMode, durationFrames, enableGlow, ease
 // una animación de entrada fade-up (abajo->arriba) por Character/Word/Line.
 // El tamaño de la caja se muestrea en un tiempo FIJO (fin de la animación)
 // para que no tiemble mientras entran las letras.
-function pcCreateTextBox(mode, withAnim, roundness, padding, bgColor, textColor, durationFrames, easeOut, easeIn, boxAnimFrames) {
+function pcCreateTextBox(mode, withAnim, roundness, padding, bgColor, textColor, durationFrames, easeOut, easeIn, boxAnimFrames, easeType, ex1, ey1, ex2, ey2) {
+    _pcSetGlobalEase(easeType, ex1, ey1, ex2, ey2);
     var comp = _pcRequireComp();
     if (!comp) return JSON.stringify({ error: "No hay composición activa." });
     try {
@@ -2236,6 +2279,7 @@ function pcCreateTextBox(mode, withAnim, roundness, padding, bgColor, textColor,
 // ─── ANNOTATIONS ─────────────────────────────────────────────────
 
 function pcCreateAnnotation(annType, thickness, enableGlow, easeOut, easeIn) {
+    _pcSetGlobalEase(null); // no cableada al easing global; evita estado pegado
     var comp = _pcRequireComp();
     if (!comp) return JSON.stringify({ error: "No hay composici\u00f3n activa." });
     try {
@@ -2572,6 +2616,7 @@ function _pcAnimApplyMode(prop, mode, comp, layer, durFrames, fromVal, curVal, t
 }
 
 function pcAnimFade(mode, durFrames, eo, ei, easeType, x1, y1, x2, y2, p1) {
+    _pcSetGlobalEase(null); // los pcAnim* manejan su propio spec
     var s = _pcRequireSelected();
     if (!s) return JSON.stringify({ error: "Selecciona al menos una capa." });
     try {
@@ -2598,6 +2643,7 @@ function pcAnimFade(mode, durFrames, eo, ei, easeType, x1, y1, x2, y2, p1) {
 // direction = dirección del MOVIMIENTO al entrar: "right" = entra moviéndose
 // a la derecha (desde la izquierda). El OUT sale continuando esa dirección.
 function pcAnimSlide(direction, mode, durFrames, amountPx, eo, ei, easeType, x1, y1, x2, y2, p1) {
+    _pcSetGlobalEase(null); // los pcAnim* manejan su propio spec
     var s = _pcRequireSelected();
     if (!s) return JSON.stringify({ error: "Selecciona al menos una capa." });
     try {
@@ -2630,6 +2676,7 @@ function pcAnimSlide(direction, mode, durFrames, amountPx, eo, ei, easeType, x1,
 }
 
 function pcAnimScale(mode, durFrames, eo, ei, easeType, x1, y1, x2, y2, p1) {
+    _pcSetGlobalEase(null); // los pcAnim* manejan su propio spec
     var s = _pcRequireSelected();
     if (!s) return JSON.stringify({ error: "Selecciona al menos una capa." });
     try {
@@ -2656,6 +2703,7 @@ function pcAnimScale(mode, durFrames, eo, ei, easeType, x1, y1, x2, y2, p1) {
 
 // dirSign: 1 = horario (CW), -1 = antihorario (CCW).
 function pcAnimRotate(dirSign, mode, durFrames, degrees, eo, ei, easeType, x1, y1, x2, y2, p1) {
+    _pcSetGlobalEase(null); // los pcAnim* manejan su propio spec
     var s = _pcRequireSelected();
     if (!s) return JSON.stringify({ error: "Selecciona al menos una capa." });
     try {
@@ -2732,6 +2780,7 @@ function _pcBakeProfileBetween(prop, tA, tB, type, spec) {
 // el APPLY de Flow, pero para todos los tipos): por cada propiedad con 2+
 // keys seleccionados, aplica a cada par consecutivo.
 function pcApplyEaseToSelected(easeType, eo, ei, x1, y1, x2, y2, p1) {
+    _pcSetGlobalEase(null); // los pcAnim* manejan su propio spec
     var s = _pcRequireSelected();
     if (!s) return JSON.stringify({ error: "Selecciona una capa con keyframes seleccionados." });
     try {

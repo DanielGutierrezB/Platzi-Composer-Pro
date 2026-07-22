@@ -1260,6 +1260,20 @@
         function easeOut() { return parseFloat(document.getElementById("ease-out").value) || 33; }
         function easeIn()  { return parseFloat(document.getElementById("ease-in").value) || 100; }
 
+        // Args extra de easing global para TODAS las funciones host con ease:
+        // la curva Custom (bezier) se propaga a todas las tools; los tipos
+        // físicos (overshoot/bounce/spring) solo aplican en Animate y Apply
+        // Keyframes — el resto cae al ease clásico por influencia Out/In.
+        function easeArgsGlobal() {
+            var sel = document.querySelector('input[name="an-ease"]:checked');
+            var type = sel ? sel.value : "default";
+            if (type === "custom") {
+                var c = pcCurve.current();
+                return ", 'bezier', " + c.x1 + ", " + c.y1 + ", " + c.x2 + ", " + c.y2;
+            }
+            return ", 'default', 0, 0, 0, 0";
+        }
+
         // Shift+Click: if shift is held OR checkbox is checked → animate = true
         function shouldAnimate(checkboxId, evt) {
             var cb = document.getElementById(checkboxId);
@@ -1286,7 +1300,7 @@
                 else if (e.altKey) mode = "in";
                 else if (e.shiftKey) mode = "inout";
                 if (mode) {
-                    callHost(animFn + "(\"" + mode + "\"," + eo + "," + ei + ")");
+                    callHost(animFn + "(\"" + mode + "\"," + eo + "," + ei + easeArgsGlobal() + ")");
                 } else {
                     showToast("Listo", "success");
                 }
@@ -1300,9 +1314,9 @@
             var rcaps = document.getElementById("chk-stroke-round").checked;
             var shift = e.shiftKey, alt = e.altKey;
             callHost("pcCreateHighlighter(" + rcaps + ")", function() {
-                if (shift && alt) { callHost("pcHighlighterAnimate(\"out\","+eo+","+ei+")"); }
-                else if (alt) { callHost("pcHighlighterAnimate(\"in\","+eo+","+ei+")"); }
-                else if (shift) { callHost("pcHighlighterAnimate(\"inout\","+eo+","+ei+")"); }
+                if (shift && alt) { callHost("pcHighlighterAnimate(\"out\","+eo+","+ei+easeArgsGlobal()+")"); }
+                else if (alt) { callHost("pcHighlighterAnimate(\"in\","+eo+","+ei+easeArgsGlobal()+")"); }
+                else if (shift) { callHost("pcHighlighterAnimate(\"inout\","+eo+","+ei+easeArgsGlobal()+")"); }
             });
         });
         on("btn-hl-flip",           "click", function()  { callHost("pcFlipHorizontal()"); });
@@ -1313,9 +1327,9 @@
             var glow = document.getElementById("chk-line-glow").checked;
             var shift = e.shiftKey, alt = e.altKey;
             callHost("pcCreateLineHighlighter('" + style + "', " + glow + ")", function() {
-                if (shift && alt) { callHost("pcLineHighlighterAnimate(\"out\","+eo+","+ei+")"); }
-                else if (alt) { callHost("pcLineHighlighterAnimate(\"in\","+eo+","+ei+")"); }
-                else if (shift) { callHost("pcLineHighlighterAnimate(\"inout\","+eo+","+ei+")"); }
+                if (shift && alt) { callHost("pcLineHighlighterAnimate(\"out\","+eo+","+ei+easeArgsGlobal()+")"); }
+                else if (alt) { callHost("pcLineHighlighterAnimate(\"in\","+eo+","+ei+easeArgsGlobal()+")"); }
+                else if (shift) { callHost("pcLineHighlighterAnimate(\"inout\","+eo+","+ei+easeArgsGlobal()+")"); }
             });
         });
         // chk-line-glow: no change handler needed, value is read on Create click
@@ -1325,9 +1339,9 @@
             var fmr = parseFloat(document.getElementById("fm-round").value); if (isNaN(fmr)) fmr = 0;
             var shift = e.shiftKey, alt = e.altKey;
             callHost("pcCreateFocusMask(70, 20, " + fmr + ")", function() {
-                if (shift && alt) { callHost("pcFocusMaskAnimate(\"out\","+eo+","+ei+")"); }
-                else if (alt) { callHost("pcFocusMaskAnimate(\"in\","+eo+","+ei+")"); }
-                else if (shift) { callHost("pcFocusMaskAnimate(\"inout\","+eo+","+ei+")"); }
+                if (shift && alt) { callHost("pcFocusMaskAnimate(\"out\","+eo+","+ei+easeArgsGlobal()+")"); }
+                else if (alt) { callHost("pcFocusMaskAnimate(\"in\","+eo+","+ei+easeArgsGlobal()+")"); }
+                else if (shift) { callHost("pcFocusMaskAnimate(\"inout\","+eo+","+ei+easeArgsGlobal()+")"); }
             });
         });
         document.getElementById("btn-zoom-focus-create").addEventListener("click", function() {
@@ -1336,7 +1350,7 @@
             var eo = document.getElementById("ease-out").value || 33;
             var ei = document.getElementById("ease-in").value || 100;
             var zfr = parseFloat(document.getElementById("zf-round").value); if (isNaN(zfr)) zfr = 0;
-            callHost("pcCreateZoomFocus(" + blur + "," + sf + "," + eo + "," + ei + "," + zfr + ")");
+            callHost("pcCreateZoomFocus(" + blur + "," + sf + "," + eo + "," + ei + "," + zfr + easeArgsGlobal() + ")");
         });
 
         // Highlight Box
@@ -1350,7 +1364,7 @@
             if (e.shiftKey && e.altKey) mode = "out";
             else if (e.altKey) mode = "in";
             else if (e.shiftKey) mode = "inout";
-            callHost("pcCreateHighlightBox('" + mode + "', " + eo + ", " + ei + ", " + glow + ", " + rnd + ")");
+            callHost("pcCreateHighlightBox('" + mode + "', " + eo + ", " + ei + ", " + glow + ", " + rnd + easeArgsGlobal() + ")");
         });
 
         // Universal animate — routes based on selected layer name
@@ -1362,7 +1376,7 @@
                 if (name.indexOf("Line Highlight") !== -1) fn = "pcLineHighlighterAnimate";
                 else if (name.indexOf("Highlight Box") !== -1) fn = "pcLineHighlighterAnimate";
                 else if (name.indexOf("Focus Mask") !== -1) fn = "pcFocusMaskAnimate";
-                callHost(fn + "('" + mode + "', " + easeOut() + ", " + easeIn() + ")");
+                callHost(fn + "('" + mode + "', " + easeOut() + ", " + easeIn() + easeArgsGlobal() + ")");
             });
         }
         on("btn-hl-in",    "click", function() { animateHighlighter("in"); });
@@ -1380,7 +1394,7 @@
             on("btn-" + id, "click", function() {
                 var dur = parseFloat(document.getElementById("zoom-dur").value) || 20;
                 var zpct = parseFloat(document.getElementById("zoom-pct").value) || 130;
-                callHost("pcZoomToCorner('" + corners[id] + "', " + dur + ", " + zpct + ", " + easeOut() + ", " + easeIn() + ")");
+                callHost("pcZoomToCorner('" + corners[id] + "', " + dur + ", " + zpct + ", " + easeOut() + ", " + easeIn() + easeArgsGlobal() + ")");
             });
         });
 
@@ -1524,12 +1538,12 @@
             on("btn-sol-" + dir, "click", function(evt) {
                 var anim = shouldAnimate("solid-animate", evt);
                 var dur = parseFloat(document.getElementById("solid-dur").value) || 20;
-                callHost("pcSolidOrLayer('" + dir + "', " + anim + ", " + dur + ", " + easeOut() + ", " + easeIn() + ")");
+                callHost("pcSolidOrLayer('" + dir + "', " + anim + ", " + dur + ", " + easeOut() + ", " + easeIn() + easeArgsGlobal() + ")");
             });
         });
         on("btn-sol-mask-in", "click", function() {
             var dur = parseFloat(document.getElementById("solid-dur").value) || 20;
-            callHost("pcAnimateMaskIn(" + dur + ", " + easeOut() + ", " + easeIn() + ")");
+            callHost("pcAnimateMaskIn(" + dur + ", " + easeOut() + ", " + easeIn() + easeArgsGlobal() + ")");
         });
 
         // Mini Profesor (Shift+Click or checkbox → animate)
@@ -1537,13 +1551,13 @@
             var x = parseFloat(document.getElementById("mp-x").value) || 35;
             var y = parseFloat(document.getElementById("mp-y").value) || 0;
             var anim = shouldAnimate("mp-animate", evt);
-            callHost("pcMiniProfesor('left', " + x + ", " + y + ", " + anim + ", " + easeOut() + ", " + easeIn() + ")");
+            callHost("pcMiniProfesor('left', " + x + ", " + y + ", " + anim + ", " + easeOut() + ", " + easeIn() + easeArgsGlobal() + ")");
         });
         on("btn-mp-right", "click", function(evt) {
             var x = parseFloat(document.getElementById("mp-x").value) || 35;
             var y = parseFloat(document.getElementById("mp-y").value) || 0;
             var anim = shouldAnimate("mp-animate", evt);
-            callHost("pcMiniProfesor('right', " + x + ", " + y + ", " + anim + ", " + easeOut() + ", " + easeIn() + ")");
+            callHost("pcMiniProfesor('right', " + x + ", " + y + ", " + anim + ", " + easeOut() + ", " + easeIn() + easeArgsGlobal() + ")");
         });
 
         // Corner Profesor (Shift+Click or checkbox → animate)
@@ -1554,7 +1568,7 @@
                 var dur = parseFloat(document.getElementById("cp-dur").value) || 20;
                 var size = parseFloat(document.getElementById("cp-size").value) || 600;
                 var anim = shouldAnimate("cp-animate", evt);
-                callHost("pcCornerProfesor('" + corners[c] + "', " + circ + ", " + dur + ", " + size + ", " + anim + ", " + easeOut() + ", " + easeIn() + ")");
+                callHost("pcCornerProfesor('" + corners[c] + "', " + circ + ", " + dur + ", " + size + ", " + anim + ", " + easeOut() + ", " + easeIn() + easeArgsGlobal() + ")");
             });
         });
 
@@ -1588,7 +1602,7 @@
                     if (evt.shiftKey && evt.altKey) animMode = "out";
                     else if (evt.shiftKey) animMode = "in";
                     var boxDur = parseInt(document.getElementById("tb-anim-dur").value) || 20;
-                    callHost("pcTextHelper('" + animType + "','" + mode + "','" + animMode + "'," + dur + "," + glow + "," + easeOut() + "," + easeIn() + "," + boxDur + ")");
+                    callHost("pcTextHelper('" + animType + "','" + mode + "','" + animMode + "'," + dur + "," + glow + "," + easeOut() + "," + easeIn() + "," + boxDur + easeArgsGlobal() + ")");
                 });
             })(thBtns[ti]);
         }
@@ -1605,7 +1619,7 @@
                 var txt = hexToRgb(document.getElementById("tb-text").value);
                 var boxDur = parseInt(document.getElementById("tb-anim-dur").value) || 20;
                 var withAnim = evt.shiftKey ? 1 : 0;
-                callHost("pcCreateTextBox('" + mode + "'," + withAnim + "," + round + "," + pad + ",[" + bg + "],[" + txt + "]," + dur + "," + easeOut() + "," + easeIn() + "," + boxDur + ")");
+                callHost("pcCreateTextBox('" + mode + "'," + withAnim + "," + round + "," + pad + ",[" + bg + "],[" + txt + "]," + dur + "," + easeOut() + "," + easeIn() + "," + boxDur + easeArgsGlobal() + ")");
             });
         }
 
