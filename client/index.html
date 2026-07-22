@@ -14,7 +14,7 @@
             <div class="header-spacer"></div>
             <span id="comp-name" class="comp-name">Sin composición activa</span>
             <span id="layer-count" class="layer-count"></span>
-            <span id="version-badge" class="version-label">v1.8.3</span>
+            <span id="version-badge" class="version-label">v1.9.0</span>
             <button id="btn-update" class="icon-btn" title="Verificar actualización / Recargar panel">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
@@ -39,14 +39,7 @@
         </div>
         <!-- Ease + Zoom bar -->
         <div class="global-ease-bar">
-            <div class="ease-group">
-                <label title="Influencia de ease al salir de un keyframe (velocidad de salida)">Out</label>
-                <input type="number" id="ease-out" class="ease-input" value="33" min="0" max="100" title="Ease Out (0-100)">
-            </div>
-            <div class="ease-group">
-                <label title="Influencia de ease al llegar a un keyframe (velocidad de llegada)">In</label>
-                <input type="number" id="ease-in" class="ease-input" value="100" min="0" max="100" title="Ease In (0-100)">
-            </div>
+            <button id="btn-easing-toggle" class="btn btn-sm btn-ghost" title="Tipo de easing global (aplica a Animate y Apply Keyframes)">Easing: Default ▾</button>
             <div class="ease-divider"></div>
             <div class="ease-group">
                 <label title="Porcentaje de zoom por defecto para Quick Scale">Zoom</label>
@@ -58,6 +51,43 @@
             <button class="btn-defaults btn-reset-def" data-keys="ease-out,ease-in,cont-zoom-pct" title="Restaurar defaults">↩</button>
         </div>
     </header>
+
+    <!-- Global Easing Panel (desplegable desde el botón Easing) -->
+    <div id="easing-panel" class="easing-panel hidden">
+        <!-- Tipo de animación (easing global) -->
+        <div class="th-mode-bar an-ease-bar">
+            <label class="th-radio an-ease-radio active" data-tooltip="Ease clásico por influencia (usa los Out/In de abajo)"><input type="radio" name="an-ease" value="default" checked>Default</label>
+            <label class="th-radio an-ease-radio" data-tooltip="Se pasa del valor final y asienta suave (% configurable)"><input type="radio" name="an-ease" value="overshoot">Overshoot</label>
+            <label class="th-radio an-ease-radio" data-tooltip="Rebota contra el valor final, rebotes decrecientes (# configurable)"><input type="radio" name="an-ease" value="bounce">Bounce</label>
+            <label class="th-radio an-ease-radio" data-tooltip="Oscila alrededor del valor final con amortiguación (% configurable)"><input type="radio" name="an-ease" value="spring">Spring</label>
+            <label class="th-radio an-ease-radio" data-tooltip="Curva bezier del editor 〜 de abajo (clic para desplegarlo)"><input type="radio" name="an-ease" value="custom">Custom ✎</label>
+        </div>
+        <div class="easing-influence-row">
+            <div class="ease-group">
+                <label title="Influencia de ease al salir de un keyframe (velocidad de salida)">Out</label>
+                <input type="number" id="ease-out" class="ease-input" value="33" min="0" max="100" title="Ease Out (0-100)">
+            </div>
+            <div class="ease-group">
+                <label title="Influencia de ease al llegar a un keyframe (velocidad de llegada)">In</label>
+                <input type="number" id="ease-in" class="ease-input" value="100" min="0" max="100" title="Ease In (0-100)">
+            </div>
+            <!-- Parámetro del tipo seleccionado (solo aparece si aplica) -->
+            <div class="an-ease-params">
+                <span id="an-param-overshoot" class="an-param hidden">
+                    <label title="Cuánto se pasa del valor final (%)">Overshoot %</label>
+                    <input type="number" id="an-ovs" class="tool-input" value="10" min="1" max="100" step="1">
+                </span>
+                <span id="an-param-bounce" class="an-param hidden">
+                    <label title="Cantidad de rebotes">Rebotes</label>
+                    <input type="number" id="an-bounces" class="tool-input" value="2" min="1" max="6" step="1">
+                </span>
+                <span id="an-param-spring" class="an-param hidden">
+                    <label title="Amplitud de la oscilación (%)">Spring %</label>
+                    <input type="number" id="an-spring" class="tool-input" value="15" min="1" max="100" step="1">
+                </span>
+            </div>
+        </div>
+    </div>
 
     <!-- AI Settings Panel -->
     <div id="settings-panel" class="settings-panel hidden">
@@ -201,31 +231,6 @@
             <div class="tool-card-body hidden">
                 <div class="hl-hint">💡 Clic=In · Shift=In+Out · Alt=Out (en el playhead)</div>
 
-                <!-- Tipo de animación (easing) -->
-                <div class="th-mode-bar an-ease-bar">
-                    <label class="th-radio an-ease-radio active" data-tooltip="Ease clásico por influencia (usa Out/In del header)"><input type="radio" name="an-ease" value="default" checked>Default</label>
-                    <label class="th-radio an-ease-radio" data-tooltip="Se pasa del valor final y asienta suave (% configurable)"><input type="radio" name="an-ease" value="overshoot">Overshoot</label>
-                    <label class="th-radio an-ease-radio" data-tooltip="Rebota contra el valor final, rebotes decrecientes (# configurable)"><input type="radio" name="an-ease" value="bounce">Bounce</label>
-                    <label class="th-radio an-ease-radio" data-tooltip="Oscila alrededor del valor final con amortiguación (% configurable)"><input type="radio" name="an-ease" value="spring">Spring</label>
-                    <label class="th-radio an-ease-radio" data-tooltip="Curva bezier del editor 〜 de abajo (clic para desplegarlo)"><input type="radio" name="an-ease" value="custom">Custom ✎</label>
-                </div>
-
-                <!-- Parámetro del tipo seleccionado (solo aparece si aplica) -->
-                <div class="an-ease-params">
-                    <span id="an-param-overshoot" class="an-param hidden">
-                        <label title="Cuánto se pasa del valor final (%)">Overshoot %</label>
-                        <input type="number" id="an-ovs" class="tool-input" value="10" min="1" max="100" step="1">
-                    </span>
-                    <span id="an-param-bounce" class="an-param hidden">
-                        <label title="Cantidad de rebotes">Rebotes</label>
-                        <input type="number" id="an-bounces" class="tool-input" value="2" min="1" max="6" step="1">
-                    </span>
-                    <span id="an-param-spring" class="an-param hidden">
-                        <label title="Amplitud de la oscilación (%)">Spring %</label>
-                        <input type="number" id="an-spring" class="tool-input" value="15" min="1" max="100" step="1">
-                    </span>
-                </div>
-
                 <div class="an-grid">
                     <button class="an-btn" id="btn-an-fade" data-tooltip="Fade de opacidad · Clic=In / Shift=In+Out / Alt=Out">
                         <svg class="th-svg" viewBox="0 0 20 20"><circle cx="6" cy="10" r="3.5" stroke="currentColor" stroke-width="1.5" fill="none" opacity=".35"/><circle cx="13" cy="10" r="3.5" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
@@ -260,21 +265,23 @@
                         <span class="th-label">Down</span>
                     </button>
                     <button class="an-btn" id="btn-an-stagger" data-tooltip="Desplaza keyframes en cascada: Stag frames por paso, 'Cada' agrupa clips (ej. 5 frames cada 2 clips)">
-                        <svg class="th-svg" viewBox="0 0 20 20"><rect x="3" y="4" width="9" height="2.5" rx="1" fill="currentColor" opacity=".9"/><rect x="6" y="9" width="9" height="2.5" rx="1" fill="currentColor" opacity=".6"/><rect x="9" y="14" width="9" height="2.5" rx="1" fill="currentColor" opacity=".35"/></svg>
-                        <span class="th-label">Stagger →</span>
+                        <span class="an-btn-iconrow"><svg class="th-svg" viewBox="0 0 20 20"><rect x="3" y="4" width="9" height="2.5" rx="1" fill="currentColor" opacity=".9"/><rect x="6" y="9" width="9" height="2.5" rx="1" fill="currentColor" opacity=".6"/><rect x="9" y="14" width="9" height="2.5" rx="1" fill="currentColor" opacity=".35"/></svg><span class="an-btn-dir">→</span></span>
+                        <span class="th-label">Stagger</span>
                     </button>
                     <button class="an-btn" id="btn-an-stagger-rev" data-tooltip="Stagger inverso: la última capa queda fija. 'Cada' agrupa clips (ej. 5 frames cada 2 clips)">
-                        <svg class="th-svg" viewBox="0 0 20 20"><rect x="8" y="4" width="9" height="2.5" rx="1" fill="currentColor" opacity=".35"/><rect x="5" y="9" width="9" height="2.5" rx="1" fill="currentColor" opacity=".6"/><rect x="2" y="14" width="9" height="2.5" rx="1" fill="currentColor" opacity=".9"/></svg>
-                        <span class="th-label">Stagger ←</span>
+                        <span class="an-btn-iconrow"><svg class="th-svg" viewBox="0 0 20 20"><rect x="8" y="4" width="9" height="2.5" rx="1" fill="currentColor" opacity=".35"/><rect x="5" y="9" width="9" height="2.5" rx="1" fill="currentColor" opacity=".6"/><rect x="2" y="14" width="9" height="2.5" rx="1" fill="currentColor" opacity=".9"/></svg><span class="an-btn-dir">←</span></span>
+                        <span class="th-label">Stagger</span>
                     </button>
+                    <div class="an-stagger-opts">
+                        <label title="Frames de desplazamiento entre capas para Stagger">Stag</label><input type="number" id="an-stagger" class="tool-input" value="5" min="1" title="Frames">
+                        <label title="Cada cuántos clips avanza el paso del stagger (ej. 2 = de a pares)">Cada</label><input type="number" id="an-stagger-every" class="tool-input" value="1" min="1" max="20" title="Cada cuántos clips avanza el paso del stagger">
+                    </div>
                 </div>
 
                 <div class="tool-inline-row">
                     <label title="Duración de la animación en frames">Dur</label><input type="number" id="an-dur" class="tool-input" value="16" min="1" max="300" title="Frames">
                     <label title="Distancia del slide en píxeles">Slide</label><input type="number" id="an-slide" class="tool-input" value="200" min="1" title="px">
-                    <label title="Grados de rotación">Rot</label><input type="number" id="an-rot" class="tool-input" value="90" min="1" title="Grados">
-                    <label title="Frames de desplazamiento entre capas para Stagger">Stag</label><input type="number" id="an-stagger" class="tool-input" value="5" min="1" title="Frames">
-                    <label title="Cada cuántos clips avanza el paso del stagger (ej. 2 = de a pares)">Cada</label><input type="number" id="an-stagger-every" class="tool-input" value="1" min="1" max="20" title="Cada cuántos clips avanza el paso del stagger">
+                    <label title="Grados que giran los botones Rot ⟳/⟲ (ej. 90 = entra rotando desde −90°)">Rot °</label><input type="number" id="an-rot" class="tool-input" value="90" min="1" title="Grados que giran los botones Rot ⟳/⟲ (ej. 90 = entra rotando desde −90°)">
                     <button class="btn-defaults btn-save-def" data-keys="an-dur,an-slide,an-rot,an-stagger,an-stagger-every,an-ovs,an-bounces,an-spring" title="Guardar como default">💾</button>
                     <button class="btn-defaults btn-reset-def" data-keys="an-dur,an-slide,an-rot,an-stagger,an-stagger-every,an-ovs,an-bounces,an-spring" title="Restaurar defaults">↩</button>
                 </div>
@@ -535,20 +542,24 @@
             <span id="curve-drawer-arrow" class="toggle-icon">▸</span>
         </div>
         <div id="curve-drawer-body" class="curve-drawer-body hidden">
-            <canvas id="curve-canvas" width="260" height="220"></canvas>
-            <div class="curve-values">
-                <input type="number" id="curve-x1" class="tool-input curve-num" step="0.01" min="0" max="1" title="x1 (0-1)">
-                <input type="number" id="curve-y1" class="tool-input curve-num" step="0.01" min="-2" max="3" title="y1">
-                <input type="number" id="curve-x2" class="tool-input curve-num" step="0.01" min="0" max="1" title="x2 (0-1)">
-                <input type="number" id="curve-y2" class="tool-input curve-num" step="0.01" min="-2" max="3" title="y2">
+            <div class="curve-col curve-col-editor">
+                <canvas id="curve-canvas" width="260" height="220"></canvas>
+                <div class="curve-values">
+                    <input type="number" id="curve-x1" class="tool-input curve-num" step="0.01" min="0" max="1" title="x1 (0-1)">
+                    <input type="number" id="curve-y1" class="tool-input curve-num" step="0.01" min="-2" max="3" title="y1">
+                    <input type="number" id="curve-x2" class="tool-input curve-num" step="0.01" min="0" max="1" title="x2 (0-1)">
+                    <input type="number" id="curve-y2" class="tool-input curve-num" step="0.01" min="-2" max="3" title="y2">
+                </div>
             </div>
-            <div class="curve-preset-save">
-                <input type="text" id="curve-preset-name" class="text-input" placeholder="Nombre del preset...">
-                <input type="text" id="curve-preset-group" class="text-input" placeholder="Grupo" list="curve-groups">
-                <datalist id="curve-groups"></datalist>
-                <button id="curve-preset-savebtn" class="btn btn-sm btn-ghost">💾</button>
+            <div class="curve-col curve-col-presets">
+                <div class="curve-preset-save">
+                    <input type="text" id="curve-preset-name" class="text-input" placeholder="Nombre del preset...">
+                    <input type="text" id="curve-preset-group" class="text-input" placeholder="Grupo" list="curve-groups">
+                    <datalist id="curve-groups"></datalist>
+                    <button id="curve-preset-savebtn" class="btn btn-sm btn-ghost">💾</button>
+                </div>
+                <div id="curve-preset-list" class="curve-preset-list"></div>
             </div>
-            <div id="curve-preset-list" class="curve-preset-list"></div>
         </div>
     </div>
 

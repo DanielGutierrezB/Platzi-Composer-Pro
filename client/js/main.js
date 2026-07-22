@@ -1448,7 +1448,15 @@
             }
             var lbl = document.getElementById("ease-type-label");
             if (lbl) lbl.textContent = EASE_LABELS[type] || type;
+            var btn = document.getElementById("btn-easing-toggle");
+            if (btn) btn.textContent = "Easing: " + (EASE_LABELS[type] || type) + " ▾";
         }
+
+        // Botón "Easing: <tipo> ▾" del header → despliega el panel global
+        on("btn-easing-toggle", "click", function() {
+            var panel = document.getElementById("easing-panel");
+            if (panel) panel.classList.toggle("hidden");
+        });
         (function() {
             var radios = document.querySelectorAll(".an-ease-radio");
             for (var r = 0; r < radios.length; r++) {

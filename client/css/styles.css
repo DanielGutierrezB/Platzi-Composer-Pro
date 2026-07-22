@@ -387,7 +387,7 @@ html, body {
 /* ─── Tool Cards ─── */
 
 .tools-container {
-    padding: 6px 8px 76px; /* el bottom deja lugar a la paleta + curve drawer */
+    padding: 6px 8px 90px; /* el bottom deja lugar a la paleta + curve drawer */
     display: flex;
     flex-direction: column;
     gap: 0;
@@ -1263,10 +1263,22 @@ html, body {
 .curve-drawer-body {
     padding: 8px 12px 12px;
     display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 14px;
+}
+.curve-drawer-body.hidden { display: none; }
+.curve-col {
+    display: flex;
     flex-direction: column;
     gap: 8px;
 }
-.curve-drawer-body.hidden { display: none; }
+.curve-col-editor { flex: 0 0 auto; }
+.curve-col-presets { flex: 1; min-width: 0; }
+@media (max-width: 420px) {
+    .curve-drawer-body { flex-direction: column; align-items: center; }
+    .curve-col-presets { width: 100%; }
+}
 #curve-canvas {
     border-radius: var(--radius-sm, 4px);
     cursor: crosshair;
@@ -1282,10 +1294,51 @@ html, body {
     text-align: center;
     font-family: monospace;
 }
+/* Panel de easing global (desplegable desde el botón Easing del header) */
+.easing-panel {
+    background: var(--bg-raised, var(--bg-surface));
+    border-bottom: 1px solid var(--border);
+    padding: 8px 12px;
+}
+.easing-panel.hidden { display: none; }
+.easing-panel .an-ease-bar { margin-bottom: 6px; }
+.easing-influence-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+.easing-influence-row .ease-group {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.an-btn-iconrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.an-btn-dir {
+    font-size: 11px;
+    line-height: 1;
+    color: currentColor;
+}
+.an-stagger-opts {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 3px;
+    padding: 4px 6px;
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-sm, 4px);
+    font-size: 9px;
+    color: var(--text-secondary);
+}
+.an-stagger-opts label { font-size: 9px; }
+.an-stagger-opts .tool-input { width: 100%; }
 .an-ease-params {
     display: flex;
     gap: 6px;
-    margin-bottom: 6px;
     min-height: 0;
 }
 .an-param {
