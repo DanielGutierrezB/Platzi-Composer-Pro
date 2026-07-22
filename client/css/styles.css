@@ -1246,6 +1246,13 @@ html, body {
     user-select: none;
 }
 .curve-drawer-header:hover { background: var(--bg-hover); }
+.curve-hint {
+    font-size: 9px;
+    color: var(--text-muted);
+    margin-left: auto;
+    margin-right: 8px;
+    white-space: nowrap;
+}
 .curve-title {
     font-size: 10px;
     font-weight: 700;

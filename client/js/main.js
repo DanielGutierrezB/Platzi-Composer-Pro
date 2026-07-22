@@ -1840,8 +1840,14 @@
                 if (!dragging) return;
                 var m = mousePos(e);
                 var pt = fromPx(m.x, m.y);
-                var nx = clamp(pt.x, 0, 1);
-                var ny = clamp(pt.y, -2, 3);
+                var nx = pt.x, ny = pt.y;
+                // Shift = snap a la cuadrícula (paso 0.25), como Flow.
+                if (e.shiftKey) {
+                    nx = Math.round(nx / 0.25) * 0.25;
+                    ny = Math.round(ny / 0.25) * 0.25;
+                }
+                nx = clamp(nx, 0, 1);
+                ny = clamp(ny, -2, 3);
                 if (dragging === "p1") { cur.x1 = nx; cur.y1 = ny; }
                 else { cur.x2 = nx; cur.y2 = ny; }
                 draw();
