@@ -1858,14 +1858,19 @@ function pcTextHelper(animType, mode, animMode, durationFrames, enableGlow, ease
         app.beginUndoGroup("Text Helper - " + animType);
         var textLayer;
 
-        // Auto-detect: if a text layer is selected, apply to it; otherwise create new
+        // Auto-detect: buscar el PRIMER text layer en la selecci\u00f3n (no solo sel[0]),
+        // as\u00ed funciona aunque est\u00e9n seleccionadas ambas capas (texto + caja) en
+        // cualquier orden. Si no hay texto seleccionado, crear uno nuevo.
         var sel = comp.selectedLayers;
-        if (sel && sel.length > 0 && sel[0] instanceof TextLayer) {
-            textLayer = sel[0];
-        } else {
+        if (sel) {
+            for (var si = 0; si < sel.length; si++) {
+                if (sel[si] instanceof TextLayer) { textLayer = sel[si]; break; }
+            }
+        }
+        if (!textLayer) {
             // Create new text layer
             textLayer = comp.layers.addText("Tu texto aqu\u00ed");
-            textLayer.property("Position").setValue([comp.width / 2, comp.height / 2]);
+            textLayer.property("ADBE Transform Group").property("ADBE Position").setValue([comp.width / 2, comp.height / 2]);
             var textDoc = textLayer.property("ADBE Text Properties").property("ADBE Text Document").value;
             textDoc.fontSize = 80;
             textDoc.fillColor = [1, 1, 1];
@@ -1995,10 +2000,20 @@ function pcTextHelper(animType, mode, animMode, durationFrames, enableGlow, ease
         try { glow.property("Glow Intensity").setValue(1); } catch(ex) {}
         glow.enabled = enableGlow;
 
-        // Si el texto tiene una caja de fondo (creada con el Recuadro), re-sincronizar
-        // su animación de entrada al nuevo modo/duración (solo cuando hay entrada).
+        // Re-sincronizar la caja de fondo al nuevo modo/duración (solo con entrada).
+        // Se toma: (a) una shape "Box" que esté SELECCIONADA, o (b) la emparentada
+        // al texto. Así funciona seleccionando ambas capas o solo el texto.
         if (animMode === "in" || animMode === "inout") {
-            var boxLayer = _pcFindBoxForText(comp, textLayer);
+            var boxLayer = null;
+            if (sel) {
+                for (var bi = 0; bi < sel.length; bi++) {
+                    var cand = sel[bi];
+                    try {
+                        if (cand instanceof ShapeLayer && cand.name.substring(cand.name.length - 3) === "Box") { boxLayer = cand; break; }
+                    } catch(ex) {}
+                }
+            }
+            if (!boxLayer) boxLayer = _pcFindBoxForText(comp, textLayer);
             if (boxLayer) {
                 var txtStrRB = "";
                 try { txtStrRB = textLayer.property("ADBE Text Properties").property("ADBE Text Document").value.text; } catch(ex) {}
