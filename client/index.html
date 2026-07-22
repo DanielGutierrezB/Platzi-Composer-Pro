@@ -14,7 +14,7 @@
             <div class="header-spacer"></div>
             <span id="comp-name" class="comp-name">Sin composición activa</span>
             <span id="layer-count" class="layer-count"></span>
-            <span id="version-badge" class="version-label">v1.10.0</span>
+            <span id="version-badge" class="version-label">v1.10.1</span>
             <button id="btn-update" class="icon-btn" title="Verificar actualización / Recargar panel">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
@@ -62,9 +62,11 @@
                 <button id="btn-mirror-keys" class="btn-palette-action" data-tooltip="Clone & Mirror Keys al playhead">⇄</button>
             </div>
             <div class="ease-divider"></div>
-            <span id="ease-type-label" class="ease-type-label" data-tooltip="Tipo de easing global activo">Default</span>
-            <button id="btn-apply-ease" class="btn-palette-action btn-apply-ease" data-tooltip="Aplica el easing actual a los keyframes seleccionados">Apply Keyframes</button>
-            <button id="btn-curve-toggle" class="btn btn-sm btn-ghost" data-tooltip="Editor de curva custom · Shift al arrastrar = snap a la cuadrícula">〜 Curva ▸</button>
+            <div class="apply-curve-group">
+                <span id="ease-type-label" class="ease-type-label" data-tooltip="Tipo de easing global activo (se aplica con Shift+Clic en Apply)">Default</span>
+                <button id="btn-apply-ease" class="btn-apply-ease" data-tooltip="Clic: aplica la curva Custom a los keyframes seleccionados · Shift+Clic: aplica el tipo de easing global">Apply Keyframes</button>
+                <button id="btn-curve-toggle" class="btn btn-sm btn-ghost" data-tooltip="Editor de curva custom · Shift al arrastrar = snap a la cuadrícula">〜 Curva ▸</button>
+            </div>
         </div>
     </header>
 

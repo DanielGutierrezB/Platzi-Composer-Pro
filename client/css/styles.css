@@ -1348,16 +1348,39 @@ body {
     margin-left: 8px;
     white-space: nowrap;
 }
-.btn-apply-ease {
-    width: auto;
-    height: 18px;
-    font-size: 9px;
-    font-weight: 600;
+/* Grupo Apply Keyframes + Curva: siempre juntos (unidad en el wrap) */
+.apply-curve-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: nowrap;
     white-space: nowrap;
-    padding: 0 8px;
+}
+.btn-apply-ease {
+    height: 24px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    white-space: nowrap;
+    padding: 0 12px;
+    border: none;
+    border-radius: var(--radius-sm, 4px);
+    background: linear-gradient(135deg, var(--brand-start, #a78bfa), var(--brand-end, #60a5fa));
+    color: #0b0b10;
+    cursor: pointer;
+    box-shadow: 0 0 8px var(--accent-glow, rgba(129, 140, 248, 0.25));
+    transition: all var(--transition);
+}
+.btn-apply-ease:hover {
+    filter: brightness(1.15);
+    box-shadow: 0 0 14px var(--accent-glow, rgba(129, 140, 248, 0.45));
+}
+.btn-apply-ease:active {
+    transform: scale(0.97);
 }
 @media (max-width: 360px) {
-    .btn-apply-ease { padding: 0 5px; font-size: 8px; }
+    .btn-apply-ease { padding: 0 7px; font-size: 9px; }
     .ease-type-label { display: none; }
 }
 .curve-preset-save {

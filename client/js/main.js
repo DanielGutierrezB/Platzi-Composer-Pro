@@ -908,11 +908,18 @@
 
     // ─── Save Action Log ─────────────────────────────────────────
     function saveActionLog() {
-        if (actionLog.length === 0) {
+        // Incluir el historial persistente de updates (sobrevive reloads,
+        // porque location.reload() borra actionLog en memoria).
+        var updateHistory = [];
+        try { updateHistory = JSON.parse(localStorage.getItem("pc_update_log") || "[]"); } catch(_) {}
+        var full = updateHistory.length > 0
+            ? [{ action: "updateHistory", entries: updateHistory }].concat(actionLog)
+            : actionLog;
+        if (full.length === 0) {
             showToast("No hay acciones registradas todavía.", "info");
             return;
         }
-        var payload = JSON.stringify(actionLog);
+        var payload = JSON.stringify(full);
         var escaped = escExtend(payload);
         csInterface.evalScript('saveLogToFile("' + escaped + '")', function(result) {
             try {
@@ -926,6 +933,20 @@
     }
 
     // ─── Update Check ────────────────────────────────────────────
+
+    // Log del updater: en memoria Y persistente (localStorage), porque los
+    // location.reload() del flujo de update borran el actionLog en memoria.
+    // El botón 🗎 incluye este historial para poder compartir fallos.
+    function logUpdate(step, data) {
+        logAction("update:" + step, data);
+        try {
+            var hist = JSON.parse(localStorage.getItem("pc_update_log") || "[]");
+            hist.push({ step: step, version: LOCAL_VERSION, timestamp: new Date().toISOString(), data: data == null ? null : data });
+            if (hist.length > 60) hist = hist.slice(hist.length - 60);
+            localStorage.setItem("pc_update_log", JSON.stringify(hist));
+        } catch(_) {}
+    }
+
     function compareVersions(a, b) {
         var pa = String(a).split(".").map(function(n) { return parseInt(n, 10) || 0; });
         var pb = String(b).split(".").map(function(n) { return parseInt(n, 10) || 0; });
@@ -941,6 +962,7 @@
 
     function checkForUpdate() {
         showToast("Verificando actualización...", "info");
+        logUpdate("check-start", { local: LOCAL_VERSION });
 
         var xhr = new XMLHttpRequest();
         xhr.open("GET", REMOTE_VERSION_URL + "?_=" + Date.now(), true);
@@ -948,21 +970,42 @@
         xhr.onload = function() {
             if (xhr.status >= 200 && xhr.status < 300) {
                 var remote = (xhr.responseText || "").replace(/\s+/g, "");
-                if (!remote) { location.reload(); return; }
+                if (!remote) {
+                    logUpdate("check-empty-response", { status: xhr.status });
+                    showToast("⚠️ Respuesta vacía del servidor de versiones — recargando panel", "error");
+                    setTimeout(function() { location.reload(); }, 1500);
+                    return;
+                }
+                logUpdate("check-remote", { remote: remote, local: LOCAL_VERSION });
                 if (compareVersions(remote, LOCAL_VERSION) > 0) {
                     showToast("v" + remote + " disponible — descargando...", "info");
                     _doGitHubUpdate(remote);
                 } else {
+                    logUpdate("check-up-to-date", { remote: remote });
                     showToast("Ya estás en la última versión ✓", "info");
-                    location.reload();
+                    setTimeout(function() { location.reload(); }, 800);
                 }
             } else {
-                location.reload();
+                logUpdate("check-http-error", { status: xhr.status });
+                showToast("⚠️ No se pudo verificar la versión (HTTP " + xhr.status + ") — recargando panel", "error");
+                setTimeout(function() { location.reload(); }, 1500);
             }
         };
-        xhr.onerror = function() { location.reload(); };
-        xhr.ontimeout = function() { location.reload(); };
-        try { xhr.send(); } catch(e) { location.reload(); }
+        xhr.onerror = function() {
+            logUpdate("check-network-error", null);
+            showToast("⚠️ Sin conexión al servidor de versiones — recargando panel", "error");
+            setTimeout(function() { location.reload(); }, 1500);
+        };
+        xhr.ontimeout = function() {
+            logUpdate("check-timeout", null);
+            showToast("⚠️ Timeout verificando versión — recargando panel", "error");
+            setTimeout(function() { location.reload(); }, 1500);
+        };
+        try { xhr.send(); } catch(e) {
+            logUpdate("check-exception", { error: e.message });
+            showToast("⚠️ Error verificando versión: " + e.message, "error");
+            setTimeout(function() { location.reload(); }, 1500);
+        }
     }
 
     // ─── GitHub Hybrid Updater (git pull → ZIP fallback) ─────────
@@ -975,7 +1018,8 @@
             https = require("https");
             os = require("os");
         } catch(e) {
-            showToast("Error: Node modules no disponibles", "error");
+            logUpdate("node-unavailable", { error: e.message });
+            showToast("❌ Node no disponible en este panel — reinstalá el .zxp para actualizar", "error");
             return;
         }
 
@@ -984,6 +1028,7 @@
 
         var gitDir = path.join(extPath, ".git");
         var hasGit = fs.existsSync(gitDir);
+        logUpdate("update-start", { target: remoteVersion, extPath: extPath, hasGit: hasGit });
 
         if (hasGit) {
             // Try git pull first
@@ -992,10 +1037,12 @@
                 { cwd: extPath, timeout: 60000 },
                 function(err, stdout, stderr) {
                     if (err) {
+                        logUpdate("git-pull-failed", { error: err.message, stderr: ("" + (stderr || "")).substring(0, 300) });
                         showToast("Git pull falló, intentando ZIP...", "info");
                         _downloadZipUpdate(extPath, remoteVersion, fs, path, cp, https, os);
                         return;
                     }
+                    logUpdate("git-pull-ok", { stdout: ("" + (stdout || "")).substring(0, 200) });
                     showToast("✅ Actualizado a v" + remoteVersion, "info");
                     setTimeout(function() { location.reload(); }, 800);
                 }
@@ -1016,15 +1063,18 @@
             fs.writeFileSync(wtest, "ok");
             fs.unlinkSync(wtest);
         } catch(e) {
+            logUpdate("no-write-permission", { extPath: extPath, error: e.message });
             showToast("❌ Sin permiso de escritura en la carpeta de la extensión. Reinstalá el .zxp.", "error");
             return;
         }
 
         showToast("Descargando update...", "info");
+        logUpdate("zip-download-start", { url: zipUrl });
 
         _httpsDownload(zipUrl, zipPath, https, function(dlErr) {
             if (dlErr) {
-                showToast("Error descargando: " + dlErr.message, "error");
+                logUpdate("zip-download-failed", { error: dlErr.message });
+                showToast("❌ Error descargando: " + dlErr.message, "error");
                 return;
             }
 
@@ -1045,7 +1095,8 @@
 
             cp.execFile(cmd, args, { timeout: 120000 }, function(exErr) {
                 if (exErr) {
-                    showToast("Error extrayendo: " + exErr.message, "error");
+                    logUpdate("zip-extract-failed", { error: exErr.message });
+                    showToast("❌ Error extrayendo: " + exErr.message, "error");
                     try { fs.unlinkSync(zipPath); } catch(_) {}
                     return;
                 }
@@ -1061,7 +1112,8 @@
                 }
 
                 if (!extractedRoot) {
-                    showToast("Error: no se encontró carpeta en ZIP", "error");
+                    logUpdate("zip-no-root", { entries: entries.length });
+                    showToast("❌ Error: no se encontró carpeta en ZIP", "error");
                     return;
                 }
 
@@ -1082,6 +1134,11 @@
                 } catch(_) {}
 
                 if (copyResult.failed > 0 || installedVersion !== remoteVersion) {
+                    logUpdate("zip-install-incomplete", {
+                        copied: copyResult.copied, failed: copyResult.failed,
+                        installedVersion: installedVersion, target: remoteVersion,
+                        errors: copyResult.errors.slice(0, 5)
+                    });
                     var emsg = "❌ Update incompleto";
                     if (copyResult.failed > 0) emsg += " — " + copyResult.failed + " archivo(s) no se pudieron escribir (permisos). Reinstalá el .zxp.";
                     else emsg += " — VERSION en disco quedó en " + (installedVersion || "?") + ". Reinstalá el .zxp.";
@@ -1089,6 +1146,7 @@
                     return;
                 }
 
+                logUpdate("zip-install-ok", { copied: copyResult.copied, version: installedVersion });
                 showToast("✅ Actualizado a v" + remoteVersion + " — recargando...", "info");
                 setTimeout(function() { location.reload(); }, 1000);
             });
@@ -1169,7 +1227,8 @@
         toast.textContent = msg;
         toast.className = "toast toast-" + type + " show";
         clearTimeout(toast._timeout);
-        toast._timeout = setTimeout(function() { toast.classList.remove("show"); }, 3500);
+        // Los errores duran más para que dé tiempo de leerlos.
+        toast._timeout = setTimeout(function() { toast.classList.remove("show"); }, type === "error" ? 7000 : 3500);
     }
 
     function showElement(id) {
@@ -1485,13 +1544,18 @@
             refreshEaseUI();
         })();
 
-        // Apply Keyframes (barra inferior): aplica el tipo de animación
-        // actual a los keyframes seleccionados, sin ir a la pestaña Animate.
-        on("btn-apply-ease", "click", function() {
-            var type = anEaseType();
-            if (type === "custom") {
+        // Apply Keyframes: clic = SIEMPRE la curva Custom del editor 〜.
+        // Shift+clic = el tipo de easing global seleccionado en "Easing".
+        on("btn-apply-ease", "click", function(evt) {
+            if (!evt.shiftKey) {
                 var c = pcCurve.current();
                 callHost("pcApplyEaseToSelected('bezier', " + easeOut() + ", " + easeIn() + ", " + c.x1 + ", " + c.y1 + ", " + c.x2 + ", " + c.y2 + ", 0)");
+                return;
+            }
+            var type = anEaseType();
+            if (type === "custom") {
+                var cc = pcCurve.current();
+                callHost("pcApplyEaseToSelected('bezier', " + easeOut() + ", " + easeIn() + ", " + cc.x1 + ", " + cc.y1 + ", " + cc.x2 + ", " + cc.y2 + ", 0)");
             } else {
                 callHost("pcApplyEaseToSelected('" + type + "', " + easeOut() + ", " + easeIn() + ", 0, 0, 0, 0, " + anEaseParam(type) + ")");
             }
