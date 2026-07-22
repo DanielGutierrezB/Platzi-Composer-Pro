@@ -2473,8 +2473,14 @@ function _pcApplyCurvePair(prop, kA, kB, x1, y1, x2, y2) {
     if (dt <= 0) return;
     var vA = prop.keyValue(kA), vB = prop.keyValue(kB);
     var dim = _pcEaseDim(prop);
+    // Propiedades NO numéricas (Mask Path/Shape, etc.): no hay delta de
+    // valor para calcular speed → se aplica la curva solo por influencias
+    // (speed 0). Sin esto, vB - vA daba NaN y el ease fallaba en silencio.
+    var numeric = (typeof vA === "number") || (vA instanceof Array);
     var dvs = [], d;
-    if (dim === 1) {
+    if (!numeric) {
+        for (d = 0; d < dim; d++) dvs.push(0);
+    } else if (dim === 1) {
         if (vA instanceof Array) { // spatial: distancia (positiva)
             var sum = 0;
             for (d = 0; d < vA.length; d++) { var dd = vB[d] - vA[d]; sum += dd * dd; }
@@ -2849,12 +2855,19 @@ function pcApplyEaseToSelected(easeType, eo, ei, x1, y1, x2, y2, p1) {
                     // Capturar tiempos ANTES (insertar keys corre los índices)
                     var times = [];
                     for (var q = 0; q < sel.length; q++) times.push(p.keyTime(sel[q]));
+                    // Propiedades no numéricas (Mask Path, etc.): no se pueden
+                    // hornear perfiles (no hay lerp de shapes) → los tipos
+                    // físicos caen a influencia; la curva bezier sí aplica
+                    // (por influencias, speed 0).
+                    var vTest = null;
+                    try { vTest = p.keyValue(p.nearestKeyIndex(times[0])); } catch(exV) {}
+                    var isNumeric = (typeof vTest === "number") || (vTest instanceof Array);
                     for (var k = 0; k < times.length - 1; k++) {
                         if (easeType === "bezier") {
                             _pcApplyCurvePair(p, p.nearestKeyIndex(times[k]), p.nearestKeyIndex(times[k + 1]), x1, y1, x2, y2);
-                        } else if (easeType === "overshoot" || easeType === "bounce" || easeType === "spring") {
+                        } else if (isNumeric && (easeType === "overshoot" || easeType === "bounce" || easeType === "spring")) {
                             _pcBakeProfileBetween(p, times[k], times[k + 1], easeType, sp);
-                        } else { // default
+                        } else { // default (o físico sobre prop no numérica)
                             _pcApplyInfluencePair(p, p.nearestKeyIndex(times[k]), p.nearestKeyIndex(times[k + 1]), eo, ei);
                         }
                         pairs++;
