@@ -2092,21 +2092,39 @@ function pcCreateTextBox(mode, withAnim, roundness, padding, bgColor, textColor,
         var fill = grpContents.addProperty("ADBE Vector Graphic - Fill");
         fill.property("ADBE Vector Fill Color").setValue(bgColor4);
 
-        // 6) Animación de ENTRADA de la caja (solo Shift+clic). Fade-up: sube desde
-        //    abajo + fade in, misma duración que la entrada del texto (t0→t1) y
-        //    arrancando en el playhead. La caja está emparentada, así que animamos
-        //    su transform relativo (posición Y y opacidad). El tamaño sigue fijo.
+        // 6) Animación de ENTRADA de la caja (solo Shift+clic). Fade-up desde el
+        //    playhead. La caja debe entrar sincronizada con la PRIMERA unidad
+        //    (char/word/line), no estirarse hasta la última. Por eso su duración
+        //    es la porción de la primera unidad: durationFrames / (nº de unidades).
         if (doAnim) {
             step = "box-anim";
             try {
+                // Contar unidades según el modo, desde el texto real.
+                var txtStr = "";
+                try { txtStr = textLayer.property("ADBE Text Properties").property("ADBE Text Document").value.text; } catch(exT) {}
+                var units = 1;
+                if (mode === "word") {
+                    var trimmed = txtStr.replace(/^\s+/, "").replace(/\s+$/, "");
+                    units = (trimmed === "") ? 1 : trimmed.split(/\s+/).length;
+                } else if (mode === "line") {
+                    units = txtStr.split(/[\r\n]/).length;
+                } else { // char
+                    units = txtStr.replace(/\s/g, "").length;
+                }
+                if (units < 1) units = 1;
+                var boxDurFrames = Math.round(durationFrames / units);
+                if (boxDurFrames < 3) boxDurFrames = 3;
+                if (boxDurFrames > durationFrames) boxDurFrames = durationFrames;
+                var tBoxEnd = t0 + boxDurFrames / fps;
+
                 var opP = box.property("ADBE Transform Group").property("ADBE Opacity");
                 var posP = box.property("ADBE Transform Group").property("ADBE Position");
                 var restPos = posP.value; // relativo (ya emparentado)
                 var rpX = restPos[0], rpY = restPos[1];
                 var ka = opP.addKey(t0);  opP.setValueAtKey(ka, 0);
-                var kb = opP.addKey(t1);  opP.setValueAtKey(kb, 100);
+                var kb = opP.addKey(tBoxEnd);  opP.setValueAtKey(kb, 100);
                 var kc = posP.addKey(t0); posP.setValueAtKey(kc, [rpX, rpY + 30]);
-                var kd = posP.addKey(t1); posP.setValueAtKey(kd, [rpX, rpY]);
+                var kd = posP.addKey(tBoxEnd); posP.setValueAtKey(kd, [rpX, rpY]);
                 try {
                     opP.setInterpolationTypeAtKey(ka, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
                     opP.setInterpolationTypeAtKey(kb, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
