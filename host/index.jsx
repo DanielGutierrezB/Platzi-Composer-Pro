@@ -1784,6 +1784,71 @@ function pcCornerProfesor(corner, circular, durationFrames, sizePx, animate, eas
     } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
 }
 
+// ─── HELPERS COMPARTIDOS (caja + texto) ─────────────────────────
+
+// Cuenta unidades del texto según el modo (char/word/line) para sincronizar
+// la entrada de la caja con la PRIMERA unidad.
+function _pcCountUnits(txtStr, mode) {
+    if (!txtStr) return 1;
+    var n = 1;
+    if (mode === "word") {
+        var t = txtStr.replace(/^\s+/, "").replace(/\s+$/, "");
+        n = (t === "") ? 1 : t.split(/\s+/).length;
+    } else if (mode === "line") {
+        n = txtStr.split(/[\r\n]/).length;
+    } else {
+        n = txtStr.replace(/\s/g, "").length;
+    }
+    return n < 1 ? 1 : n;
+}
+
+// Busca la caja de fondo: shape layer emparentada a textLayer (la que crea
+// pcCreateTextBox). Devuelve la primera que encuentre, o null.
+function _pcFindBoxForText(comp, textLayer) {
+    for (var i = 1; i <= comp.numLayers; i++) {
+        var L = comp.layer(i);
+        try {
+            if (L instanceof ShapeLayer && L.parent !== null && L.parent.index === textLayer.index &&
+                L.name.substring(L.name.length - 3) === "Box") return L;
+        } catch(ex) {}
+    }
+    return null;
+}
+
+// Aplica / re-sincroniza la animación de ENTRADA de la caja: fade-up
+// (abajo→arriba) + fade in, duración = 1ra unidad (durationFrames/unidades),
+// arrancando en t0. Keyframes (no expresiones). Limpia lo previo.
+function _pcAnimateBoxEntrance(box, txtStr, mode, durationFrames, t0, fps, easeOut, easeIn) {
+    try {
+        var opP = box.property("ADBE Transform Group").property("ADBE Opacity");
+        var posP = box.property("ADBE Transform Group").property("ADBE Position");
+        // Reposo: último keyframe si ya animaba; si no, el valor actual.
+        var rest;
+        if (posP.numKeys > 0) rest = posP.keyValue(posP.numKeys);
+        else rest = posP.value;
+        _pcClearKeys(posP); _pcClearKeys(opP);
+        try { posP.setValue(rest); } catch(ex) {}
+        var rx = rest[0], ry = rest[1];
+        var units = _pcCountUnits(txtStr, mode);
+        var boxDurFrames = Math.round(durationFrames / units);
+        if (boxDurFrames < 3) boxDurFrames = 3;
+        if (boxDurFrames > durationFrames) boxDurFrames = durationFrames;
+        var t1b = t0 + boxDurFrames / fps;
+        var ka = opP.addKey(t0);   opP.setValueAtKey(ka, 0);
+        var kb = opP.addKey(t1b);  opP.setValueAtKey(kb, 100);
+        var kc = posP.addKey(t0);  posP.setValueAtKey(kc, [rx, ry + 30]);
+        var kd = posP.addKey(t1b); posP.setValueAtKey(kd, [rx, ry]);
+        try {
+            opP.setInterpolationTypeAtKey(ka, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+            opP.setInterpolationTypeAtKey(kb, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+            _pcApplyEaseScalar(opP, ka, kb, easeOut, easeIn);
+            posP.setInterpolationTypeAtKey(kc, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+            posP.setInterpolationTypeAtKey(kd, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+            _pcApplyEaseScalar(posP, kc, kd, easeOut, easeIn);
+        } catch(ex) {}
+    } catch(exB) {}
+}
+
 // ─── TEXT HELPER ────────────────────────────────────────────────
 
 function pcTextHelper(animType, mode, animMode, durationFrames, enableGlow, easeOut, easeIn) {
@@ -1912,12 +1977,17 @@ function pcTextHelper(animType, mode, animMode, durationFrames, enableGlow, ease
             opBounce.setValue(0);
         }
 
-        // Add Effect Controls for editor adjustment
-        var fxs = textLayer.property("Effects");
-        var colorCtrl = fxs.addProperty("ADBE Color Control"); colorCtrl.name = "Text Color";
-        colorCtrl.property("Color").setValue([1, 1, 1]);
-
-        // Glow (always added, enabled/disabled based on checkbox)
+        // Glow (dedup): quitar Glow/Color previos antes de re-agregar, para no
+        // acumular controles al re-aplicar. NO se pone control de color ni
+        // expresión: en este AE las expresiones no aplican; el color del texto
+        // se maneja con la paleta o el panel del recuadro.
+        var fxs = textLayer.property("ADBE Effect Parade");
+        for (var gi = fxs.numProperties; gi >= 1; gi--) {
+            try {
+                var fxp = fxs.property(gi);
+                if (fxp.name === "Text Glow" || fxp.name === "Text Color") fxp.remove();
+            } catch(ex) {}
+        }
         var glow = fxs.addProperty("ADBE Glo2");
         glow.name = "Text Glow";
         try { glow.property("Glow Threshold").setValue(153); } catch(ex) {}
@@ -1925,14 +1995,16 @@ function pcTextHelper(animType, mode, animMode, durationFrames, enableGlow, ease
         try { glow.property("Glow Intensity").setValue(1); } catch(ex) {}
         glow.enabled = enableGlow;
 
-        // Link text color via expression
-        try {
-            textLayer.property("ADBE Text Properties").property("ADBE Text Document").expression =
-                "var c = thisLayer.effect(\"Text Color\")(1);" +
-                "var txt = value;" +
-                "txt.fillColor = c;" +
-                "txt;";
-        } catch(ex) {}
+        // Si el texto tiene una caja de fondo (creada con el Recuadro), re-sincronizar
+        // su animación de entrada al nuevo modo/duración (solo cuando hay entrada).
+        if (animMode === "in" || animMode === "inout") {
+            var boxLayer = _pcFindBoxForText(comp, textLayer);
+            if (boxLayer) {
+                var txtStrRB = "";
+                try { txtStrRB = textLayer.property("ADBE Text Properties").property("ADBE Text Document").value.text; } catch(ex) {}
+                _pcAnimateBoxEntrance(boxLayer, txtStrRB, mode, durationFrames, t0, fps, easeOut, easeIn);
+            }
+        }
 
         app.endUndoGroup();
         return JSON.stringify({ success: true, type: animType });
@@ -2099,40 +2171,9 @@ function pcCreateTextBox(mode, withAnim, roundness, padding, bgColor, textColor,
         if (doAnim) {
             step = "box-anim";
             try {
-                // Contar unidades según el modo, desde el texto real.
                 var txtStr = "";
                 try { txtStr = textLayer.property("ADBE Text Properties").property("ADBE Text Document").value.text; } catch(exT) {}
-                var units = 1;
-                if (mode === "word") {
-                    var trimmed = txtStr.replace(/^\s+/, "").replace(/\s+$/, "");
-                    units = (trimmed === "") ? 1 : trimmed.split(/\s+/).length;
-                } else if (mode === "line") {
-                    units = txtStr.split(/[\r\n]/).length;
-                } else { // char
-                    units = txtStr.replace(/\s/g, "").length;
-                }
-                if (units < 1) units = 1;
-                var boxDurFrames = Math.round(durationFrames / units);
-                if (boxDurFrames < 3) boxDurFrames = 3;
-                if (boxDurFrames > durationFrames) boxDurFrames = durationFrames;
-                var tBoxEnd = t0 + boxDurFrames / fps;
-
-                var opP = box.property("ADBE Transform Group").property("ADBE Opacity");
-                var posP = box.property("ADBE Transform Group").property("ADBE Position");
-                var restPos = posP.value; // relativo (ya emparentado)
-                var rpX = restPos[0], rpY = restPos[1];
-                var ka = opP.addKey(t0);  opP.setValueAtKey(ka, 0);
-                var kb = opP.addKey(tBoxEnd);  opP.setValueAtKey(kb, 100);
-                var kc = posP.addKey(t0); posP.setValueAtKey(kc, [rpX, rpY + 30]);
-                var kd = posP.addKey(tBoxEnd); posP.setValueAtKey(kd, [rpX, rpY]);
-                try {
-                    opP.setInterpolationTypeAtKey(ka, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
-                    opP.setInterpolationTypeAtKey(kb, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
-                    _pcApplyEaseScalar(opP, ka, kb, easeOut, easeIn);
-                    posP.setInterpolationTypeAtKey(kc, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
-                    posP.setInterpolationTypeAtKey(kd, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
-                    _pcApplyEaseScalar(posP, kc, kd, easeOut, easeIn);
-                } catch(ex) {}
+                _pcAnimateBoxEntrance(box, txtStr, mode, durationFrames, t0, fps, easeOut, easeIn);
             } catch(exBoxAnim) { boxAnimErr = exBoxAnim.toString(); }
         }
 
