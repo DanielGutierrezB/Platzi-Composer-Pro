@@ -1234,6 +1234,31 @@
         } else {
             activateTab("zoomer");
         }
+
+        // ─── Shortcuts: Ctrl+1…7 cambia de pestaña (panel con foco) ──
+        // Orden = orden visual de la tab bar.
+        var TAB_ORDER = ["zoomer", "animate", "highlighter", "text-helper", "profesor-views", "solid", "spellcheck"];
+        document.addEventListener("keydown", function(e) {
+            if (!e.ctrlKey || e.shiftKey || e.altKey || e.metaKey) return;
+            var kc = e.keyCode;
+            var n = -1;
+            if (kc >= 49 && kc <= 55) n = kc - 49;        // fila de números 1-7
+            else if (kc >= 97 && kc <= 103) n = kc - 97;  // numpad 1-7
+            if (n < 0 || n >= TAB_ORDER.length) return;
+            e.preventDefault();
+            activateTab(TAB_ORDER[n]);
+        });
+
+        // Pedirle a AE que enrute Ctrl+1…7 al panel cuando tiene foco
+        // (keycodes nativos de macOS para la fila 1-7).
+        try {
+            var macKeys = [18, 19, 20, 21, 23, 22, 26];
+            var interest = [];
+            for (var ki = 0; ki < macKeys.length; ki++) {
+                interest.push({ keyCode: macKeys[ki], ctrlKey: true });
+            }
+            csInterface.registerKeyEventsInterest(JSON.stringify(interest));
+        } catch(_) {}
     }
 
     function expandSpellCheck() {
