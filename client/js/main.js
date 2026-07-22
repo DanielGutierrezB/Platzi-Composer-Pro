@@ -20,7 +20,8 @@
         "cp-dur": 20, "cp-size": 600,
         "zoom-dur": 20, "zoom-pct": 130,
         "box-round": 20, "fm-round": 0, "zf-round": 0, "chk-stroke-round": 0,
-        "tb-round": 20, "tb-pad": 40, "tb-anim-dur": 20, "tb-bg": "#ffffff", "tb-text": "#000000"
+        "tb-round": 20, "tb-pad": 40, "tb-anim-dur": 20, "tb-bg": "#ffffff", "tb-text": "#000000",
+        "an-dur": 16, "an-slide": 200, "an-rot": 90, "an-stagger": 5
     };
 
     var state = {
@@ -1376,6 +1377,56 @@
                 callHost("pcZoomToCorner('" + corners[id] + "', " + dur + ", " + zpct + ", " + easeOut() + ", " + easeIn() + ")");
             });
         });
+
+        // ─── Animate (estilo KeyFast) ────────────────────────────
+        // Clic=In · Shift=In+Out (out pegado al outPoint) · Alt=Out (playhead)
+        function anMode(evt) {
+            if (evt.altKey) return "out";
+            if (evt.shiftKey) return "inout";
+            return "in";
+        }
+        function anDur()     { return parseFloat(document.getElementById("an-dur").value) || 16; }
+        function anSlide()   { return parseFloat(document.getElementById("an-slide").value) || 200; }
+        function anRot()     { return parseFloat(document.getElementById("an-rot").value) || 90; }
+        function anStagger() { return parseFloat(document.getElementById("an-stagger").value) || 5; }
+
+        on("btn-an-fade", "click", function(evt) {
+            callHost("pcAnimFade('" + anMode(evt) + "', " + anDur() + ", " + easeOut() + ", " + easeIn() + ")");
+        });
+        on("btn-an-scale", "click", function(evt) {
+            callHost("pcAnimScale('" + anMode(evt) + "', " + anDur() + ", " + easeOut() + ", " + easeIn() + ")");
+        });
+        on("btn-an-rot-cw", "click", function(evt) {
+            callHost("pcAnimRotate(1, '" + anMode(evt) + "', " + anDur() + ", " + anRot() + ", " + easeOut() + ", " + easeIn() + ")");
+        });
+        on("btn-an-rot-ccw", "click", function(evt) {
+            callHost("pcAnimRotate(-1, '" + anMode(evt) + "', " + anDur() + ", " + anRot() + ", " + easeOut() + ", " + easeIn() + ")");
+        });
+        ["left", "right", "up", "down"].forEach(function(dir) {
+            on("btn-an-slide-" + dir, "click", function(evt) {
+                callHost("pcAnimSlide('" + dir + "', '" + anMode(evt) + "', " + anDur() + ", " + anSlide() + ", " + easeOut() + ", " + easeIn() + ")");
+            });
+        });
+        on("btn-an-stagger", "click", function(evt) {
+            var reverse = evt.altKey ? "true" : "false";
+            callHost("pcStaggerKeys(" + anStagger() + ", " + reverse + ")");
+        });
+
+        // Anchor Point 3x3 (estilo Motion Tools)
+        (function() {
+            var grid = document.getElementById("anchor-grid");
+            if (!grid) return;
+            var dots = grid.querySelectorAll(".an-anchor-dot");
+            for (var d = 0; d < dots.length; d++) {
+                (function(dot) {
+                    dot.addEventListener("click", function() {
+                        var ax = dot.getAttribute("data-ax");
+                        var ay = dot.getAttribute("data-ay");
+                        callHost("pcSetAnchorPoint(" + ax + ", " + ay + ")");
+                    });
+                })(dots[d]);
+            }
+        })();
 
         // Continuous Zoom
         on("btn-cont-zoom", "click", function() {

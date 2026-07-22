@@ -1144,6 +1144,84 @@ html, body {
     .tool-grid-2x2 { grid-template-columns: 1fr; }
 }
 
+/* ─── Animate (estilo KeyFast) ─── */
+.an-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+    margin-bottom: 6px;
+}
+.an-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 8px 4px;
+    border-radius: var(--radius-sm, 4px);
+    border: 1px solid var(--border);
+    background: var(--bg-surface);
+    color: var(--text-secondary, #999);
+    cursor: pointer;
+    transition: all var(--transition);
+}
+.an-btn:hover {
+    border-color: var(--accent);
+    color: var(--text-primary);
+}
+.an-btn:active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #000;
+}
+.an-anchor-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 6px 0;
+}
+.an-anchor-info { flex: 1; }
+.an-anchor-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 18px);
+    grid-template-rows: repeat(3, 18px);
+    gap: 3px;
+    padding: 6px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm, 4px);
+    background: var(--bg-surface);
+}
+.an-anchor-dot {
+    width: 18px;
+    height: 18px;
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    background: transparent;
+    cursor: pointer;
+    padding: 0;
+    position: relative;
+    transition: all var(--transition);
+}
+.an-anchor-dot::before {
+    content: "";
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--text-secondary, #999);
+    transition: background var(--transition);
+}
+.an-anchor-dot:hover { border-color: var(--accent); }
+.an-anchor-dot:hover::before { background: var(--accent); }
+.an-anchor-dot:active { background: var(--accent); }
+.an-anchor-dot:active::before { background: #000; }
+.an-anchor-center::before {
+    width: 7px; height: 7px;
+    box-shadow: 0 0 0 2px rgba(153, 153, 153, 0.25);
+}
+
 [data-tooltip]{position:relative}
 [data-tooltip]:hover::after{content:attr(data-tooltip);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:#1a1a1a;color:#ddd;padding:4px 8px;border-radius:4px;font-size:10px;z-index:999;pointer-events:none;border:1px solid #444;max-width:220px;white-space:normal;text-align:center}
 .checkbox-label{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--text-secondary);cursor:pointer}

@@ -14,7 +14,7 @@
             <div class="header-spacer"></div>
             <span id="comp-name" class="comp-name">Sin composición activa</span>
             <span id="layer-count" class="layer-count"></span>
-            <span id="version-badge" class="version-label">v1.5.41</span>
+            <span id="version-badge" class="version-label">v1.6.0</span>
             <button id="btn-update" class="icon-btn" title="Verificar actualización / Recargar panel">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
@@ -96,6 +96,7 @@
         <div class="tools-tab-bar">
             <button class="tools-tab" data-tool="spellcheck">🔍 SpellCheck</button>
             <button class="tools-tab" data-tool="zoomer">🟠 Zoomer</button>
+            <button class="tools-tab" data-tool="animate">🎬 Animate</button>
             <button class="tools-tab" data-tool="highlighter">✨ Highlighter</button>
             <button class="tools-tab" data-tool="solid">⬛ Solid</button>
             <button class="tools-tab" data-tool="profesor-views">🧑‍🏫 Profesor</button>
@@ -187,6 +188,88 @@
                     <label title="Porcentaje de zoom (100=sin cambio, 130=30% más grande)">Zoom%</label><input type="number" id="zoom-pct" class="tool-input" value="130">
                     <button class="btn-defaults btn-save-def" data-keys="zoom-dur,zoom-pct" title="Guardar como default">💾</button>
                     <button class="btn-defaults btn-reset-def" data-keys="zoom-dur,zoom-pct" title="Restaurar defaults">↩</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2b. ANIMATE (estilo KeyFast) -->
+        <div class="tool-card">
+            <div class="tool-card-header" data-tool="animate">
+                <span class="tool-card-title">🎬 Animate</span>
+                <span class="toggle-icon">▸</span>
+            </div>
+            <div class="tool-card-body hidden">
+                <div class="hl-hint">💡 Clic=In · Shift=In+Out · Alt=Out (en el playhead)</div>
+
+                <div class="an-grid">
+                    <button class="an-btn" id="btn-an-fade" data-tooltip="Fade de opacidad · Clic=In / Shift=In+Out / Alt=Out">
+                        <svg class="th-svg" viewBox="0 0 20 20"><circle cx="6" cy="10" r="3.5" stroke="currentColor" stroke-width="1.5" fill="none" opacity=".35"/><circle cx="13" cy="10" r="3.5" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+                        <span class="th-label">Fade</span>
+                    </button>
+                    <button class="an-btn" id="btn-an-scale" data-tooltip="Escala desde/hacia 0% · Clic=In / Shift=In+Out / Alt=Out">
+                        <svg class="th-svg" viewBox="0 0 20 20"><rect x="3" y="3" width="14" height="14" rx="1.5" stroke="currentColor" stroke-width="1.2" fill="none" opacity=".35"/><rect x="7" y="7" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.5" fill="none"/><path d="M13 7 L16.5 3.5 M16.5 6.5 V3.5 H13.5" stroke="currentColor" stroke-width="1.2" fill="none"/></svg>
+                        <span class="th-label">Scale</span>
+                    </button>
+                    <button class="an-btn" id="btn-an-rot-cw" data-tooltip="Rotación horaria · Clic=In / Shift=In+Out / Alt=Out">
+                        <svg class="th-svg" viewBox="0 0 20 20"><path d="M15.5 10 A5.5 5.5 0 1 1 10 4.5" stroke="currentColor" stroke-width="1.5" fill="none"/><path d="M10 1.5 L13 4.5 L10 7.5" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+                        <span class="th-label">Rot ⟳</span>
+                    </button>
+                    <button class="an-btn" id="btn-an-rot-ccw" data-tooltip="Rotación antihoraria · Clic=In / Shift=In+Out / Alt=Out">
+                        <svg class="th-svg" viewBox="0 0 20 20"><path d="M4.5 10 A5.5 5.5 0 1 0 10 4.5" stroke="currentColor" stroke-width="1.5" fill="none"/><path d="M10 1.5 L7 4.5 L10 7.5" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+                        <span class="th-label">Rot ⟲</span>
+                    </button>
+                    <button class="an-btn" id="btn-an-slide-left" data-tooltip="Entra moviéndose a la izquierda · Clic=In / Shift=In+Out / Alt=Out">
+                        <svg class="th-svg" viewBox="0 0 20 20"><path d="M16 10 L5 10 M9 6 L5 10 L9 14" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+                        <span class="th-label">Left</span>
+                    </button>
+                    <button class="an-btn" id="btn-an-slide-right" data-tooltip="Entra moviéndose a la derecha · Clic=In / Shift=In+Out / Alt=Out">
+                        <svg class="th-svg" viewBox="0 0 20 20"><path d="M4 10 L15 10 M11 6 L15 10 L11 14" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+                        <span class="th-label">Right</span>
+                    </button>
+                    <button class="an-btn" id="btn-an-slide-up" data-tooltip="Entra moviéndose hacia arriba · Clic=In / Shift=In+Out / Alt=Out">
+                        <svg class="th-svg" viewBox="0 0 20 20"><path d="M10 16 L10 5 M6 9 L10 5 L14 9" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+                        <span class="th-label">Up</span>
+                    </button>
+                    <button class="an-btn" id="btn-an-slide-down" data-tooltip="Entra moviéndose hacia abajo · Clic=In / Shift=In+Out / Alt=Out">
+                        <svg class="th-svg" viewBox="0 0 20 20"><path d="M10 4 L10 15 M6 11 L10 15 L14 11" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+                        <span class="th-label">Down</span>
+                    </button>
+                    <button class="an-btn" id="btn-an-stagger" data-tooltip="Desplaza keyframes entre capas (orden de selección) · Alt=inverso">
+                        <svg class="th-svg" viewBox="0 0 20 20"><rect x="3" y="4" width="9" height="2.5" rx="1" fill="currentColor" opacity=".9"/><rect x="6" y="9" width="9" height="2.5" rx="1" fill="currentColor" opacity=".6"/><rect x="9" y="14" width="9" height="2.5" rx="1" fill="currentColor" opacity=".35"/></svg>
+                        <span class="th-label">Stagger</span>
+                    </button>
+                </div>
+
+                <div class="hl-divider"></div>
+
+                <!-- Anchor Point (estilo Motion Tools) -->
+                <div class="an-anchor-row">
+                    <div class="an-anchor-info">
+                        <div class="hl-type-label">⌖ Anchor</div>
+                        <div class="hl-type-desc">Mueve el anchor point sin que la capa salte</div>
+                    </div>
+                    <div class="an-anchor-grid" id="anchor-grid">
+                        <button class="an-anchor-dot" data-ax="0"   data-ay="0"   data-tooltip="Arriba izquierda"></button>
+                        <button class="an-anchor-dot" data-ax="0.5" data-ay="0"   data-tooltip="Arriba centro"></button>
+                        <button class="an-anchor-dot" data-ax="1"   data-ay="0"   data-tooltip="Arriba derecha"></button>
+                        <button class="an-anchor-dot" data-ax="0"   data-ay="0.5" data-tooltip="Centro izquierda"></button>
+                        <button class="an-anchor-dot an-anchor-center" data-ax="0.5" data-ay="0.5" data-tooltip="Centro"></button>
+                        <button class="an-anchor-dot" data-ax="1"   data-ay="0.5" data-tooltip="Centro derecha"></button>
+                        <button class="an-anchor-dot" data-ax="0"   data-ay="1"   data-tooltip="Abajo izquierda"></button>
+                        <button class="an-anchor-dot" data-ax="0.5" data-ay="1"   data-tooltip="Abajo centro"></button>
+                        <button class="an-anchor-dot" data-ax="1"   data-ay="1"   data-tooltip="Abajo derecha"></button>
+                    </div>
+                </div>
+
+                <div class="hl-divider"></div>
+
+                <div class="tool-inline-row">
+                    <label title="Duración de la animación en frames">Dur</label><input type="number" id="an-dur" class="tool-input" value="16" min="1" max="300" title="Frames">
+                    <label title="Distancia del slide en píxeles">Slide</label><input type="number" id="an-slide" class="tool-input" value="200" min="1" title="px">
+                    <label title="Grados de rotación">Rot</label><input type="number" id="an-rot" class="tool-input" value="90" min="1" title="Grados">
+                    <label title="Frames de desplazamiento entre capas para Stagger">Stag</label><input type="number" id="an-stagger" class="tool-input" value="5" min="1" title="Frames">
+                    <button class="btn-defaults btn-save-def" data-keys="an-dur,an-slide,an-rot,an-stagger" title="Guardar como default">💾</button>
+                    <button class="btn-defaults btn-reset-def" data-keys="an-dur,an-slide,an-rot,an-stagger" title="Restaurar defaults">↩</button>
                 </div>
             </div>
         </div>

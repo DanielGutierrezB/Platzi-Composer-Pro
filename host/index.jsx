@@ -2361,6 +2361,289 @@ function pcCreateAnnotation(annType, thickness, enableGlow, easeOut, easeIn) {
     } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
 }
 
+// ─── ANIMATE (estilo KeyFast) ────────────────────────────────────
+// Todos los botones leen el valor ACTUAL de la propiedad en el playhead y
+// generan keyframes alrededor de él (la capa siempre termina/empieza donde
+// ya estaba). Modos: "in" (clic), "inout" (Shift = in + out en el outPoint),
+// "out" (Alt = out en el playhead). Cero expresiones: solo keyframes.
+
+// Crea un par de keyframes (tA→vA, tB→vB) con BEZIER + ease. isArray decide
+// el helper de ease (Scale=array; Position/Opacity/Rotation=scalar).
+function _pcAnimAddPair(prop, tA, vA, tB, vB, isArray, eo, ei) {
+    var kA = prop.addKey(tA); prop.setValueAtKey(kA, vA);
+    var kB = prop.addKey(tB); prop.setValueAtKey(kB, vB);
+    prop.setInterpolationTypeAtKey(kA, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+    prop.setInterpolationTypeAtKey(kB, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+    if (isArray) _pcApplyEaseArray(prop, kA, kB, eo, ei);
+    else _pcApplyEaseScalar(prop, kA, kB, eo, ei);
+}
+
+// Genera los keyframes según el modo. fromVal = valor de arranque del IN,
+// curVal = valor actual (reposo), toVal = valor final del OUT.
+function _pcAnimApplyMode(prop, mode, comp, layer, durFrames, fromVal, curVal, toVal, isArray, eo, ei) {
+    var dur = durFrames / comp.frameRate;
+    var t0 = comp.time;
+    if (mode === "out") {
+        _pcAnimAddPair(prop, t0, curVal, t0 + dur, toVal, isArray, eo, ei);
+    } else if (mode === "inout") {
+        _pcAnimAddPair(prop, t0, fromVal, t0 + dur, curVal, isArray, eo, ei);
+        var tEnd = layer.outPoint;
+        var tStart = tEnd - dur;
+        if (tStart < t0 + dur) tStart = t0 + dur; // clip muy corto
+        _pcAnimAddPair(prop, tStart, curVal, tEnd, toVal, isArray, eo, ei);
+    } else { // "in"
+        _pcAnimAddPair(prop, t0, fromVal, t0 + dur, curVal, isArray, eo, ei);
+    }
+}
+
+function pcAnimFade(mode, durFrames, eo, ei) {
+    var s = _pcRequireSelected();
+    if (!s) return JSON.stringify({ error: "Selecciona al menos una capa." });
+    try {
+        app.beginUndoGroup("Animate Fade");
+        var done = 0;
+        for (var i = 0; i < s.layers.length; i++) {
+            try {
+                var layer = s.layers[i];
+                var op = layer.property("ADBE Transform Group").property("ADBE Opacity");
+                if (!op) continue;
+                var cur = op.valueAtTime(s.comp.time, false);
+                _pcAnimApplyMode(op, mode, s.comp, layer, durFrames, 0, cur, 0, false, eo, ei);
+                done++;
+            } catch(exL) {}
+        }
+        app.endUndoGroup();
+        if (!done) return JSON.stringify({ error: "Ninguna capa admite Opacity." });
+        return JSON.stringify({ success: true, layers: done });
+    } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
+}
+
+// direction = dirección del MOVIMIENTO al entrar: "right" = entra moviéndose
+// a la derecha (desde la izquierda). El OUT sale continuando esa dirección.
+function pcAnimSlide(direction, mode, durFrames, amountPx, eo, ei) {
+    var s = _pcRequireSelected();
+    if (!s) return JSON.stringify({ error: "Selecciona al menos una capa." });
+    try {
+        app.beginUndoGroup("Animate Slide " + direction);
+        var dx = 0, dy = 0;
+        if (direction === "right") dx = amountPx;
+        else if (direction === "left") dx = -amountPx;
+        else if (direction === "up") dy = -amountPx;
+        else if (direction === "down") dy = amountPx;
+        var done = 0;
+        for (var i = 0; i < s.layers.length; i++) {
+            try {
+                var layer = s.layers[i];
+                var pos = layer.property("ADBE Transform Group").property("ADBE Position");
+                if (!pos) continue;
+                var cur = pos.valueAtTime(s.comp.time, false);
+                var fromVal = [cur[0] - dx, cur[1] - dy];
+                var toVal = [cur[0] + dx, cur[1] + dy];
+                if (cur.length > 2) { fromVal.push(cur[2]); toVal.push(cur[2]); }
+                // Position es spatial → ease scalar (convención del proyecto).
+                _pcAnimApplyMode(pos, mode, s.comp, layer, durFrames, fromVal, cur, toVal, false, eo, ei);
+                done++;
+            } catch(exL) {}
+        }
+        app.endUndoGroup();
+        if (!done) return JSON.stringify({ error: "Ninguna capa admite Position." });
+        return JSON.stringify({ success: true, layers: done });
+    } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
+}
+
+function pcAnimScale(mode, durFrames, eo, ei) {
+    var s = _pcRequireSelected();
+    if (!s) return JSON.stringify({ error: "Selecciona al menos una capa." });
+    try {
+        app.beginUndoGroup("Animate Scale");
+        var done = 0;
+        for (var i = 0; i < s.layers.length; i++) {
+            try {
+                var layer = s.layers[i];
+                var sc = layer.property("ADBE Transform Group").property("ADBE Scale");
+                if (!sc) continue;
+                var cur = sc.valueAtTime(s.comp.time, false);
+                var zero = [0, 0];
+                if (cur.length > 2) zero.push(0);
+                _pcAnimApplyMode(sc, mode, s.comp, layer, durFrames, zero, cur, zero, true, eo, ei);
+                done++;
+            } catch(exL) {}
+        }
+        app.endUndoGroup();
+        if (!done) return JSON.stringify({ error: "Ninguna capa admite Scale." });
+        return JSON.stringify({ success: true, layers: done });
+    } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
+}
+
+// dirSign: 1 = horario (CW), -1 = antihorario (CCW).
+function pcAnimRotate(dirSign, mode, durFrames, degrees, eo, ei) {
+    var s = _pcRequireSelected();
+    if (!s) return JSON.stringify({ error: "Selecciona al menos una capa." });
+    try {
+        app.beginUndoGroup("Animate Rotate");
+        var delta = dirSign * degrees;
+        var done = 0;
+        for (var i = 0; i < s.layers.length; i++) {
+            try {
+                var layer = s.layers[i];
+                var rot = layer.property("ADBE Transform Group").property("ADBE Rotate Z");
+                if (!rot) continue;
+                var cur = rot.valueAtTime(s.comp.time, false);
+                _pcAnimApplyMode(rot, mode, s.comp, layer, durFrames, cur - delta, cur, cur + delta, false, eo, ei);
+                done++;
+            } catch(exL) {}
+        }
+        app.endUndoGroup();
+        if (!done) return JSON.stringify({ error: "Ninguna capa admite Rotation." });
+        return JSON.stringify({ success: true, layers: done });
+    } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
+}
+
+// ─── STAGGER ─────────────────────────────────────────────────────
+
+// Desplaza TODOS los keyframes de una propiedad `offset` segundos,
+// preservando valor, interpolación y ease temporal. (No hay API para mover
+// un keyframe: se copia, se borra y se re-crea.)
+function _pcShiftPropKeys(prop, offset) {
+    var n = prop.numKeys;
+    if (n === 0) return;
+    var keys = [], i;
+    for (i = 1; i <= n; i++) {
+        var k = {
+            t: prop.keyTime(i),
+            v: prop.keyValue(i),
+            inI: prop.keyInInterpolationType(i),
+            outI: prop.keyOutInterpolationType(i),
+            tie: null, toe: null
+        };
+        try { k.tie = prop.keyInTemporalEase(i); k.toe = prop.keyOutTemporalEase(i); } catch(exE) {}
+        keys.push(k);
+    }
+    while (prop.numKeys > 0) prop.removeKey(1);
+    for (i = 0; i < keys.length; i++) {
+        var kk = keys[i];
+        var idx = prop.addKey(kk.t + offset);
+        prop.setValueAtKey(idx, kk.v);
+        try { prop.setInterpolationTypeAtKey(idx, kk.inI, kk.outI); } catch(exI) {}
+        if (kk.tie && kk.toe) {
+            try { prop.setTemporalEaseAtKey(idx, kk.tie, kk.toe); } catch(exT) {}
+        }
+    }
+}
+
+// Recorre recursivamente un grupo y desplaza los keys de toda propiedad.
+function _pcWalkShiftKeys(group, offset) {
+    for (var i = 1; i <= group.numProperties; i++) {
+        var p = null;
+        try { p = group.property(i); } catch(exP) {}
+        if (!p) continue;
+        try {
+            if (p.propertyType === PropertyType.PROPERTY) {
+                if (p.numKeys > 0) _pcShiftPropKeys(p, offset);
+            } else {
+                _pcWalkShiftKeys(p, offset);
+            }
+        } catch(exW) {}
+    }
+}
+
+// Stagger: capa 1 = 0 frames, capa 2 = N, capa 3 = 2N… (orden de selección).
+// Si hay propiedades seleccionadas, solo desplaza esas; si no, toda la capa.
+// reverse invierte el orden (la última capa queda sin offset).
+function pcStaggerKeys(frames, reverse) {
+    var s = _pcRequireSelected();
+    if (!s) return JSON.stringify({ error: "Selecciona al menos 2 capas." });
+    if (s.layers.length < 2) return JSON.stringify({ error: "Selecciona al menos 2 capas para el stagger." });
+    try {
+        app.beginUndoGroup("Stagger Keys");
+        var fps = s.comp.frameRate;
+        var total = s.layers.length;
+        var shifted = 0;
+        for (var i = 0; i < total; i++) {
+            var order = reverse ? (total - 1 - i) : i;
+            var offset = (order * frames) / fps;
+            if (offset === 0) continue;
+            var layer = s.layers[i];
+            var props = [];
+            try { props = layer.selectedProperties; } catch(exS) {}
+            var onlySelected = [];
+            for (var j = 0; j < props.length; j++) {
+                try {
+                    if (props[j].propertyType === PropertyType.PROPERTY && props[j].numKeys > 0) onlySelected.push(props[j]);
+                } catch(exQ) {}
+            }
+            if (onlySelected.length > 0) {
+                for (var m = 0; m < onlySelected.length; m++) _pcShiftPropKeys(onlySelected[m], offset);
+            } else {
+                _pcWalkShiftKeys(layer, offset);
+            }
+            shifted++;
+        }
+        app.endUndoGroup();
+        if (!shifted) return JSON.stringify({ error: "No se encontraron keyframes para desplazar." });
+        return JSON.stringify({ success: true, layers: shifted });
+    } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
+}
+
+// ─── ANCHOR POINT (estilo Motion Tools) ──────────────────────────
+
+// Mueve el anchor point a una posición normalizada del bounding box
+// (xNorm/yNorm: 0=izq/arriba, 0.5=centro, 1=der/abajo) y compensa Position
+// para que la capa NO salte visualmente. sourceRectAtTime desde SCRIPTING
+// sí funciona (lo que falla en este entorno son las expresiones).
+function pcSetAnchorPoint(xNorm, yNorm) {
+    var s = _pcRequireSelected();
+    if (!s) return JSON.stringify({ error: "Selecciona al menos una capa." });
+    try {
+        app.beginUndoGroup("Set Anchor Point");
+        var t = s.comp.time;
+        var done = 0;
+        for (var i = 0; i < s.layers.length; i++) {
+            try {
+                var layer = s.layers[i];
+                var r = layer.sourceRectAtTime(t, false);
+                var tg = layer.property("ADBE Transform Group");
+                var ap = tg.property("ADBE Anchor Point");
+                var pos = tg.property("ADBE Position");
+                var sc = tg.property("ADBE Scale");
+                var rot = tg.property("ADBE Rotate Z");
+
+                var oldAp = ap.valueAtTime(t, false);
+                var newAp = [r.left + r.width * xNorm, r.top + r.height * yNorm];
+                if (oldAp.length > 2) newAp.push(oldAp[2]);
+
+                // Delta del anchor en espacio de capa → espacio de comp
+                // (aplicar escala y rotación actuales).
+                var dax = newAp[0] - oldAp[0];
+                var day = newAp[1] - oldAp[1];
+                var scl = sc.valueAtTime(t, false);
+                var sx = dax * (scl[0] / 100);
+                var sy = day * (scl[1] / 100);
+                var deg = 0;
+                try { deg = rot ? rot.valueAtTime(t, false) : 0; } catch(exR) {}
+                var rad = deg * Math.PI / 180;
+                var wx = sx * Math.cos(rad) - sy * Math.sin(rad);
+                var wy = sx * Math.sin(rad) + sy * Math.cos(rad);
+
+                var oldPos = pos.valueAtTime(t, false);
+                var newPos = [oldPos[0] + wx, oldPos[1] + wy];
+                if (oldPos.length > 2) newPos.push(oldPos[2]);
+
+                // Si la prop tiene keyframes, agregar key en el playhead
+                // (setValue rompería la animación existente).
+                if (ap.numKeys > 0) { var ka = ap.addKey(t); ap.setValueAtKey(ka, newAp); }
+                else ap.setValue(newAp);
+                if (pos.numKeys > 0) { var kp = pos.addKey(t); pos.setValueAtKey(kp, newPos); }
+                else pos.setValue(newPos);
+                done++;
+            } catch(exL) {}
+        }
+        app.endUndoGroup();
+        if (!done) return JSON.stringify({ error: "No se pudo mover el anchor (¿la capa tiene bounding box?)." });
+        return JSON.stringify({ success: true, layers: done });
+    } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
+}
+
 // ─── Save Log ────────────────────────────────────────────────────
 function saveLogToFile(jsonString) {
     try {
