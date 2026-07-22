@@ -2498,24 +2498,37 @@ function _pcAnimProfile(type, p1) {
     var i;
     if (type === "overshoot") {
         var amt = (typeof p1 === "number" && p1 > 0) ? p1 / 100 : 0.1;
-        return [[0, 0, 0], [0.6, 1 + amt, 0], [1, 1, 0]];
+        // Pico a t=0.65 y asentamiento suave hasta el final.
+        return [[0, 0, 0], [0.65, 1 + amt, 0], [1, 1, 0]];
     }
     if (type === "bounce") {
         var n = (typeof p1 === "number" && p1 >= 1) ? Math.round(p1) : 2;
         if (n > 6) n = 6;
-        var prof = [[0, 0, 0], [0.4, 1, 1]];
-        var seg = 0.6 / n;
-        var amp = 0.25;
+        // Físicamente creíble: el recorrido principal es 0→0.55 y GOLPEA el
+        // destino con velocidad (contacto LINEAR). Después n rebotes
+        // parabólicos chicos: amplitud inicial 13% del recorrido, decay 0.35,
+        // y duración de cada rebote ∝ sqrt(amplitud) (como una pelota).
+        var tHit = 0.55;
+        var prof = [[0, 0, 0], [tHit, 1, 1]];
+        var amp = 0.13;
+        var decay = 0.35;
+        var w = [], wsum = 0;
+        for (i = 0; i < n; i++) { w.push(Math.pow(Math.sqrt(decay), i)); wsum += w[i]; }
+        var t = tHit;
         for (i = 0; i < n; i++) {
-            prof.push([0.4 + seg * (i + 0.5), 1 - amp, 0]);
-            prof.push([0.4 + seg * (i + 1), 1, 1]);
-            amp *= 0.45;
+            var d = (1 - tHit) * (w[i] / wsum);
+            prof.push([t + d / 2, 1 - amp, 0]);        // pico del rebote (speed 0)
+            t += d;
+            prof.push([(i === n - 1) ? 1 : t, 1, 1]);  // contacto LINEAR
+            amp *= decay;
         }
         return prof;
     }
     if (type === "spring") {
         var A = (typeof p1 === "number" && p1 > 0) ? p1 / 100 : 0.15;
-        return [[0, 0, 0], [0.3, 1 + A, 0], [0.5, 1 - A * 0.55, 0], [0.68, 1 + A * 0.3, 0], [0.84, 1 - A * 0.12, 0], [1, 1, 0]];
+        // Oscilación amortiguada: primer cruce después del recorrido
+        // principal, con decaimiento ~50% por medio ciclo.
+        return [[0, 0, 0], [0.35, 1 + A, 0], [0.55, 1 - A * 0.5, 0], [0.72, 1 + A * 0.25, 0], [0.86, 1 - A * 0.1, 0], [1, 1, 0]];
     }
     return null;
 }
@@ -2768,12 +2781,18 @@ function _pcBakeProfileBetween(prop, tA, tB, type, spec) {
             _pcSetEase0(prop, k, 33, 33);
         }
     }
-    // Extremos: recomputar índices (se corrieron al insertar) y suavizar.
+    // Extremos: recomputar índices (se corrieron al insertar).
     kA = prop.nearestKeyIndex(tA); kB = prop.nearestKeyIndex(tB);
     prop.setInterpolationTypeAtKey(kA, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
-    prop.setInterpolationTypeAtKey(kB, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
     _pcSetEase0(prop, kA, spec.eo, spec.eo);
-    _pcSetEase0(prop, kB, spec.ei, spec.ei);
+    // Si el perfil aterriza con velocidad (contacto del bounce), el key
+    // final es LINEAR; si no, asienta suave.
+    if (prof[prof.length - 1][2] === 1) {
+        prop.setInterpolationTypeAtKey(kB, KeyframeInterpolationType.LINEAR, KeyframeInterpolationType.LINEAR);
+    } else {
+        prop.setInterpolationTypeAtKey(kB, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+        _pcSetEase0(prop, kB, spec.ei, spec.ei);
+    }
 }
 
 // Aplica el tipo de animación actual a los KEYFRAMES SELECCIONADOS (como
