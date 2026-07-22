@@ -1235,18 +1235,12 @@
             activateTab("zoomer");
         }
 
-        // ─── Shortcuts: 1…7 (o Ctrl+1…7) cambia de pestaña ───────────
-        // CEP manda TODAS las teclas a AE salvo que se registre interés en
-        // cada combinación exacta, y solo funciona con el panel enfocado.
-        // Las teclas SIN modificador son las más confiables en Mac, así que
-        // el atajo principal es el número solo (si no estás escribiendo).
+        // ─── Shortcuts: Cmd+Shift+1…7 cambia de pestaña ──────────────
+        // Los números solos son atajos de herramientas de AE (Orbit Camera,
+        // Pan, Dolly…), así que usamos Cmd+Shift+1…7, que están libres.
+        // CEP solo entrega teclas con el panel enfocado y si se registró
+        // interés en la combinación exacta (metaKey = Cmd en Mac).
         var TAB_ORDER = ["zoomer", "animate", "highlighter", "text-helper", "profesor-views", "solid", "spellcheck"];
-
-        function isTypingTarget(el) {
-            if (!el) return false;
-            var tag = (el.tagName || "").toUpperCase();
-            return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || el.isContentEditable === true;
-        }
 
         document.addEventListener("keydown", function(e) {
             var kc = e.keyCode;
@@ -1254,29 +1248,26 @@
             if (kc >= 49 && kc <= 55) n = kc - 49;        // fila de números 1-7
             else if (kc >= 97 && kc <= 103) n = kc - 97;  // numpad 1-7
             // Diagnóstico: quedará en el log 🗎
-            logAction("keydown", { keyCode: kc, ctrl: e.ctrlKey, shift: e.shiftKey, alt: e.altKey, meta: e.metaKey, typing: isTypingTarget(e.target) });
+            logAction("keydown", { keyCode: kc, ctrl: e.ctrlKey, shift: e.shiftKey, alt: e.altKey, meta: e.metaKey });
             if (n < 0) return;
-            if (e.shiftKey || e.altKey || e.metaKey) return;
-            // Número solo: únicamente si NO se está escribiendo en un campo.
-            if (!e.ctrlKey && isTypingTarget(e.target)) return;
+            if (!e.metaKey || !e.shiftKey || e.altKey || e.ctrlKey) return;
             e.preventDefault();
             activateTab(TAB_ORDER[n]);
             logAction("tabShortcut", { tab: TAB_ORDER[n] });
         });
 
-        // Registrar interés en 1…7 (solos y con Ctrl) para que AE se las
-        // enrute al panel. Keycodes NATIVOS de macOS para la fila 1-7:
+        // Registrar interés en Cmd+Shift+1…7 para que AE las enrute al
+        // panel. Keycodes NATIVOS de macOS para la fila 1-7:
         // kVK_ANSI_1..7 = 18,19,20,21,23,22,26 (sí, 5/6 van cruzados).
         // Y numpad 1-7: 83,84,85,86,87,88,89.
         try {
             var macKeys = [18, 19, 20, 21, 23, 22, 26, 83, 84, 85, 86, 87, 88, 89];
             var interest = [];
             for (var ki = 0; ki < macKeys.length; ki++) {
-                interest.push({ keyCode: macKeys[ki] });
-                interest.push({ keyCode: macKeys[ki], ctrlKey: true });
+                interest.push({ keyCode: macKeys[ki], metaKey: true, shiftKey: true });
             }
             csInterface.registerKeyEventsInterest(JSON.stringify(interest));
-            logAction("registerKeyEventsInterest", { keys: macKeys.length * 2 });
+            logAction("registerKeyEventsInterest", { combo: "Cmd+Shift+1..7", keys: interest.length });
         } catch(ex) {
             logAction("registerKeyEventsInterest", { error: ex.message });
         }
