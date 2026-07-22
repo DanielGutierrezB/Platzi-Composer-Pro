@@ -14,7 +14,7 @@
             <div class="header-spacer"></div>
             <span id="comp-name" class="comp-name">Sin composición activa</span>
             <span id="layer-count" class="layer-count"></span>
-            <span id="version-badge" class="version-label">v1.6.2</span>
+            <span id="version-badge" class="version-label">v1.7.0</span>
             <button id="btn-update" class="icon-btn" title="Verificar actualización / Recargar panel">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
@@ -200,6 +200,15 @@
             </div>
             <div class="tool-card-body hidden">
                 <div class="hl-hint">💡 Clic=In · Shift=In+Out · Alt=Out (en el playhead)</div>
+
+                <!-- Tipo de animación (easing) -->
+                <div class="th-mode-bar an-ease-bar">
+                    <label class="th-radio an-ease-radio active"><input type="radio" name="an-ease" value="default" checked>Default</label>
+                    <label class="th-radio an-ease-radio"><input type="radio" name="an-ease" value="overshoot">Overshoot</label>
+                    <label class="th-radio an-ease-radio"><input type="radio" name="an-ease" value="bounce">Bounce</label>
+                    <label class="th-radio an-ease-radio"><input type="radio" name="an-ease" value="spring">Spring</label>
+                    <label class="th-radio an-ease-radio"><input type="radio" name="an-ease" value="custom">Custom ✎</label>
+                </div>
 
                 <div class="an-grid">
                     <button class="an-btn" id="btn-an-fade" data-tooltip="Fade de opacidad · Clic=In / Shift=In+Out / Alt=Out">
@@ -509,6 +518,28 @@
         <div class="color-swatch" data-color="0.961,0.353,0" style="background:#F55A00" data-tooltip="#F55A00"></div>
         <div class="color-swatch" data-color="1,0.380,0.886" style="background:#FF61E2" data-tooltip="#FF61E2"></div>
         <button id="btn-mirror-keys" class="btn-palette-action" data-tooltip="Clone & Mirror Keys al playhead">⇄</button>
+    </div>
+
+    <!-- Curve Editor (estilo Flow) -->
+    <div id="curve-panel" class="curve-panel hidden">
+        <div class="curve-card">
+            <div class="curve-header">
+                <span class="curve-title">Curva Custom</span>
+                <button id="curve-close" class="icon-btn" title="Cerrar">✕</button>
+            </div>
+            <canvas id="curve-canvas" width="260" height="260"></canvas>
+            <div class="curve-readout" id="curve-readout">0.33, 0.00, 0.30, 1.00</div>
+            <div class="curve-actions">
+                <button id="curve-apply" class="btn btn-tool btn-full" data-tooltip="Aplica la curva a los keyframes seleccionados en AE (como el APPLY de Flow)">APPLY a keys seleccionados</button>
+            </div>
+            <div class="curve-preset-save">
+                <input type="text" id="curve-preset-name" class="text-input" placeholder="Nombre del preset...">
+                <input type="text" id="curve-preset-group" class="text-input" placeholder="Grupo" list="curve-groups">
+                <datalist id="curve-groups"></datalist>
+                <button id="curve-preset-savebtn" class="btn btn-sm btn-ghost">💾</button>
+            </div>
+            <div id="curve-preset-list" class="curve-preset-list"></div>
+        </div>
     </div>
 
     <!-- Toast -->

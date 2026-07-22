@@ -1436,23 +1436,48 @@
         function anRot()     { return parseFloat(document.getElementById("an-rot").value) || 90; }
         function anStagger() { return parseFloat(document.getElementById("an-stagger").value) || 5; }
 
+        // Tipo de easing seleccionado → args extra para las funciones pcAnim*.
+        // "custom" manda la curva bezier actual del editor.
+        function anEaseArgs() {
+            var sel = document.querySelector('input[name="an-ease"]:checked');
+            var type = sel ? sel.value : "default";
+            if (type === "custom") {
+                var c = pcCurve.current();
+                return ", 'bezier', " + c.x1 + ", " + c.y1 + ", " + c.x2 + ", " + c.y2;
+            }
+            return ", '" + type + "', 0, 0, 0, 0";
+        }
+
         on("btn-an-fade", "click", function(evt) {
-            callHost("pcAnimFade('" + anMode(evt) + "', " + anDur() + ", " + easeOut() + ", " + easeIn() + ")");
+            callHost("pcAnimFade('" + anMode(evt) + "', " + anDur() + ", " + easeOut() + ", " + easeIn() + anEaseArgs() + ")");
         });
         on("btn-an-scale", "click", function(evt) {
-            callHost("pcAnimScale('" + anMode(evt) + "', " + anDur() + ", " + easeOut() + ", " + easeIn() + ")");
+            callHost("pcAnimScale('" + anMode(evt) + "', " + anDur() + ", " + easeOut() + ", " + easeIn() + anEaseArgs() + ")");
         });
         on("btn-an-rot-cw", "click", function(evt) {
-            callHost("pcAnimRotate(1, '" + anMode(evt) + "', " + anDur() + ", " + anRot() + ", " + easeOut() + ", " + easeIn() + ")");
+            callHost("pcAnimRotate(1, '" + anMode(evt) + "', " + anDur() + ", " + anRot() + ", " + easeOut() + ", " + easeIn() + anEaseArgs() + ")");
         });
         on("btn-an-rot-ccw", "click", function(evt) {
-            callHost("pcAnimRotate(-1, '" + anMode(evt) + "', " + anDur() + ", " + anRot() + ", " + easeOut() + ", " + easeIn() + ")");
+            callHost("pcAnimRotate(-1, '" + anMode(evt) + "', " + anDur() + ", " + anRot() + ", " + easeOut() + ", " + easeIn() + anEaseArgs() + ")");
         });
         ["left", "right", "up", "down"].forEach(function(dir) {
             on("btn-an-slide-" + dir, "click", function(evt) {
-                callHost("pcAnimSlide('" + dir + "', '" + anMode(evt) + "', " + anDur() + ", " + anSlide() + ", " + easeOut() + ", " + easeIn() + ")");
+                callHost("pcAnimSlide('" + dir + "', '" + anMode(evt) + "', " + anDur() + ", " + anSlide() + ", " + easeOut() + ", " + easeIn() + anEaseArgs() + ")");
             });
         });
+
+        // Radio "Custom ✎" abre el editor de curvas (también si ya está activo)
+        (function() {
+            var radios = document.querySelectorAll(".an-ease-radio");
+            for (var r = 0; r < radios.length; r++) {
+                (function(lbl) {
+                    lbl.addEventListener("click", function() {
+                        var inp = lbl.querySelector("input");
+                        if (inp && inp.value === "custom") pcCurve.open();
+                    });
+                })(radios[r]);
+            }
+        })();
         on("btn-an-stagger", "click", function(evt) {
             var reverse = evt.altKey ? "true" : "false";
             callHost("pcStaggerKeys(" + anStagger() + ", " + reverse + ")");
@@ -1597,6 +1622,255 @@
         });
 
     }
+
+    // ─── Curve Editor (estilo Flow) ──────────────────────────────
+    // Editor de cubic-bezier (x1,y1,x2,y2) con presets nombrados por grupos
+    // en localStorage. La curva actual la usan los botones de Animate cuando
+    // el tipo es "Custom", y APPLY la aplica a keyframes seleccionados.
+    var pcCurve = (function() {
+        var W = 260, H = 260, PAD = 26;
+        var cur = null;
+        var inited = false;
+        var canvas = null, ctx = null;
+        var dragging = null; // "p1" | "p2"
+
+        function load() {
+            if (cur) return cur;
+            try {
+                var raw = localStorage.getItem("pc_curve_current");
+                if (raw) cur = JSON.parse(raw);
+            } catch(_) {}
+            if (!cur || typeof cur.x1 !== "number") cur = { x1: 0.33, y1: 0, x2: 0.3, y2: 1 };
+            return cur;
+        }
+        function persist() {
+            try { localStorage.setItem("pc_curve_current", JSON.stringify(cur)); } catch(_) {}
+        }
+        function getPresets() {
+            try {
+                var raw = localStorage.getItem("pc_curve_presets");
+                if (raw) return JSON.parse(raw) || [];
+            } catch(_) {}
+            return [];
+        }
+        function setPresets(list) {
+            try { localStorage.setItem("pc_curve_presets", JSON.stringify(list)); } catch(_) {}
+        }
+
+        function toPx(x, y) {
+            return { x: PAD + x * (W - 2 * PAD), y: H - PAD - y * (H - 2 * PAD) };
+        }
+        function fromPx(px, py) {
+            return {
+                x: (px - PAD) / (W - 2 * PAD),
+                y: (H - PAD - py) / (H - 2 * PAD)
+            };
+        }
+
+        function draw() {
+            if (!ctx) return;
+            load();
+            ctx.clearRect(0, 0, W, H);
+            // Fondo
+            ctx.fillStyle = "#151519";
+            ctx.fillRect(0, 0, W, H);
+            // Grid
+            ctx.strokeStyle = "rgba(255,255,255,0.06)";
+            ctx.lineWidth = 1;
+            var g;
+            for (g = 0; g <= 4; g++) {
+                var gx = PAD + (g / 4) * (W - 2 * PAD);
+                var gy = PAD + (g / 4) * (H - 2 * PAD);
+                ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, H); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(W, gy); ctx.stroke();
+            }
+            // Caja 0..1
+            var a = toPx(0, 0), b = toPx(1, 1);
+            ctx.strokeStyle = "rgba(129,140,248,0.5)";
+            ctx.strokeRect(b.x < a.x ? b.x : a.x, b.y < a.y ? b.y : a.y, Math.abs(b.x - a.x), Math.abs(b.y - a.y));
+            // Handles (naranja, como Flow)
+            var p0 = toPx(0, 0), p3 = toPx(1, 1);
+            var p1 = toPx(cur.x1, cur.y1), p2 = toPx(cur.x2, cur.y2);
+            ctx.strokeStyle = "#f5a623";
+            ctx.lineWidth = 1.5;
+            ctx.beginPath(); ctx.moveTo(p0.x, p0.y); ctx.lineTo(p1.x, p1.y); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(p3.x, p3.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+            // Curva
+            ctx.strokeStyle = "#ffffff";
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.moveTo(p0.x, p0.y);
+            ctx.bezierCurveTo(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y);
+            ctx.stroke();
+            // Puntos de control
+            ctx.fillStyle = "#f5a623";
+            ctx.beginPath(); ctx.arc(p1.x, p1.y, 5, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(p2.x, p2.y, 5, 0, Math.PI * 2); ctx.fill();
+            // Extremos
+            ctx.fillStyle = "#818cf8";
+            ctx.beginPath(); ctx.arc(p0.x, p0.y, 3.5, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(p3.x, p3.y, 3.5, 0, Math.PI * 2); ctx.fill();
+            updateReadout();
+        }
+
+        function updateReadout() {
+            var el = document.getElementById("curve-readout");
+            if (el) {
+                el.textContent = cur.x1.toFixed(2) + ", " + cur.y1.toFixed(2) + ", " + cur.x2.toFixed(2) + ", " + cur.y2.toFixed(2);
+            }
+        }
+
+        function mousePos(e) {
+            var r = canvas.getBoundingClientRect();
+            return { x: e.clientX - r.left, y: e.clientY - r.top };
+        }
+
+        function nearestHandle(mx, my) {
+            var p1 = toPx(cur.x1, cur.y1), p2 = toPx(cur.x2, cur.y2);
+            var d1 = Math.sqrt((mx - p1.x) * (mx - p1.x) + (my - p1.y) * (my - p1.y));
+            var d2 = Math.sqrt((mx - p2.x) * (mx - p2.x) + (my - p2.y) * (my - p2.y));
+            if (d1 <= d2 && d1 < 18) return "p1";
+            if (d2 < 18) return "p2";
+            return null;
+        }
+
+        function clamp(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); }
+
+        function renderPresets() {
+            var box = document.getElementById("curve-preset-list");
+            var dl = document.getElementById("curve-groups");
+            if (!box) return;
+            var list = getPresets();
+            box.innerHTML = "";
+            if (dl) dl.innerHTML = "";
+            if (list.length === 0) {
+                var empty = document.createElement("div");
+                empty.className = "curve-preset-empty";
+                empty.textContent = "Sin presets. Ajusta la curva y guárdala con un nombre.";
+                box.appendChild(empty);
+                return;
+            }
+            // Agrupar
+            var groups = {};
+            var order = [];
+            for (var i = 0; i < list.length; i++) {
+                var gname = list[i].group || "General";
+                if (!groups[gname]) { groups[gname] = []; order.push(gname); }
+                groups[gname].push(list[i]);
+            }
+            for (var go = 0; go < order.length; go++) {
+                var gn = order[go];
+                if (dl) {
+                    var opt = document.createElement("option");
+                    opt.value = gn;
+                    dl.appendChild(opt);
+                }
+                var hdr = document.createElement("div");
+                hdr.className = "curve-group-header";
+                hdr.textContent = gn;
+                box.appendChild(hdr);
+                for (var pi = 0; pi < groups[gn].length; pi++) {
+                    (function(preset) {
+                        var row = document.createElement("div");
+                        row.className = "curve-preset-item";
+                        var nm = document.createElement("span");
+                        nm.className = "curve-preset-name";
+                        nm.textContent = preset.name;
+                        nm.setAttribute("data-tooltip", preset.x1.toFixed(2) + ", " + preset.y1.toFixed(2) + ", " + preset.x2.toFixed(2) + ", " + preset.y2.toFixed(2));
+                        var del = document.createElement("button");
+                        del.className = "curve-preset-del";
+                        del.textContent = "✕";
+                        row.appendChild(nm);
+                        row.appendChild(del);
+                        nm.addEventListener("click", function() {
+                            cur = { x1: preset.x1, y1: preset.y1, x2: preset.x2, y2: preset.y2 };
+                            persist();
+                            draw();
+                            showToast("Preset: " + preset.name, "success");
+                        });
+                        del.addEventListener("click", function() {
+                            var all = getPresets();
+                            var out = [];
+                            for (var d = 0; d < all.length; d++) {
+                                if (!(all[d].name === preset.name && (all[d].group || "General") === (preset.group || "General"))) out.push(all[d]);
+                            }
+                            setPresets(out);
+                            renderPresets();
+                        });
+                        box.appendChild(row);
+                    })(groups[gn][pi]);
+                }
+            }
+        }
+
+        function ensureInit() {
+            if (inited) return;
+            inited = true;
+            load();
+            canvas = document.getElementById("curve-canvas");
+            ctx = canvas ? canvas.getContext("2d") : null;
+            if (!canvas) return;
+
+            canvas.addEventListener("mousedown", function(e) {
+                var m = mousePos(e);
+                dragging = nearestHandle(m.x, m.y);
+            });
+            document.addEventListener("mousemove", function(e) {
+                if (!dragging) return;
+                var m = mousePos(e);
+                var pt = fromPx(m.x, m.y);
+                var nx = clamp(pt.x, 0, 1);
+                var ny = clamp(pt.y, -0.5, 1.5);
+                if (dragging === "p1") { cur.x1 = nx; cur.y1 = ny; }
+                else { cur.x2 = nx; cur.y2 = ny; }
+                draw();
+            });
+            document.addEventListener("mouseup", function() {
+                if (dragging) { dragging = null; persist(); }
+            });
+
+            var closeBtn = document.getElementById("curve-close");
+            if (closeBtn) closeBtn.addEventListener("click", function() {
+                document.getElementById("curve-panel").classList.add("hidden");
+            });
+
+            var applyBtn = document.getElementById("curve-apply");
+            if (applyBtn) applyBtn.addEventListener("click", function() {
+                callHost("pcApplyCurveToSelected(" + cur.x1 + ", " + cur.y1 + ", " + cur.x2 + ", " + cur.y2 + ")");
+            });
+
+            var saveBtn = document.getElementById("curve-preset-savebtn");
+            if (saveBtn) saveBtn.addEventListener("click", function() {
+                var name = (document.getElementById("curve-preset-name").value || "").replace(/^\s+|\s+$/g, "");
+                var group = (document.getElementById("curve-preset-group").value || "").replace(/^\s+|\s+$/g, "") || "General";
+                if (!name) { showToast("Ponle un nombre al preset", "error"); return; }
+                var list = getPresets();
+                // Reemplazar si ya existe con mismo nombre+grupo
+                var out = [];
+                for (var i = 0; i < list.length; i++) {
+                    if (!(list[i].name === name && (list[i].group || "General") === group)) out.push(list[i]);
+                }
+                out.push({ name: name, group: group, x1: cur.x1, y1: cur.y1, x2: cur.x2, y2: cur.y2 });
+                setPresets(out);
+                document.getElementById("curve-preset-name").value = "";
+                renderPresets();
+                showToast("Preset \"" + name + "\" guardado", "success");
+            });
+        }
+
+        function open() {
+            ensureInit();
+            var panel = document.getElementById("curve-panel");
+            if (panel) panel.classList.remove("hidden");
+            draw();
+            renderPresets();
+        }
+
+        return {
+            open: open,
+            current: function() { return load(); }
+        };
+    })();
 
     // ─── Start ───────────────────────────────────────────────────
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
