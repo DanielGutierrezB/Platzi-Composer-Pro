@@ -20,7 +20,7 @@
         "cp-dur": 20, "cp-size": 600,
         "zoom-dur": 20, "zoom-pct": 130,
         "box-round": 20, "fm-round": 0, "zf-round": 0, "chk-stroke-round": 0,
-        "zd-dark": 70, "zd-round": 0, "chk-stroke-autoblend": 0,
+        "zd-dark": 4, "zd-round": 0,
         "tb-round": 20, "tb-pad": 40, "tb-anim-dur": 20, "tb-bg": "#ffffff", "tb-text": "#000000",
         "an-dur": 20, "an-slide": 200, "an-rot": 90, "an-stagger": 5, "an-stagger-every": 1,
         "an-ovs": 10, "an-bounces": 2, "an-spring": 15
@@ -1372,10 +1372,8 @@
             var eo = document.getElementById("ease-out").value;
             var ei = document.getElementById("ease-in").value;
             var rcaps = document.getElementById("chk-stroke-round").checked;
-            var autoBlend = document.getElementById("chk-stroke-autoblend").checked;
             var shift = e.shiftKey, alt = e.altKey;
             callHost("pcCreateHighlighter(" + rcaps + ")", function() {
-                if (autoBlend) { runAutoBlend(); }
                 if (shift && alt) { callHost("pcHighlighterAnimate(\"out\","+eo+","+ei+easeArgsGlobal()+")"); }
                 else if (alt) { callHost("pcHighlighterAnimate(\"in\","+eo+","+ei+easeArgsGlobal()+")"); }
                 else if (shift) { callHost("pcHighlighterAnimate(\"inout\","+eo+","+ei+easeArgsGlobal()+")"); }
@@ -1383,16 +1381,9 @@
         });
         on("btn-hl-flip",           "click", function()  { callHost("pcFlipHorizontal()"); });
 
-        // Auto Blend: claro → Multiply · oscuro → Add. Re-ejecutable tras
-        // mover el highlighter (funciona sobre la capa seleccionada).
-        function runAutoBlend() {
-            callHost("pcAutoBlend()", function(d) {
-                if (d && d.mode) {
-                    showToast("◐ Blending: " + d.mode + " (fondo " + (d.mode === "Multiply" ? "claro" : "oscuro") + ")", "success");
-                }
-            });
-        }
-        on("btn-hl-autoblend", "click", runAutoBlend);
+        // Blending directo a la selección (uno o varios highlights)
+        on("btn-blend-multiply", "click", function() { callHost("pcSetBlend('multiply')"); });
+        on("btn-blend-add",      "click", function() { callHost("pcSetBlend('add')"); });
         document.getElementById("btn-line-create").addEventListener("click", function(e) {
             var eo = document.getElementById("ease-out").value;
             var ei = document.getElementById("ease-in").value;
