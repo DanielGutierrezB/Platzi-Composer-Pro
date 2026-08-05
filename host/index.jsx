@@ -1305,15 +1305,19 @@ function pcCreateZoomFocus(blurAmount, scaleFactor, easeOut, easeIn, roundness, 
         try { dupMask.property("maskExpansion").expression = "effect(\"Roundness\")(1)"; } catch(ex) {}
 
         // Zoom Dark: Drop Shadow al recorte (opacidad 50%, softness 166).
+        // La opacidad NO se setea estática: se keyframea más abajo junto al
+        // pulso del zoom (0 → 50% → 50% → 0) para que no aparezca de golpe.
+        var dsOpProp = null, dsTarget = 0;
         if (isDark) {
             try {
                 var ds = fxsDup.addProperty("ADBE Drop Shadow");
-                var dsOp = ds.property("ADBE Drop Shadow-0002"); // Opacity
+                dsOpProp = ds.property("ADBE Drop Shadow-0002"); // Opacity
                 // En AE moderno la opacidad del Drop Shadow va 0-255 (50% = 127.5);
-                // si la versión usa %, el máximo es 100 y seteamos 50.
-                dsOp.setValue(dsOp.maxValue >= 200 ? 127.5 : 50);
+                // si la versión usa %, el máximo es 100 y el target es 50.
+                dsTarget = dsOpProp.maxValue >= 200 ? 127.5 : 50;
+                dsOpProp.setValue(0);
                 ds.property("ADBE Drop Shadow-0005").setValue(166); // Softness
-            } catch(exDs) {}
+            } catch(exDs) { dsOpProp = null; }
         }
 
         var posVal = dup.property("Transform").property("Position").value;
@@ -1386,6 +1390,22 @@ function pcCreateZoomFocus(blurAmount, scaleFactor, easeOut, easeIn, roundness, 
         bgProp.setInterpolationTypeAtKey(kb4, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
         _pcApplyEaseScalar(bgProp, kb1, kb2, eo, ei);
         _pcApplyEaseScalar(bgProp, kb3, kb4, eo, ei);
+
+        // Drop Shadow (Zoom Dark): la opacidad acompaña el pulso del zoom
+        if (dsOpProp) {
+            try {
+                var kd1 = dsOpProp.addKey(inPt); dsOpProp.setValueAtKey(kd1, 0);
+                var kd2 = dsOpProp.addKey(inPt + dur); dsOpProp.setValueAtKey(kd2, dsTarget);
+                var kd3 = dsOpProp.addKey(outPt - dur); dsOpProp.setValueAtKey(kd3, dsTarget);
+                var kd4 = dsOpProp.addKey(outPt); dsOpProp.setValueAtKey(kd4, 0);
+                dsOpProp.setInterpolationTypeAtKey(kd1, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+                dsOpProp.setInterpolationTypeAtKey(kd2, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+                dsOpProp.setInterpolationTypeAtKey(kd3, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+                dsOpProp.setInterpolationTypeAtKey(kd4, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+                _pcApplyEaseScalar(dsOpProp, kd1, kd2, eo, ei);
+                _pcApplyEaseScalar(dsOpProp, kd3, kd4, eo, ei);
+            } catch(exDsK) {}
+        }
 
         // Cortar el duplicado para que ARRANQUE exactamente donde empieza el
         // movimiento (el playhead). Se hace acá, después de máscara/efectos/keyframes,
