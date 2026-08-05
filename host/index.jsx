@@ -384,6 +384,67 @@ function pcCreateHighlighter(roundCaps) {
     } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
 }
 
+// Evalúa el brillo del fondo bajo el highlighter SELECCIONADO usando
+// sampleImage (API de SCRIPTING — no expresión) y setea el blending mode:
+// fondo claro → MULTIPLY · fondo oscuro → ADD. Es re-ejecutable: mové el
+// highlighter y volvé a presionar el botón para recalcular.
+function pcAutoBlend() {
+    var s = _pcRequireSelected();
+    if (!s) return JSON.stringify({ error: "Selecciona el highlighter primero." });
+    try {
+        app.beginUndoGroup("Auto Blend");
+        var comp = s.comp, hl = s.layers[0];
+        var t = comp.time;
+        var hp = hl.property("ADBE Transform Group").property("ADBE Position").valueAtTime(t, false);
+
+        // Capa de fondo: la primera AV visible DEBAJO del highlighter en el
+        // stack, activa en el playhead y con video.
+        var bg = null;
+        for (var i = hl.index + 1; i <= comp.numLayers; i++) {
+            var cand = comp.layer(i);
+            try {
+                if (!cand.enabled) continue;
+                if (!cand.hasVideo) continue;
+                if (cand.inPoint > t || cand.outPoint < t) continue;
+                if (!cand.sampleImage) continue;
+                bg = cand;
+                break;
+            } catch(exC) {}
+        }
+        if (!bg) {
+            app.endUndoGroup();
+            return JSON.stringify({ error: "No hay capa de fondo visible debajo del highlighter." });
+        }
+
+        // Punto del comp → espacio de la capa de fondo (position/anchor/scale;
+        // la rotación se ignora — el fondo casi nunca va rotado).
+        var btg = bg.property("ADBE Transform Group");
+        var bp = btg.property("ADBE Position").valueAtTime(t, false);
+        var banch = btg.property("ADBE Anchor Point").valueAtTime(t, false);
+        var bsc = btg.property("ADBE Scale").valueAtTime(t, false);
+        var sx = (bsc[0] || 100) / 100;
+        var sy = (bsc[1] || 100) / 100;
+        if (sx === 0) sx = 1;
+        if (sy === 0) sy = 1;
+        var lx = (hp[0] - bp[0]) / sx + banch[0];
+        var ly = (hp[1] - bp[1]) / sy + banch[1];
+
+        // Muestra promediada de la zona (radio 40x20 px de capa)
+        var rgba = bg.sampleImage([lx, ly], [40, 20], true, t);
+        var lum = 0.2126 * rgba[0] + 0.7152 * rgba[1] + 0.0722 * rgba[2];
+        var isLight = lum > 0.5;
+        hl.blendingMode = isLight ? BlendingMode.MULTIPLY : BlendingMode.ADD;
+
+        app.endUndoGroup();
+        return JSON.stringify({
+            success: true,
+            mode: isLight ? "Multiply" : "Add",
+            lum: Math.round(lum * 100) / 100,
+            bgLayer: bg.name
+        });
+    } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
+}
+
 function pcFlipHorizontal() {
     var s = _pcRequireSelected();
     if (!s) return JSON.stringify({ error: "Selecciona una capa." });
@@ -1161,14 +1222,18 @@ function pcFocusMaskAnimate(mode, easeOut, easeIn, easeType, ex1, ey1, ex2, ey2)
 
 // ─── ZOOM FOCUS ──────────────────────────────────────────────
 
-function pcCreateZoomFocus(blurAmount, scaleFactor, easeOut, easeIn, roundness, easeType, ex1, ey1, ex2, ey2) {
+// darkMode=1 → "Zoom Dark": el fondo se OSCURECE (Brightness negativo) en
+// vez de blurearse, y el duplicado recibe Drop Shadow (50% / softness 166).
+// blurAmount hace de "cantidad": px de blur o % de oscuridad según el modo.
+function pcCreateZoomFocus(blurAmount, scaleFactor, easeOut, easeIn, roundness, easeType, ex1, ey1, ex2, ey2, darkMode) {
     _pcSetGlobalEase(easeType, ex1, ey1, ex2, ey2);
+    var isDark = (darkMode === 1 || darkMode === true || darkMode === "1");
     var s = _pcRequireSelected();
     if (!s) return JSON.stringify({ error: "Selecciona una capa con máscara." });
     try {
-        app.beginUndoGroup("Create Zoom Focus");
+        app.beginUndoGroup(isDark ? "Create Zoom Dark" : "Create Zoom Focus");
         var comp = s.comp, original = s.layers[0];
-        var ba = blurAmount || 25;
+        var ba = blurAmount || (isDark ? 70 : 25);
         var sf = scaleFactor || 150;
         var eo = easeOut || 75;
         var ei = easeIn || 75;
@@ -1191,7 +1256,7 @@ function pcCreateZoomFocus(blurAmount, scaleFactor, easeOut, easeIn, roundness, 
         var compCenterX = comp.width / 2;
         var compCenterY = comp.height / 2;
         var dup = original.duplicate();
-        dup.name = "ZoomFocus_" + original.name;
+        dup.name = (isDark ? "ZoomDark_" : "ZoomFocus_") + original.name;
         // El corte (inPoint) se hace AL FINAL de la función, no acá: setearlo antes
         // de reconstruir máscara/efectos/keyframes no "pega" en capas linked/MOGRT y
         // la capa quedaba extendida hacia atrás (desde el inicio del clip original)
@@ -1208,13 +1273,24 @@ function pcCreateZoomFocus(blurAmount, scaleFactor, easeOut, easeIn, roundness, 
         dupMask.property("maskShape").setValue(maskShapeVal);
         try { dupMask.maskMode = MaskMode.ADD; } catch(exMode) {}
 
-        // El original pierde su máscara y se vuelve el fondo blureado a pantalla completa.
+        // El original pierde su máscara y se vuelve el fondo a pantalla completa:
+        // blureado (Zoom Focus) u oscurecido (Zoom Dark).
         original.property("Masks").property(1).remove();
-        // Blur on original
         var fxsOrig = original.property("Effects");
-        var blur = fxsOrig.addProperty("ADBE Gaussian Blur 2");
-        blur.property("Blurriness").setValue(0);
-        try { blur.property("Repeat Edge Pixels").setValue(1); } catch(e) {}
+        var bgProp, bgTarget;
+        if (isDark) {
+            var darkFx = fxsOrig.addProperty("ADBE Brightness & Contrast 2");
+            darkFx.name = "Zoom Dark";
+            bgProp = darkFx.property(1); // Brightness (por índice, a prueba de idioma)
+            bgProp.setValue(0);
+            bgTarget = -ba; // % de oscuridad → brightness negativo
+        } else {
+            var blur = fxsOrig.addProperty("ADBE Gaussian Blur 2");
+            bgProp = blur.property("Blurriness");
+            bgProp.setValue(0);
+            try { blur.property("Repeat Edge Pixels").setValue(1); } catch(e) {}
+            bgTarget = ba;
+        }
         // Mask Feather / Roundness controls on duplicate
         var fxsDup = dup.property("Effects");
         var mfCtrl = fxsDup.addProperty("ADBE Slider Control"); mfCtrl.name = "Mask Feather";
@@ -1226,6 +1302,18 @@ function pcCreateZoomFocus(blurAmount, scaleFactor, easeOut, easeIn, roundness, 
         roundCtrlZF.property("Slider").setValue(rn);
         try { dupMask.property("maskFeather").expression = "var f = effect(\"Mask Feather\")(1); [f, f]"; } catch(ex) {}
         try { dupMask.property("maskExpansion").expression = "effect(\"Roundness\")(1)"; } catch(ex) {}
+
+        // Zoom Dark: Drop Shadow al recorte (opacidad 50%, softness 166).
+        if (isDark) {
+            try {
+                var ds = fxsDup.addProperty("ADBE Drop Shadow");
+                var dsOp = ds.property("ADBE Drop Shadow-0002"); // Opacity
+                // En AE moderno la opacidad del Drop Shadow va 0-255 (50% = 127.5);
+                // si la versión usa %, el máximo es 100 y seteamos 50.
+                dsOp.setValue(dsOp.maxValue >= 200 ? 127.5 : 50);
+                ds.property("ADBE Drop Shadow-0005").setValue(166); // Softness
+            } catch(exDs) {}
+        }
 
         var posVal = dup.property("Transform").property("Position").value;
         var anchorVal = dup.property("Transform").property("Anchor Point").value;
@@ -1286,18 +1374,17 @@ function pcCreateZoomFocus(blurAmount, scaleFactor, easeOut, easeIn, roundness, 
         _pcApplyEaseArray(scaleProp, ks1, ks2, eo, ei);
         _pcApplyEaseArray(scaleProp, ks3, ks4, eo, ei);
 
-        // Blur keyframes
-        var blurProp = blur.property("Blurriness");
-        var kb1 = blurProp.addKey(inPt); blurProp.setValueAtKey(kb1, 0);
-        var kb2 = blurProp.addKey(inPt + dur); blurProp.setValueAtKey(kb2, ba);
-        var kb3 = blurProp.addKey(outPt - dur); blurProp.setValueAtKey(kb3, ba);
-        var kb4 = blurProp.addKey(outPt); blurProp.setValueAtKey(kb4, 0);
-        blurProp.setInterpolationTypeAtKey(kb1, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
-        blurProp.setInterpolationTypeAtKey(kb2, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
-        blurProp.setInterpolationTypeAtKey(kb3, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
-        blurProp.setInterpolationTypeAtKey(kb4, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
-        _pcApplyEaseScalar(blurProp, kb1, kb2, eo, ei);
-        _pcApplyEaseScalar(blurProp, kb3, kb4, eo, ei);
+        // Keyframes del fondo (Blurriness o Brightness según el modo)
+        var kb1 = bgProp.addKey(inPt); bgProp.setValueAtKey(kb1, 0);
+        var kb2 = bgProp.addKey(inPt + dur); bgProp.setValueAtKey(kb2, bgTarget);
+        var kb3 = bgProp.addKey(outPt - dur); bgProp.setValueAtKey(kb3, bgTarget);
+        var kb4 = bgProp.addKey(outPt); bgProp.setValueAtKey(kb4, 0);
+        bgProp.setInterpolationTypeAtKey(kb1, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+        bgProp.setInterpolationTypeAtKey(kb2, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+        bgProp.setInterpolationTypeAtKey(kb3, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+        bgProp.setInterpolationTypeAtKey(kb4, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+        _pcApplyEaseScalar(bgProp, kb1, kb2, eo, ei);
+        _pcApplyEaseScalar(bgProp, kb3, kb4, eo, ei);
 
         // Cortar el duplicado para que ARRANQUE exactamente donde empieza el
         // movimiento (el playhead). Se hace acá, después de máscara/efectos/keyframes,
