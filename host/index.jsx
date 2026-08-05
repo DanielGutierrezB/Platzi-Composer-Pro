@@ -340,12 +340,20 @@ function pcCreateHighlighter(roundCaps) {
     if (!comp) return JSON.stringify({ error: "No hay composición activa." });
     try {
         app.beginUndoGroup("Create Highlighter");
+        // Si hay una capa seleccionada, el highlighter se emparenta a ella
+        // (capturar ANTES de crear: la capa nueva roba la selección).
+        var parentLayer = null;
+        try { if (comp.selectedLayers.length > 0) parentLayer = comp.selectedLayers[0]; } catch(exSel) {}
         var layer = comp.layers.addShape();
         layer.name = "Highlight";
         layer.inPoint = comp.time;
         layer.outPoint = comp.time + 10;
         layer.property("Transform").property("Opacity").setValue(50);
         layer.property("Transform").property("Anchor Point").setValue([0, 0]);
+        // Multiply por defecto (fondos claros); el botón ☀/☾ lo alterna.
+        try { layer.blendingMode = BlendingMode.MULTIPLY; } catch(exBm) {}
+        // .parent (sin jump): AE compensa el transform, la capa no salta.
+        if (parentLayer) { try { layer.parent = parentLayer; } catch(exPar) {} }
 
         var fxs = layer.property("Effects");
         var lenCtrl = fxs.addProperty("ADBE Slider Control"); lenCtrl.name = "Length";
@@ -384,21 +392,23 @@ function pcCreateHighlighter(roundCaps) {
     } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
 }
 
-// Setea el blending mode de TODAS las capas seleccionadas: "multiply"
-// (para fondos claros) o "add" (para fondos oscuros). Directo y simple.
-function pcSetBlend(mode) {
+// Alterna el blending de TODAS las capas seleccionadas entre MULTIPLY
+// (☀ fondos claros) y ADD (☾ fondos oscuros), según el estado de la primera.
+function pcToggleBlend() {
     var s = _pcRequireSelected();
     if (!s) return JSON.stringify({ error: "Selecciona uno o más highlights primero." });
     try {
-        app.beginUndoGroup("Set Blend " + mode);
-        var bm = (mode === "multiply") ? BlendingMode.MULTIPLY : BlendingMode.ADD;
+        app.beginUndoGroup("Toggle Blend");
+        var toAdd = false;
+        try { toAdd = (s.layers[0].blendingMode === BlendingMode.MULTIPLY); } catch(e0) {}
+        var bm = toAdd ? BlendingMode.ADD : BlendingMode.MULTIPLY;
         var done = 0;
         for (var i = 0; i < s.layers.length; i++) {
             try { s.layers[i].blendingMode = bm; done++; } catch(exL) {}
         }
         app.endUndoGroup();
         if (!done) return JSON.stringify({ error: "No se pudo cambiar el blending de la selección." });
-        return JSON.stringify({ success: true, layers: done, mode: mode });
+        return JSON.stringify({ success: true, layers: done, mode: toAdd ? "add" : "multiply" });
     } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
 }
 
@@ -473,11 +483,15 @@ function pcCreateLineHighlighter(style, enableGlow) {
     if (!style) style = "solid";
     try {
         app.beginUndoGroup("Create Line Highlight");
+        // Emparentar a la capa seleccionada (capturar antes de crear).
+        var parentLayer = null;
+        try { if (comp.selectedLayers.length > 0) parentLayer = comp.selectedLayers[0]; } catch(exSel) {}
         var layer = comp.layers.addShape();
         var styleNames = {"solid":"Solid","thunder":"Thunder","dashed":"Dashed"};
         layer.name = "Line Highlight - " + (styleNames[style] || style);
         layer.inPoint = comp.time;
         layer.outPoint = comp.time + 3;
+        if (parentLayer) { try { layer.parent = parentLayer; } catch(exPar) {} }
 
         var fxs = layer.property("Effects");
         // Common controls
@@ -1179,9 +1193,30 @@ function pcFocusMaskAnimate(mode, easeOut, easeIn, easeType, ex1, ey1, ex2, ey2)
 
 // ─── ZOOM FOCUS ──────────────────────────────────────────────
 
-// darkMode=1 → "Zoom Dark": el fondo se OSCURECE (Brightness negativo) en
+// Encuentra el slider Master Exposure del efecto Exposure. Sus matchNames
+// internos no son estables ("-0002" es NO_VALUE), así que se busca el
+// primer OneD con el rango característico del slider de stops (-20..20).
+// Fallback: display name (el AE del equipo corre en inglés).
+function _pcFindExposureProp(fx) {
+    for (var i = 1; i <= fx.numProperties; i++) {
+        var p = null;
+        try { p = fx.property(i); } catch(e) {}
+        if (!p) continue;
+        try {
+            if (p.propertyValueType !== PropertyValueType.OneD) continue;
+            if (p.hasMin && p.hasMax && p.minValue <= -10 && p.maxValue >= 10) return p;
+        } catch(e2) {}
+    }
+    try {
+        var byName = fx.property("Master Exposure");
+        if (byName) return byName;
+    } catch(e3) {}
+    return null;
+}
+
+// darkMode=1 → "Zoom Dark": el fondo se OSCURECE (Exposure negativo) en
 // vez de blurearse, y el duplicado recibe Drop Shadow (50% / softness 166).
-// blurAmount hace de "cantidad": px de blur o % de oscuridad según el modo.
+// blurAmount hace de "cantidad": px de blur o stops de exposición según modo.
 function pcCreateZoomFocus(blurAmount, scaleFactor, easeOut, easeIn, roundness, easeType, ex1, ey1, ex2, ey2, darkMode) {
     _pcSetGlobalEase(easeType, ex1, ey1, ex2, ey2);
     var isDark = (darkMode === 1 || darkMode === true || darkMode === "1");
@@ -1241,7 +1276,13 @@ function pcCreateZoomFocus(blurAmount, scaleFactor, easeOut, easeIn, roundness, 
             // mucho más pesado). Master Exposure en stops: -4 = bien oscuro.
             var darkFx = fxsOrig.addProperty("ADBE Exposure2");
             darkFx.name = "Zoom Dark";
-            bgProp = darkFx.property("ADBE Exposure2-0002"); // Master Exposure
+            // OJO: "ADBE Exposure2-0002" es NO_VALUE (no es el slider). El
+            // Master Exposure se detecta por su rango característico -20..20.
+            bgProp = _pcFindExposureProp(darkFx);
+            if (!bgProp) {
+                app.endUndoGroup();
+                return JSON.stringify({ error: "No se encontró el slider Master Exposure del efecto Exposure en este AE." });
+            }
             bgProp.setValue(0);
             bgTarget = -Math.abs(ba); // ba = stops de exposición hacia abajo
         } else {

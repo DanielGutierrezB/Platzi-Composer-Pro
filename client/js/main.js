@@ -1381,9 +1381,14 @@
         });
         on("btn-hl-flip",           "click", function()  { callHost("pcFlipHorizontal()"); });
 
-        // Blending directo a la selección (uno o varios highlights)
-        on("btn-blend-multiply", "click", function() { callHost("pcSetBlend('multiply')"); });
-        on("btn-blend-add",      "click", function() { callHost("pcSetBlend('add')"); });
+        // Toggle de blending de la selección: ☀ Multiply ↔ ☾ Add.
+        // El ícono del botón refleja el modo que quedó aplicado.
+        on("btn-blend-toggle", "click", function() {
+            callHost("pcToggleBlend()", function(d) {
+                var btn = document.getElementById("btn-blend-toggle");
+                if (btn && d && d.mode) btn.textContent = (d.mode === "multiply") ? "☀" : "☾";
+            });
+        });
         document.getElementById("btn-line-create").addEventListener("click", function(e) {
             var eo = document.getElementById("ease-out").value;
             var ei = document.getElementById("ease-in").value;
