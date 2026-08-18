@@ -14,7 +14,7 @@
             <div class="header-spacer"></div>
             <span id="comp-name" class="comp-name">Sin composición activa</span>
             <span id="layer-count" class="layer-count"></span>
-            <span id="version-badge" class="version-label">v1.12.0</span>
+            <span id="version-badge" class="version-label">v1.12.1</span>
             <button id="btn-update" class="icon-btn" title="Verificar actualización / Recargar panel">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
@@ -60,6 +60,19 @@
                 <div class="color-swatch" data-color="0.961,0.353,0" style="background:#F55A00" data-tooltip="#F55A00"></div>
                 <div class="color-swatch" data-color="1,0.380,0.886" style="background:#FF61E2" data-tooltip="#FF61E2"></div>
                 <button id="btn-mirror-keys" class="btn-palette-action" data-tooltip="Clone & Mirror Keys al playhead">⇄</button>
+            </div>
+            <div class="ease-divider"></div>
+            <!-- Mini Anchor (siempre visible, igual que el de Animate) -->
+            <div class="an-anchor-grid an-anchor-mini" id="anchor-grid-mini">
+                <button class="an-anchor-dot" data-ax="0"   data-ay="0"   data-tooltip="Anchor arriba izq"></button>
+                <button class="an-anchor-dot" data-ax="0.5" data-ay="0"   data-tooltip="Anchor arriba"></button>
+                <button class="an-anchor-dot" data-ax="1"   data-ay="0"   data-tooltip="Anchor arriba der"></button>
+                <button class="an-anchor-dot" data-ax="0"   data-ay="0.5" data-tooltip="Anchor izquierda"></button>
+                <button class="an-anchor-dot an-anchor-center" data-ax="0.5" data-ay="0.5" data-tooltip="Anchor centro"></button>
+                <button class="an-anchor-dot" data-ax="1"   data-ay="0.5" data-tooltip="Anchor derecha"></button>
+                <button class="an-anchor-dot" data-ax="0"   data-ay="1"   data-tooltip="Anchor abajo izq"></button>
+                <button class="an-anchor-dot" data-ax="0.5" data-ay="1"   data-tooltip="Anchor abajo"></button>
+                <button class="an-anchor-dot" data-ax="1"   data-ay="1"   data-tooltip="Anchor abajo der"></button>
             </div>
             <div class="ease-divider"></div>
             <div class="apply-curve-group">

@@ -1218,6 +1218,27 @@ body {
     box-shadow: 0 0 0 2px rgba(153, 153, 153, 0.25);
 }
 
+/* Mini Anchor del header (misma grilla, tamaño compacto) */
+.an-anchor-mini {
+    grid-template-columns: repeat(3, 10px);
+    grid-template-rows: repeat(3, 10px);
+    gap: 2px;
+    padding: 3px;
+}
+.an-anchor-mini .an-anchor-dot {
+    width: 10px;
+    height: 10px;
+}
+.an-anchor-mini .an-anchor-dot::before {
+    width: 3px;
+    height: 3px;
+}
+.an-anchor-mini .an-anchor-center::before {
+    width: 4px;
+    height: 4px;
+    box-shadow: 0 0 0 1px rgba(153, 153, 153, 0.25);
+}
+
 /* ─── Curve Editor (drawer estilo Flow) ─── */
 /* Drawer de curva: se despliega hacia abajo desde la barra del header */
 .curve-drawer {

@@ -1591,11 +1591,10 @@
             callHost("pcStaggerKeys(" + anStagger() + ", true, " + anStaggerEvery() + ")");
         });
 
-        // Anchor Point 3x3 (estilo Motion Tools)
+        // Anchor Point 3x3 (estilo Motion Tools) — bindea TODAS las grillas:
+        // la de la card Animate y la mini del header (siempre visible).
         (function() {
-            var grid = document.getElementById("anchor-grid");
-            if (!grid) return;
-            var dots = grid.querySelectorAll(".an-anchor-dot");
+            var dots = document.querySelectorAll(".an-anchor-dot");
             for (var d = 0; d < dots.length; d++) {
                 (function(dot) {
                     dot.addEventListener("click", function() {
