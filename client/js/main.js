@@ -1691,6 +1691,12 @@
             })(thBtns[ti]);
         }
 
+        // Split Text: separa el texto en capas según el modo Character/Word/Line
+        on("btn-split-text", "click", function() {
+            var mode = document.querySelector('input[name="th-mode"]:checked').value;
+            callHost("pcSplitText('" + mode + "')");
+        });
+
         // Text Box (recuadro): clic = caja responsive; Shift+clic = caja + animación de entrada
         var tbBtn = document.getElementById("btn-textbox");
         if (tbBtn) {

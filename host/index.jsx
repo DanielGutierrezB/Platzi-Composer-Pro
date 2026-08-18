@@ -2143,6 +2143,136 @@ function _pcAnimateBoxEntrance(box, animType, boxDurFrames, t0, fps, easeOut, ea
     } catch(exB) {}
 }
 
+// ─── SPLIT TEXT ─────────────────────────────────────────────────
+
+// Separa cada texto seleccionado en capas individuales por unidad:
+// mode = "char" | "word" | "line". Cada unidad queda como un duplicado del
+// original (mismo estilo/parent/blend) posicionado EXACTAMENTE donde estaba
+// dentro del texto. Medición de anchos con una capa temporal +
+// sourceRectAtTime (scripting), usando centinelas "|" para que los espacios
+// del prefijo no colapsen. El original se apaga (no se borra).
+// Limitaciones: point text, sin rotación, un solo estilo por capa.
+function pcSplitText(mode) {
+    var s = _pcRequireSelected();
+    if (!s) return JSON.stringify({ error: "Selecciona el texto a separar." });
+    try {
+        app.beginUndoGroup("Split Text");
+        var comp = s.comp;
+        var t = comp.time;
+        var targets = [], i;
+        for (i = 0; i < s.layers.length; i++) {
+            if (s.layers[i] instanceof TextLayer) targets.push(s.layers[i]);
+        }
+        if (targets.length === 0) {
+            app.endUndoGroup();
+            return JSON.stringify({ error: "Selecciona al menos una capa de texto." });
+        }
+
+        var made = 0;
+        for (var li0 = 0; li0 < targets.length; li0++) {
+            try {
+                var src = targets[li0];
+                var tProp = src.property("ADBE Text Properties").property("ADBE Text Document");
+                var tdoc = tProp.value;
+                var full = tdoc.text || "";
+                if (!full) continue;
+
+                // Normalizar saltos de línea y separar líneas
+                var norm = full.replace(/\r\n/g, "\r").replace(/\n/g, "\r");
+                var lines = norm.split("\r");
+
+                var leading = 0;
+                try { leading = tdoc.autoLeading ? tdoc.fontSize * 1.2 : tdoc.leading; } catch(exLd) { leading = tdoc.fontSize * 1.2; }
+
+                // Offset del origen según justificación (el origin de un point
+                // text es el punto de justificación de la baseline).
+                var f = 0; // LEFT
+                try {
+                    if (tdoc.justification === ParagraphJustification.CENTER_JUSTIFY) f = 0.5;
+                    else if (tdoc.justification === ParagraphJustification.RIGHT_JUSTIFY) f = 1;
+                } catch(exJ) {}
+
+                // Capa temporal de medición (hereda fuente/estilo del original)
+                var meas = src.duplicate();
+                meas.enabled = false;
+                var measProp = meas.property("ADBE Text Properties").property("ADBE Text Document");
+                var _w = function(txt) {
+                    var md = measProp.value;
+                    md.text = "|" + txt + "|";
+                    measProp.setValue(md);
+                    return meas.sourceRectAtTime(t, false).width;
+                };
+                var wBars = _w(""); // ancho de los 2 centinelas solos
+                var W = function(txt) { return txt === "" ? 0 : (_w(txt) - wBars); };
+
+                // Unidades con su origen (x,y) en espacio de capa del original
+                var units = [];
+                for (var ln = 0; ln < lines.length; ln++) {
+                    var lineTxt = lines[ln];
+                    if (!lineTxt) continue;
+                    var y = ln * leading;
+                    var lw = W(lineTxt);
+                    var lineStartX = -f * lw;
+                    if (mode === "line") {
+                        units.push({ t: lineTxt, x: lineStartX + f * lw, y: y });
+                    } else if (mode === "word") {
+                        var words = lineTxt.split(" ");
+                        var prefix = "";
+                        for (var wi = 0; wi < words.length; wi++) {
+                            if (words[wi] !== "") {
+                                units.push({ t: words[wi], x: lineStartX + W(prefix) + f * W(words[wi]), y: y });
+                            }
+                            prefix += words[wi] + " ";
+                        }
+                    } else { // char
+                        var prefC = "";
+                        for (var ci = 0; ci < lineTxt.length; ci++) {
+                            var ch = lineTxt.charAt(ci);
+                            if (ch !== " ") {
+                                units.push({ t: ch, x: lineStartX + W(prefC) + f * W(ch), y: y });
+                            }
+                            prefC += ch;
+                        }
+                    }
+                }
+                meas.remove();
+
+                // Transform del original (asume sin rotación)
+                var tg = src.property("ADBE Transform Group");
+                var pos = tg.property("ADBE Position").valueAtTime(t, false);
+                var sc = tg.property("ADBE Scale").valueAtTime(t, false);
+                var sx = sc[0] / 100, sy = sc[1] / 100;
+
+                // Crear una capa por unidad. pos' = pos + unidad.(x,y) * scale
+                // (mismo parent y anchor que el original → la cuenta se
+                // simplifica a esto).
+                for (var ui = 0; ui < units.length; ui++) {
+                    var dup = src.duplicate();
+                    dup.name = src.name + " · " + units[ui].t;
+                    var dProp = dup.property("ADBE Text Properties").property("ADBE Text Document");
+                    var dd = dProp.value;
+                    dd.text = units[ui].t;
+                    dProp.setValue(dd);
+                    // Sin animators heredados: la unidad nace limpia
+                    try {
+                        var dAnims = dup.property("ADBE Text Properties").property("ADBE Text Animators");
+                        for (var da = dAnims.numProperties; da >= 1; da--) dAnims.property(da).remove();
+                    } catch(exAn) {}
+                    var np = [pos[0] + units[ui].x * sx, pos[1] + units[ui].y * sy];
+                    if (pos.length > 2) np.push(pos[2]);
+                    try { dup.property("ADBE Transform Group").property("ADBE Position").setValue(np); } catch(exP) {}
+                    made++;
+                }
+                src.enabled = false; // apagar el original (queda por si acaso)
+            } catch(exLayer) {}
+        }
+
+        app.endUndoGroup();
+        if (!made) return JSON.stringify({ error: "No se pudo separar el texto." });
+        return JSON.stringify({ success: true, layers: made });
+    } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
+}
+
 // ─── TEXT HELPER ────────────────────────────────────────────────
 
 function pcTextHelper(animType, mode, animMode, durationFrames, enableGlow, easeOut, easeIn, boxAnimFrames, easeType, ex1, ey1, ex2, ey2) {
