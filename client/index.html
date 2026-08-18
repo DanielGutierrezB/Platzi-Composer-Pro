@@ -14,7 +14,7 @@
             <div class="header-spacer"></div>
             <span id="comp-name" class="comp-name">Sin composición activa</span>
             <span id="layer-count" class="layer-count"></span>
-            <span id="version-badge" class="version-label">v1.11.3</span>
+            <span id="version-badge" class="version-label">v1.12.0</span>
             <button id="btn-update" class="icon-btn" title="Verificar actualización / Recargar panel">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
@@ -495,6 +495,16 @@
                     <label class="tool-checkbox"><input type="checkbox" id="solid-animate"> Animate</label>
                 </div>
                 <button id="btn-sol-mask-in" class="btn btn-tool btn-full">▶ Animate Mask In</button>
+
+                <div class="hl-divider"></div>
+
+                <!-- Align to Solid (pedido de Nicolás) -->
+                <div class="tool-label">Align Text</div>
+                <div class="tool-inline-row">
+                    <button id="btn-align-solid" class="btn btn-tool" data-tooltip="Centra el texto seleccionado en el CENTRO del sólido (usa su máscara si tiene — funciona con las mitades del Solid Creator). Podés seleccionar texto + sólido, o solo el texto">● Al Sólido</button>
+                    <button id="btn-align-left" class="btn btn-tool" data-tooltip="Centra el texto en la mitad IZQUIERDA del comp">◀ Mitad Izq</button>
+                    <button id="btn-align-right" class="btn btn-tool" data-tooltip="Centra el texto en la mitad DERECHA del comp">Mitad Der ▶</button>
+                </div>
             </div>
         </div>
 

@@ -1621,6 +1621,126 @@ function pcSolidOrLayer(position, animate, durationFrames, easeOut, easeIn, ease
     } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
 }
 
+// Alinea las capas seleccionadas (típicamente textos) al centro de una zona:
+// zone = "solid" → centro del sólido (el seleccionado, o el primero visible
+//   del comp). Si el sólido tiene máscara (mitades del Solid Creator), usa
+//   el centro del bounding box de la máscara, no del layer completo.
+// zone = "left"/"right" → centro de la mitad izquierda/derecha del comp.
+// Centra el bounding box visual (sourceRectAtTime, scripting) compensando
+// anchor/scale, y parent si lo hay. Valores estáticos, sin expresiones.
+function pcAlignToSolid(zone) {
+    var s = _pcRequireSelected();
+    if (!s) return JSON.stringify({ error: "Selecciona el texto a alinear." });
+    try {
+        app.beginUndoGroup("Align to Solid");
+        var comp = s.comp;
+        var t = comp.time;
+
+        // Separar selección: sólido (si viene) y capas a alinear
+        var solid = null, targets = [], i;
+        for (i = 0; i < s.layers.length; i++) {
+            var ly = s.layers[i];
+            var isSolid = false;
+            try {
+                isSolid = (ly.source && ly.source instanceof FootageItem && ly.source.mainSource instanceof SolidSource);
+            } catch(exSrc) {}
+            if (isSolid && !solid) solid = ly;
+            else targets.push(ly);
+        }
+        if (targets.length === 0) {
+            app.endUndoGroup();
+            return JSON.stringify({ error: "Selecciona la capa de texto (el sólido es opcional en la selección)." });
+        }
+
+        // Punto destino (centro) en espacio del comp
+        var cx, cy;
+        if (zone === "left") { cx = comp.width * 0.25; cy = comp.height / 2; }
+        else if (zone === "right") { cx = comp.width * 0.75; cy = comp.height / 2; }
+        else {
+            if (!solid) {
+                for (i = 1; i <= comp.numLayers; i++) {
+                    var cand = comp.layer(i);
+                    try {
+                        if (!cand.enabled) continue;
+                        if (cand.source && cand.source instanceof FootageItem && cand.source.mainSource instanceof SolidSource) { solid = cand; break; }
+                    } catch(exC) {}
+                }
+            }
+            if (!solid) {
+                app.endUndoGroup();
+                return JSON.stringify({ error: "No encontré un sólido: seleccioná uno o crealo con Solid Creator." });
+            }
+            // BBox visible del sólido en su espacio de capa (máscara si tiene)
+            var minX = 0, minY = 0, maxX = solid.width, maxY = solid.height;
+            try {
+                var sMasks = solid.property("ADBE Mask Parade");
+                if (sMasks && sMasks.numProperties > 0) {
+                    var mVerts = sMasks.property(1).property("ADBE Mask Shape").value.vertices;
+                    minX = mVerts[0][0]; maxX = mVerts[0][0]; minY = mVerts[0][1]; maxY = mVerts[0][1];
+                    for (var v = 1; v < mVerts.length; v++) {
+                        if (mVerts[v][0] < minX) minX = mVerts[v][0];
+                        if (mVerts[v][0] > maxX) maxX = mVerts[v][0];
+                        if (mVerts[v][1] < minY) minY = mVerts[v][1];
+                        if (mVerts[v][1] > maxY) maxY = mVerts[v][1];
+                    }
+                }
+            } catch(exM) {}
+            var slc = [(minX + maxX) / 2, (minY + maxY) / 2];
+            // Capa → comp (position/anchor/scale; rotación ignorada)
+            var stg = solid.property("ADBE Transform Group");
+            var sPos = stg.property("ADBE Position").valueAtTime(t, false);
+            var sAnch = stg.property("ADBE Anchor Point").valueAtTime(t, false);
+            var sSc = stg.property("ADBE Scale").valueAtTime(t, false);
+            cx = sPos[0] + (slc[0] - sAnch[0]) * (sSc[0] / 100);
+            cy = sPos[1] + (slc[1] - sAnch[1]) * (sSc[1] / 100);
+        }
+
+        // Centrar cada capa objetivo en (cx, cy)
+        var done = 0;
+        for (i = 0; i < targets.length; i++) {
+            try {
+                var lay = targets[i];
+                var r = lay.sourceRectAtTime(t, false);
+                var lc = [r.left + r.width / 2, r.top + r.height / 2];
+                var ltg = lay.property("ADBE Transform Group");
+                var lAnch = ltg.property("ADBE Anchor Point").valueAtTime(t, false);
+                var lSc = ltg.property("ADBE Scale").valueAtTime(t, false);
+                var posProp = ltg.property("ADBE Position");
+
+                // Destino en el espacio donde vive Position (parent o comp)
+                var dx = cx, dy = cy;
+                if (lay.parent) {
+                    var ptg = lay.parent.property("ADBE Transform Group");
+                    var pPos = ptg.property("ADBE Position").valueAtTime(t, false);
+                    var pAnch = ptg.property("ADBE Anchor Point").valueAtTime(t, false);
+                    var pSc = ptg.property("ADBE Scale").valueAtTime(t, false);
+                    var psx = (pSc[0] || 100) / 100, psy = (pSc[1] || 100) / 100;
+                    if (psx === 0) psx = 1;
+                    if (psy === 0) psy = 1;
+                    dx = (cx - pPos[0]) / psx + pAnch[0];
+                    dy = (cy - pPos[1]) / psy + pAnch[1];
+                }
+                var npx = dx - (lc[0] - lAnch[0]) * (lSc[0] / 100);
+                var npy = dy - (lc[1] - lAnch[1]) * (lSc[1] / 100);
+                var cur = posProp.valueAtTime(t, false);
+                var np = [npx, npy];
+                if (cur.length > 2) np.push(cur[2]);
+                if (posProp.numKeys > 0) {
+                    var k = posProp.addKey(t);
+                    posProp.setValueAtKey(k, np);
+                } else {
+                    posProp.setValue(np);
+                }
+                done++;
+            } catch(exL) {}
+        }
+
+        app.endUndoGroup();
+        if (!done) return JSON.stringify({ error: "No se pudo alinear la selección." });
+        return JSON.stringify({ success: true, layers: done, zone: zone || "solid" });
+    } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
+}
+
 function pcAnimateMaskIn(durationFrames, easeOut, easeIn, easeType, ex1, ey1, ex2, ey2) {
     _pcSetGlobalEase(easeType, ex1, ey1, ex2, ey2);
     var s = _pcRequireSelected();

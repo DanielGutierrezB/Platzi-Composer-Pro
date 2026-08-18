@@ -1626,6 +1626,11 @@
             callHost("pcAnimateMaskIn(" + dur + ", " + easeOut() + ", " + easeIn() + easeArgsGlobal() + ")");
         });
 
+        // Align to Solid: centra los textos seleccionados en el sólido o mitades
+        on("btn-align-solid", "click", function() { callHost("pcAlignToSolid('solid')"); });
+        on("btn-align-left",  "click", function() { callHost("pcAlignToSolid('left')"); });
+        on("btn-align-right", "click", function() { callHost("pcAlignToSolid('right')"); });
+
         // Mini Profesor (Shift+Click or checkbox → animate)
         on("btn-mp-left", "click", function(evt) {
             var x = parseFloat(document.getElementById("mp-x").value) || 35;
