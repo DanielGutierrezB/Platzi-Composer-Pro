@@ -2151,28 +2151,33 @@ function pcTextHelper(animType, mode, animMode, durationFrames, enableGlow, ease
     if (!comp) return JSON.stringify({ error: "No hay composici\u00f3n activa." });
     try {
         app.beginUndoGroup("Text Helper - " + animType);
-        var textLayer;
 
-        // Auto-detect: buscar el PRIMER text layer en la selecci\u00f3n (no solo sel[0]),
-        // as\u00ed funciona aunque est\u00e9n seleccionadas ambas capas (texto + caja) en
-        // cualquier orden. Si no hay texto seleccionado, crear uno nuevo.
+        // Auto-detect: TODOS los text layers de la selecci\u00f3n (as\u00ed la animaci\u00f3n
+        // se aplica a cada texto seleccionado de una). Si no hay ninguno,
+        // se crea un texto nuevo.
         var sel = comp.selectedLayers;
+        var targets = [];
         if (sel) {
             for (var si = 0; si < sel.length; si++) {
-                if (sel[si] instanceof TextLayer) { textLayer = sel[si]; break; }
+                if (sel[si] instanceof TextLayer) targets.push(sel[si]);
             }
         }
-        if (!textLayer) {
+        if (targets.length === 0) {
             // Create new text layer
-            textLayer = comp.layers.addText("Tu texto aqu\u00ed");
-            textLayer.property("ADBE Transform Group").property("ADBE Position").setValue([comp.width / 2, comp.height / 2]);
-            var textDoc = textLayer.property("ADBE Text Properties").property("ADBE Text Document").value;
+            var newText = comp.layers.addText("Tu texto aqu\u00ed");
+            newText.property("ADBE Transform Group").property("ADBE Position").setValue([comp.width / 2, comp.height / 2]);
+            var textDoc = newText.property("ADBE Text Properties").property("ADBE Text Document").value;
             textDoc.fontSize = 80;
             textDoc.fillColor = [1, 1, 1];
             textDoc.font = "Arial";
             textDoc.justification = ParagraphJustification.CENTER_JUSTIFY;
-            textLayer.property("ADBE Text Properties").property("ADBE Text Document").setValue(textDoc);
+            newText.property("ADBE Text Properties").property("ADBE Text Document").setValue(textDoc);
+            targets.push(newText);
         }
+
+        // Aplicar la animaci\u00f3n a CADA texto seleccionado
+        for (var tIdx = 0; tIdx < targets.length; tIdx++) {
+        var textLayer = targets[tIdx];
 
         // Access Text Animators
         var textProp = textLayer.property("ADBE Text Properties");
@@ -2327,7 +2332,10 @@ function pcTextHelper(animType, mode, animMode, durationFrames, enableGlow, ease
         // al texto. Así funciona seleccionando ambas capas o solo el texto.
         if (animMode === "in" || animMode === "inout") {
             var boxLayer = null;
-            if (sel) {
+            // La caja tomada de la SELECCIÓN solo aplica con un único texto
+            // (con varios, cada texto usa su caja emparentada; si no, todos
+            // re-animarían la misma caja seleccionada).
+            if (sel && targets.length === 1) {
                 for (var bi = 0; bi < sel.length; bi++) {
                     var cand = sel[bi];
                     try {
@@ -2343,8 +2351,10 @@ function pcTextHelper(animType, mode, animMode, durationFrames, enableGlow, ease
             }
         }
 
+        } // fin del loop por cada texto seleccionado
+
         app.endUndoGroup();
-        return JSON.stringify({ success: true, type: animType });
+        return JSON.stringify({ success: true, type: animType, layers: targets.length });
     } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
 }
 
