@@ -391,11 +391,15 @@ body {
 /* ─── Tool Cards ─── */
 
 .tools-container {
-    padding: 6px 8px 92px; /* deja espacio para el Anchor flotante de la esquina */
+    padding: 6px 8px 10px;
     display: flex;
     flex-direction: column;
     gap: 0;
     flex: 1;
+    /* min-height 0: sin esto, un hijo flex con overflow no puede encogerse
+       por debajo de su contenido → se recortaba SIN mostrar scrollbar en
+       ventanas poco altas. */
+    min-height: 0;
     overflow-y: auto;
 }
 
@@ -1218,20 +1222,25 @@ body {
     box-shadow: 0 0 0 2px rgba(153, 153, 153, 0.25);
 }
 
-/* Anchor flotante: fijo en la esquina inferior derecha, sobre cualquier
-   pestaña. Semi-transparente hasta hacer hover para no estorbar. */
+/* Anchor flotante: fijo en la esquina inferior derecha, POR ENCIMA del
+   contenido con transparencia leve (no reserva espacio ni tapa en bloque).
+   Al hover se vuelve sólido. */
 .anchor-float {
     position: fixed;
     right: 10px;
     bottom: 10px;
     z-index: 300;
-    opacity: 0.75;
+    opacity: 0.55;
     transition: opacity var(--transition);
 }
 .anchor-float:hover { opacity: 1; }
 .anchor-float .an-anchor-grid {
+    background: rgba(20, 20, 26, 0.55);
+    border-color: rgba(255, 255, 255, 0.12);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+.anchor-float:hover .an-anchor-grid {
     background: var(--bg-secondary, #1a1a1a);
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
 }
 
 /* ─── Curve Editor (drawer estilo Flow) ─── */
