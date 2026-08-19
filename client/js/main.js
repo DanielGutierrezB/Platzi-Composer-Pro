@@ -1701,7 +1701,8 @@
                 (function(btn) {
                     btn.addEventListener("click", function() {
                         var numStyle = btn.getAttribute("data-num");
-                        var b = numStyle ? (numStyle === "paren" ? "1) " : "1. ") : btn.getAttribute("data-bullet");
+                        var NUM_PREFIX = { dot: "1. ", paren: "1) ", alphaDot: "A. ", alphaParen: "A) " };
+                        var b = numStyle ? NUM_PREFIX[numStyle] : btn.getAttribute("data-bullet");
                         try {
                             var ta = document.createElement("textarea");
                             ta.value = b;

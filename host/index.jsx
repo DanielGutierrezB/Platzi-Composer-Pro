@@ -2206,8 +2206,8 @@ function pcApplyBullet(bullet) {
                 for (var j = 0; j < lines.length; j++) {
                     var line = lines[j];
                     if (line === "") continue; // líneas vacías se dejan
-                    // Quitar numeración existente ("1. " / "23) ") o viñeta
-                    line = line.replace(/^\s*\d+[\.\)]\s?/, "");
+                    // Quitar numeración existente ("1. " / "23) " / "A. " / "B) ") o viñeta
+                    line = line.replace(/^\s*\d+[\.\)]\s?/, "").replace(/^\s*[A-Z][\.\)]\s/, "");
                     for (var b = 0; b < BULLETS.length; b++) {
                         if (line.indexOf(BULLETS[b]) === 0) {
                             line = line.substring(BULLETS[b].length);
@@ -2227,16 +2227,18 @@ function pcApplyBullet(bullet) {
     } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
 }
 
-// Numera cada línea de los textos seleccionados: style "dot" → "1. 2. 3."
-// · style "paren" → "1) 2) 3)". Reemplaza viñetas o numeración previa.
-// El contador arranca en 1 por cada capa de texto y las líneas vacías no
-// cuentan. Sin texto seleccionado devuelve lines:0 (solo clipboard).
+// Numera cada línea de los textos seleccionados: "dot" → "1. 2. 3." ·
+// "paren" → "1) 2) 3)" · "alphaDot" → "A. B. C." · "alphaParen" → "A) B) C)".
+// Reemplaza viñetas o numeración previa (números o letras). El contador
+// arranca por cada capa de texto y las líneas vacías no cuentan. Sin texto
+// seleccionado devuelve lines:0 (solo clipboard).
 function pcApplyNumbering(style) {
     var comp = _pcRequireComp();
     if (!comp) return JSON.stringify({ error: "No hay composición activa." });
     try {
         var BULLETS = ["\u2022", "\u25E6", "\u25AA", "\u2013", "\u2014", "\u2192", "\u25B8", "\u2713", "\u2717", "\u2605", "\u2606", "\u00B7", "*", "-"];
-        var sep = (style === "paren") ? ")" : ".";
+        var isAlpha = (style === "alphaDot" || style === "alphaParen");
+        var sep = (style === "paren" || style === "alphaParen") ? ")" : ".";
         var sel = comp.selectedLayers;
         var texts = [], i;
         for (i = 0; i < sel.length; i++) {
@@ -2258,7 +2260,7 @@ function pcApplyNumbering(style) {
                 for (var j = 0; j < lines.length; j++) {
                     var line = lines[j];
                     if (line === "") continue;
-                    line = line.replace(/^\s*\d+[\.\)]\s?/, "");
+                    line = line.replace(/^\s*\d+[\.\)]\s?/, "").replace(/^\s*[A-Z][\.\)]\s/, "");
                     for (var b = 0; b < BULLETS.length; b++) {
                         if (line.indexOf(BULLETS[b]) === 0) {
                             line = line.substring(BULLETS[b].length);
@@ -2266,7 +2268,8 @@ function pcApplyNumbering(style) {
                             break;
                         }
                     }
-                    lines[j] = n + sep + " " + line;
+                    var pfx = isAlpha ? String.fromCharCode(65 + ((n - 1) % 26)) : ("" + n);
+                    lines[j] = pfx + sep + " " + line;
                     n++;
                     totalLines++;
                 }
