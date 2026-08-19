@@ -2143,6 +2143,38 @@ function _pcAnimateBoxEntrance(box, animType, boxDurFrames, t0, fps, easeOut, ea
     } catch(exB) {}
 }
 
+// ─── STAGGER DE CAPAS ───────────────────────────────────────────
+
+// Desplaza EL CLIP COMPLETO de cada capa seleccionada (startTime: se mueve
+// todo — in/out points y keyframes juntos) en cascada: capa 1 fija, capa 2
+// +N frames, capa 3 +2N… groupSize agrupa (ej. 5 frames cada 2 capas).
+// reverse = la última queda fija. A diferencia de pcStaggerKeys, NO toca
+// los keyframes por dentro: mueve la capa entera.
+function pcStaggerLayers(frames, reverse, groupSize) {
+    var s = _pcRequireSelected();
+    if (!s) return JSON.stringify({ error: "Selecciona al menos 2 capas." });
+    if (s.layers.length < 2) return JSON.stringify({ error: "Selecciona al menos 2 capas para el stagger." });
+    try {
+        app.beginUndoGroup("Stagger Layers");
+        var fps = s.comp.frameRate;
+        var g = (typeof groupSize === "number" && groupSize >= 1) ? Math.round(groupSize) : 1;
+        var total = s.layers.length;
+        var moved = 0;
+        for (var i = 0; i < total; i++) {
+            var order = reverse ? (total - 1 - i) : i;
+            var offset = Math.floor(order / g) * frames / fps;
+            if (offset === 0) continue;
+            try {
+                s.layers[i].startTime = s.layers[i].startTime + offset;
+                moved++;
+            } catch(exL) {}
+        }
+        app.endUndoGroup();
+        if (!moved) return JSON.stringify({ error: "No se pudo desplazar ninguna capa." });
+        return JSON.stringify({ success: true, layers: moved });
+    } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
+}
+
 // ─── VIÑETAS ────────────────────────────────────────────────────
 
 // Aplica una viñeta al inicio de CADA línea de los textos seleccionados.

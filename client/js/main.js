@@ -23,7 +23,8 @@
         "zd-dark": 4, "zd-round": 0,
         "tb-round": 20, "tb-pad": 40, "tb-anim-dur": 20, "tb-bg": "#ffffff", "tb-text": "#000000",
         "an-dur": 20, "an-slide": 200, "an-rot": 90, "an-stagger": 5, "an-stagger-every": 1,
-        "an-ovs": 10, "an-bounces": 2, "an-spring": 15
+        "an-ovs": 10, "an-bounces": 2, "an-spring": 15,
+        "txt-stagger": 5, "txt-stagger-every": 1
     };
 
     var state = {
@@ -1727,6 +1728,19 @@
                 })(bulletBtns[bb]);
             }
         })();
+
+        // Stagger de capas (Text): mueve el clip completo de cada capa
+        function txtStaggerArgs() {
+            var st = parseFloat(document.getElementById("txt-stagger").value) || 5;
+            var ev = parseFloat(document.getElementById("txt-stagger-every").value) || 1;
+            return st + ", %REV%, " + ev;
+        }
+        on("btn-txt-stagger", "click", function() {
+            callHost("pcStaggerLayers(" + txtStaggerArgs().replace("%REV%", "false") + ")");
+        });
+        on("btn-txt-stagger-rev", "click", function() {
+            callHost("pcStaggerLayers(" + txtStaggerArgs().replace("%REV%", "true") + ")");
+        });
 
         // Split Text: separa el texto en capas según el modo Character/Word/Line
         on("btn-split-text", "click", function() {

@@ -14,7 +14,7 @@
             <div class="header-spacer"></div>
             <span id="comp-name" class="comp-name">Sin composición activa</span>
             <span id="layer-count" class="layer-count"></span>
-            <span id="version-badge" class="version-label">v1.15.1</span>
+            <span id="version-badge" class="version-label">v1.16.0</span>
             <button id="btn-update" class="icon-btn" title="Verificar actualización / Recargar panel">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
@@ -583,6 +583,17 @@
                     <button class="btn-defaults btn-save-def" data-keys="th-dur" title="Guardar como default">💾</button>
                     <button class="btn-defaults btn-reset-def" data-keys="th-dur" title="Restaurar defaults">↩</button>
                     <button id="btn-split-text" class="btn btn-tool" data-tooltip="Separa el texto seleccionado en capas individuales según el modo de arriba (Character/Word/Line). El original se apaga, no se borra">✂️ Separar</button>
+                </div>
+
+                <!-- Stagger de capas: mueve el clip COMPLETO de cada capa -->
+                <div class="tool-label">Stagger de capas</div>
+                <div class="tool-inline-row">
+                    <button id="btn-txt-stagger" class="btn btn-tool" data-tooltip="Desplaza el clip COMPLETO de cada capa seleccionada en cascada (con sus keyframes). La primera queda fija">Stagger →</button>
+                    <button id="btn-txt-stagger-rev" class="btn btn-tool" data-tooltip="Stagger inverso: la última capa queda fija">← Stagger</button>
+                    <label title="Frames de desplazamiento entre capas">Stag</label><input type="number" id="txt-stagger" class="tool-input" value="5" min="1" title="Frames">
+                    <label title="Cada cuántas capas avanza el paso (ej. 2 = de a pares)">Cada</label><input type="number" id="txt-stagger-every" class="tool-input" value="1" min="1" max="20">
+                    <button class="btn-defaults btn-save-def" data-keys="txt-stagger,txt-stagger-every" title="Guardar como default">💾</button>
+                    <button class="btn-defaults btn-reset-def" data-keys="txt-stagger,txt-stagger-every" title="Restaurar defaults">↩</button>
                 </div>
 
                 <!-- Viñetas: clic = clipboard · con texto seleccionado = aplicar por línea -->
