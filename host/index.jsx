@@ -2364,7 +2364,24 @@ function pcSplitText(mode) {
                     } catch(exAn) {}
                     var np = [pos[0] + units[ui].x * sx, pos[1] + units[ui].y * sy];
                     if (pos.length > 2) np.push(pos[2]);
-                    try { dup.property("ADBE Transform Group").property("ADBE Position").setValue(np); } catch(exP) {}
+                    var dtg = dup.property("ADBE Transform Group");
+                    try { dtg.property("ADBE Position").setValue(np); } catch(exP) {}
+
+                    // Anchor en la ESQUINA INFERIOR IZQUIERDA de la unidad,
+                    // compensando Position para que no se mueva ni un píxel:
+                    // pos += (anchorNuevo - anchorViejo) * scale.
+                    try {
+                        var rD = dup.sourceRectAtTime(t, false);
+                        var aNew = [rD.left, rD.top + rD.height];
+                        var aOld = dtg.property("ADBE Anchor Point").value;
+                        var aSet = [aNew[0], aNew[1]];
+                        if (aOld.length > 2) aSet.push(aOld[2]);
+                        dtg.property("ADBE Anchor Point").setValue(aSet);
+                        var pCur = dtg.property("ADBE Position").value;
+                        var pFix = [pCur[0] + (aNew[0] - aOld[0]) * sx, pCur[1] + (aNew[1] - aOld[1]) * sy];
+                        if (pCur.length > 2) pFix.push(pCur[2]);
+                        dtg.property("ADBE Position").setValue(pFix);
+                    } catch(exA) {}
                     made++;
                 }
                 src.enabled = false; // apagar el original (queda por si acaso)
