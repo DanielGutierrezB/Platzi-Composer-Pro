@@ -2174,7 +2174,8 @@ function pcApplyBullet(bullet) {
                 for (var j = 0; j < lines.length; j++) {
                     var line = lines[j];
                     if (line === "") continue; // líneas vacías se dejan
-                    // Quitar viñeta existente (con o sin espacio después)
+                    // Quitar numeración existente ("1. " / "23) ") o viñeta
+                    line = line.replace(/^\s*\d+[\.\)]\s?/, "");
                     for (var b = 0; b < BULLETS.length; b++) {
                         if (line.indexOf(BULLETS[b]) === 0) {
                             line = line.substring(BULLETS[b].length);
@@ -2183,6 +2184,58 @@ function pcApplyBullet(bullet) {
                         }
                     }
                     lines[j] = bullet + " " + line;
+                    totalLines++;
+                }
+                td.text = lines.join("\r");
+                tProp.setValue(td);
+            } catch(exL) {}
+        }
+        app.endUndoGroup();
+        return JSON.stringify({ success: true, lines: totalLines });
+    } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
+}
+
+// Numera cada línea de los textos seleccionados: style "dot" → "1. 2. 3."
+// · style "paren" → "1) 2) 3)". Reemplaza viñetas o numeración previa.
+// El contador arranca en 1 por cada capa de texto y las líneas vacías no
+// cuentan. Sin texto seleccionado devuelve lines:0 (solo clipboard).
+function pcApplyNumbering(style) {
+    var comp = _pcRequireComp();
+    if (!comp) return JSON.stringify({ error: "No hay composición activa." });
+    try {
+        var BULLETS = ["\u2022", "\u25E6", "\u25AA", "\u2013", "\u2014", "\u2192", "\u25B8", "\u2713", "\u2717", "\u2605", "\u2606", "\u00B7", "*", "-"];
+        var sep = (style === "paren") ? ")" : ".";
+        var sel = comp.selectedLayers;
+        var texts = [], i;
+        for (i = 0; i < sel.length; i++) {
+            if (sel[i] instanceof TextLayer) texts.push(sel[i]);
+        }
+        if (texts.length === 0) return JSON.stringify({ success: true, lines: 0 });
+
+        app.beginUndoGroup("Numerar líneas");
+        var totalLines = 0;
+        for (i = 0; i < texts.length; i++) {
+            try {
+                var tProp = texts[i].property("ADBE Text Properties").property("ADBE Text Document");
+                var td = tProp.value;
+                var full = td.text || "";
+                if (!full) continue;
+                var norm = full.replace(/\r\n/g, "\r").replace(/\n/g, "\r");
+                var lines = norm.split("\r");
+                var n = 1;
+                for (var j = 0; j < lines.length; j++) {
+                    var line = lines[j];
+                    if (line === "") continue;
+                    line = line.replace(/^\s*\d+[\.\)]\s?/, "");
+                    for (var b = 0; b < BULLETS.length; b++) {
+                        if (line.indexOf(BULLETS[b]) === 0) {
+                            line = line.substring(BULLETS[b].length);
+                            if (line.charAt(0) === " ") line = line.substring(1);
+                            break;
+                        }
+                    }
+                    lines[j] = n + sep + " " + line;
+                    n++;
                     totalLines++;
                 }
                 td.text = lines.join("\r");

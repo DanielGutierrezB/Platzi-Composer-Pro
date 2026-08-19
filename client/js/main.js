@@ -1699,7 +1699,8 @@
             for (var bb = 0; bb < bulletBtns.length; bb++) {
                 (function(btn) {
                     btn.addEventListener("click", function() {
-                        var b = btn.getAttribute("data-bullet");
+                        var numStyle = btn.getAttribute("data-num");
+                        var b = numStyle ? (numStyle === "paren" ? "1) " : "1. ") : btn.getAttribute("data-bullet");
                         try {
                             var ta = document.createElement("textarea");
                             ta.value = b;
@@ -1708,15 +1709,20 @@
                             document.execCommand("copy");
                             document.body.removeChild(ta);
                         } catch(exCp) {}
-                        var hex = b.charCodeAt(0).toString(16);
-                        while (hex.length < 4) hex = "0" + hex;
-                        callHost('pcApplyBullet("\\u' + hex + '")', function(d) {
+                        var done = function(d) {
                             if (d && d.lines > 0) {
-                                showToast("Viñeta " + b + " aplicada a " + d.lines + " línea(s) · y copiada al clipboard", "success");
+                                showToast((numStyle ? "Numeración" : "Viñeta " + b) + " aplicada a " + d.lines + " línea(s) · y copiada al clipboard", "success");
                             } else {
-                                showToast("Viñeta " + b + " copiada al clipboard 📋", "success");
+                                showToast((numStyle ? "Prefijo \"" + b + "\"" : "Viñeta " + b) + " copiado al clipboard 📋", "success");
                             }
-                        });
+                        };
+                        if (numStyle) {
+                            callHost("pcApplyNumbering('" + numStyle + "')", done);
+                        } else {
+                            var hex = b.charCodeAt(0).toString(16);
+                            while (hex.length < 4) hex = "0" + hex;
+                            callHost('pcApplyBullet("\\u' + hex + '")', done);
+                        }
                     });
                 })(bulletBtns[bb]);
             }
