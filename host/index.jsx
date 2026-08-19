@@ -2365,7 +2365,8 @@ function pcSplitText(mode) {
                 // simplifica a esto).
                 for (var ui = 0; ui < units.length; ui++) {
                     var dup = src.duplicate();
-                    dup.name = src.name + " · " + units[ui].t;
+                    dup.name = units[ui].t; // solo la unidad (palabra/letra/línea)
+                    try { dup.label = 2; } catch(exLb) {} // label amarillo
                     var dProp = dup.property("ADBE Text Properties").property("ADBE Text Document");
                     var dd = dProp.value;
                     dd.text = units[ui].t;
