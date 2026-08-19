@@ -14,7 +14,7 @@
             <div class="header-spacer"></div>
             <span id="comp-name" class="comp-name">Sin composición activa</span>
             <span id="layer-count" class="layer-count"></span>
-            <span id="version-badge" class="version-label">v1.13.0</span>
+            <span id="version-badge" class="version-label">v1.14.0</span>
             <button id="btn-update" class="icon-btn" title="Verificar actualización / Recargar panel">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
@@ -582,6 +582,19 @@
                     <button class="btn-defaults btn-save-def" data-keys="th-dur" title="Guardar como default">💾</button>
                     <button class="btn-defaults btn-reset-def" data-keys="th-dur" title="Restaurar defaults">↩</button>
                     <button id="btn-split-text" class="btn btn-tool" data-tooltip="Separa el texto seleccionado en capas individuales según el modo de arriba (Character/Word/Line). El original se apaga, no se borra">✂️ Separar</button>
+                </div>
+
+                <!-- Viñetas: clic = clipboard · con texto seleccionado = aplicar por línea -->
+                <div class="tool-label">Viñetas</div>
+                <div class="bullet-row">
+                    <button class="btn btn-tool bullet-btn" data-bullet="•" data-tooltip="Clic: copia • al clipboard · con texto seleccionado: la aplica en cada línea (reemplaza la que haya)">•</button>
+                    <button class="btn btn-tool bullet-btn" data-bullet="◦" data-tooltip="Viñeta ◦ — clipboard + aplicar por línea">◦</button>
+                    <button class="btn btn-tool bullet-btn" data-bullet="▪" data-tooltip="Viñeta ▪ — clipboard + aplicar por línea">▪</button>
+                    <button class="btn btn-tool bullet-btn" data-bullet="–" data-tooltip="Viñeta – — clipboard + aplicar por línea">–</button>
+                    <button class="btn btn-tool bullet-btn" data-bullet="→" data-tooltip="Viñeta → — clipboard + aplicar por línea">→</button>
+                    <button class="btn btn-tool bullet-btn" data-bullet="▸" data-tooltip="Viñeta ▸ — clipboard + aplicar por línea">▸</button>
+                    <button class="btn btn-tool bullet-btn" data-bullet="✓" data-tooltip="Viñeta ✓ — clipboard + aplicar por línea">✓</button>
+                    <button class="btn btn-tool bullet-btn" data-bullet="★" data-tooltip="Viñeta ★ — clipboard + aplicar por línea">★</button>
                 </div>
 
                 <div class="th-box-section">

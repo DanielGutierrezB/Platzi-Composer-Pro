@@ -2143,6 +2143,57 @@ function _pcAnimateBoxEntrance(box, animType, boxDurFrames, t0, fps, easeOut, ea
     } catch(exB) {}
 }
 
+// ─── VIÑETAS ────────────────────────────────────────────────────
+
+// Aplica una viñeta al inicio de CADA línea de los textos seleccionados.
+// Si la línea ya empieza con alguna viñeta conocida, la reemplaza. Si no
+// hay texto seleccionado devuelve lines:0 (el panel igual copió al
+// clipboard, que es la acción primaria del botón).
+function pcApplyBullet(bullet) {
+    var comp = _pcRequireComp();
+    if (!comp) return JSON.stringify({ error: "No hay composición activa." });
+    try {
+        var BULLETS = ["\u2022", "\u25E6", "\u25AA", "\u2013", "\u2014", "\u2192", "\u25B8", "\u2713", "\u2717", "\u2605", "\u2606", "\u00B7", "*", "-"];
+        var sel = comp.selectedLayers;
+        var texts = [], i;
+        for (i = 0; i < sel.length; i++) {
+            if (sel[i] instanceof TextLayer) texts.push(sel[i]);
+        }
+        if (texts.length === 0) return JSON.stringify({ success: true, lines: 0 });
+
+        app.beginUndoGroup("Aplicar viñeta");
+        var totalLines = 0;
+        for (i = 0; i < texts.length; i++) {
+            try {
+                var tProp = texts[i].property("ADBE Text Properties").property("ADBE Text Document");
+                var td = tProp.value;
+                var full = td.text || "";
+                if (!full) continue;
+                var norm = full.replace(/\r\n/g, "\r").replace(/\n/g, "\r");
+                var lines = norm.split("\r");
+                for (var j = 0; j < lines.length; j++) {
+                    var line = lines[j];
+                    if (line === "") continue; // líneas vacías se dejan
+                    // Quitar viñeta existente (con o sin espacio después)
+                    for (var b = 0; b < BULLETS.length; b++) {
+                        if (line.indexOf(BULLETS[b]) === 0) {
+                            line = line.substring(BULLETS[b].length);
+                            if (line.charAt(0) === " ") line = line.substring(1);
+                            break;
+                        }
+                    }
+                    lines[j] = bullet + " " + line;
+                    totalLines++;
+                }
+                td.text = lines.join("\r");
+                tProp.setValue(td);
+            } catch(exL) {}
+        }
+        app.endUndoGroup();
+        return JSON.stringify({ success: true, lines: totalLines });
+    } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
+}
+
 // ─── SPLIT TEXT ─────────────────────────────────────────────────
 
 // Separa cada texto seleccionado en capas individuales por unidad:

@@ -1243,6 +1243,20 @@ body {
     background: var(--bg-secondary, #1a1a1a);
 }
 
+/* ─── Viñetas (card Text) ─── */
+.bullet-row {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+}
+.bullet-btn {
+    min-width: 32px;
+    padding: 4px 0;
+    font-size: 14px;
+    line-height: 1;
+}
+
 /* ─── Curve Editor (drawer estilo Flow) ─── */
 /* Drawer de curva: se despliega hacia abajo desde la barra del header */
 .curve-drawer {

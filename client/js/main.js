@@ -1691,6 +1691,37 @@
             })(thBtns[ti]);
         }
 
+        // Viñetas: clic = copiar al clipboard (+aviso) y, si hay texto
+        // seleccionado, aplicarla al inicio de cada línea (reemplazando la
+        // existente). Se pasa como \uXXXX para sobrevivir el evalScript.
+        (function() {
+            var bulletBtns = document.querySelectorAll(".bullet-btn");
+            for (var bb = 0; bb < bulletBtns.length; bb++) {
+                (function(btn) {
+                    btn.addEventListener("click", function() {
+                        var b = btn.getAttribute("data-bullet");
+                        try {
+                            var ta = document.createElement("textarea");
+                            ta.value = b;
+                            document.body.appendChild(ta);
+                            ta.select();
+                            document.execCommand("copy");
+                            document.body.removeChild(ta);
+                        } catch(exCp) {}
+                        var hex = b.charCodeAt(0).toString(16);
+                        while (hex.length < 4) hex = "0" + hex;
+                        callHost('pcApplyBullet("\\u' + hex + '")', function(d) {
+                            if (d && d.lines > 0) {
+                                showToast("Viñeta " + b + " aplicada a " + d.lines + " línea(s) · y copiada al clipboard", "success");
+                            } else {
+                                showToast("Viñeta " + b + " copiada al clipboard 📋", "success");
+                            }
+                        });
+                    });
+                })(bulletBtns[bb]);
+            }
+        })();
+
         // Split Text: separa el texto en capas según el modo Character/Word/Line
         on("btn-split-text", "click", function() {
             var mode = document.querySelector('input[name="th-mode"]:checked').value;
