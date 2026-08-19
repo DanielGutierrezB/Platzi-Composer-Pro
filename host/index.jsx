@@ -2371,10 +2371,50 @@ function pcSplitText(mode) {
                     var dd = dProp.value;
                     dd.text = units[ui].t;
                     dProp.setValue(dd);
-                    // Sin animators heredados: la unidad nace limpia
+                    // MANTENER la animación del original: se re-timean los
+                    // keys del Range Selector Start de cada animator para que
+                    // esta unidad anime justo cuando el barrido original la
+                    // cubría (fracción = orden de la unidad). Así la cascada
+                    // se conserva después de separar. Animators sin keys
+                    // (estilos estáticos) se dejan tal cual.
                     try {
+                        var fA = ui / units.length;
+                        var fB = (ui + 1) / units.length;
                         var dAnims = dup.property("ADBE Text Properties").property("ADBE Text Animators");
-                        for (var da = dAnims.numProperties; da >= 1; da--) dAnims.property(da).remove();
+                        for (var da = 1; da <= dAnims.numProperties; da++) {
+                            var dSels = dAnims.property(da).property("ADBE Text Selectors");
+                            if (!dSels) continue;
+                            for (var ds = 1; ds <= dSels.numProperties; ds++) {
+                                var startP = null;
+                                try { startP = dSels.property(ds).property("Start"); } catch(exSp) {}
+                                if (!startP || startP.numKeys < 2) continue;
+                                // Capturar segmentos consecutivos del barrido
+                                var segs = [];
+                                for (var kk = 1; kk < startP.numKeys; kk++) {
+                                    segs.push({ t1: startP.keyTime(kk), v1: startP.keyValue(kk), t2: startP.keyTime(kk + 1), v2: startP.keyValue(kk + 1) });
+                                }
+                                while (startP.numKeys > 0) startP.removeKey(1);
+                                for (var sg = 0; sg < segs.length; sg++) {
+                                    var S = segs[sg];
+                                    if (S.v1 === S.v2) continue; // tramo sin barrido (hold)
+                                    var segLen = S.t2 - S.t1;
+                                    // Momentos en que el Start original pasaba por la
+                                    // banda de esta unidad (sirve subiendo o bajando)
+                                    var tw1 = S.t1 + ((fA * 100 - S.v1) / (S.v2 - S.v1)) * segLen;
+                                    var tw2 = S.t1 + ((fB * 100 - S.v1) / (S.v2 - S.v1)) * segLen;
+                                    var wStart = Math.min(tw1, tw2), wEnd = Math.max(tw1, tw2);
+                                    if (wEnd - wStart < 0.01) wEnd = wStart + 0.01;
+                                    var asc = S.v2 > S.v1;
+                                    var kx1 = startP.addKey(wStart); startP.setValueAtKey(kx1, asc ? 0 : 100);
+                                    var kx2 = startP.addKey(wEnd); startP.setValueAtKey(kx2, asc ? 100 : 0);
+                                    try {
+                                        startP.setInterpolationTypeAtKey(kx1, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+                                        startP.setInterpolationTypeAtKey(kx2, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
+                                        _pcApplyEaseScalar(startP, kx1, kx2, 33, 90);
+                                    } catch(exEs) {}
+                                }
+                            }
+                        }
                     } catch(exAn) {}
                     var np = [pos[0] + units[ui].x * sx, pos[1] + units[ui].y * sy];
                     if (pos.length > 2) np.push(pos[2]);
