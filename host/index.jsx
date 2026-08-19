@@ -2309,6 +2309,19 @@ function pcSplitText(mode) {
                 var wBars = _w(""); // ancho de los 2 centinelas solos
                 var W = function(txt) { return txt === "" ? 0 : (_w(txt) - wBars); };
 
+                // Leading REAL medido (el de TextDocument no es confiable en
+                // este AE y las líneas quedaban apretadas): alto de un bloque
+                // de 2 líneas menos alto de 1 línea = interlineado exacto.
+                var mdL = measProp.value;
+                mdL.text = "Ay";
+                measProp.setValue(mdL);
+                var h1 = meas.sourceRectAtTime(t, false).height;
+                mdL = measProp.value;
+                mdL.text = "Ay\rAy";
+                measProp.setValue(mdL);
+                var h2 = meas.sourceRectAtTime(t, false).height;
+                if (h2 - h1 > 0) leading = h2 - h1;
+
                 // Unidades con su origen (x,y) en espacio de capa del original
                 var units = [];
                 for (var ln = 0; ln < lines.length; ln++) {
