@@ -2520,14 +2520,24 @@ function pcTextHelper(animType, mode, animMode, durationFrames, enableGlow, ease
         var textProp = textLayer.property("ADBE Text Properties");
         var animators = textProp.property("ADBE Text Animators");
 
-        // Remove existing animators
+        // Quitar SOLO los animators de Platzi del MISMO modo que se está
+        // aplicando: así el Out se agrega sin borrar el In y viceversa, y
+        // re-aplicar un modo lo reemplaza en vez de acumular. Los legacy sin
+        // sufijo (_in/_out) se consideran reemplazables. Animators creados a
+        // mano por el usuario no se tocan.
         for (var a = animators.numProperties; a >= 1; a--) {
-            animators.property(a).remove();
+            var anP = animators.property(a);
+            var nm = "" + (anP.name || "");
+            if (nm.indexOf("PlatziAnim") !== 0) continue;
+            var sfx = "";
+            if (nm.length >= 4 && nm.substring(nm.length - 4) === "_out") sfx = "out";
+            else if (nm.length >= 3 && nm.substring(nm.length - 3) === "_in") sfx = "in";
+            if (sfx === "" || sfx === animMode) anP.remove();
         }
 
-        // Add animator based on type
+        // Add animator based on type (nombrado por modo para poder convivir)
         var animator = animators.addProperty("ADBE Text Animator");
-        animator.name = "PlatziAnim_" + animType;
+        animator.name = "PlatziAnim_" + animType + "_" + animMode;
         var animProps = animator.property("ADBE Text Animator Properties");
         var selectors = animator.property("ADBE Text Selectors");
         var rangeSel = selectors.addProperty("ADBE Text Selector");
@@ -2629,7 +2639,7 @@ function pcTextHelper(animType, mode, animMode, durationFrames, enableGlow, ease
             // por unidad es una transición monótona del selector.)
             if (animMode === "in" || animMode === "inout") {
                 var anim2 = animators.addProperty("ADBE Text Animator");
-                anim2.name = "PlatziAnim_bounce_rebote";
+                anim2.name = "PlatziAnim_bounce_rebote_in";
                 var anim2Props = anim2.property("ADBE Text Animator Properties");
                 var sel2 = anim2.property("ADBE Text Selectors");
                 var range2 = sel2.addProperty("ADBE Text Selector");
