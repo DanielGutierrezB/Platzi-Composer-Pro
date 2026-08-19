@@ -1681,10 +1681,10 @@
                     var mode = document.querySelector('input[name="th-mode"]:checked').value;
                     var dur = parseInt(document.getElementById("th-dur").value) || 20;
                     var glow = document.getElementById("th-glow").checked;
-                    // Shift=In only, Shift+Alt=Out only, normal=InOut
-                    var animMode = "inout";
-                    if (evt.shiftKey && evt.altKey) animMode = "out";
-                    else if (evt.shiftKey) animMode = "in";
+                    // Clic = IN desde el playhead · Shift+Clic = OUT desde el
+                    // playhead (la dirección elegida es la de salida). Ya no
+                    // se crean In+Out juntos.
+                    var animMode = evt.shiftKey ? "out" : "in";
                     var boxDur = parseInt(document.getElementById("tb-anim-dur").value) || 20;
                     callHost("pcTextHelper('" + animType + "','" + mode + "','" + animMode + "'," + dur + "," + glow + "," + easeOut() + "," + easeIn() + "," + boxDur + easeArgsGlobal() + ")");
                 });

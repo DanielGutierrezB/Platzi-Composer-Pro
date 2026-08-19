@@ -2553,25 +2553,28 @@ function pcTextHelper(animType, mode, animMode, durationFrames, enableGlow, ease
             var opacityProp = animProps.addProperty("ADBE Text Opacity");
             opacityProp.setValue(0);
         } else if (animType === "fade-up") {
+            // En OUT el offset direccional se invierte: el texto SALE en la
+            // dirección elegida (UP = sale hacia arriba) en vez de volver
+            // por donde entró.
             var opacityProp2 = animProps.addProperty("ADBE Text Opacity");
             opacityProp2.setValue(0);
             var posProp = animProps.addProperty("ADBE Text Position 3D");
-            posProp.setValue([0, 30, 0]);
+            posProp.setValue([0, 30 * ((animMode === "out") ? -1 : 1), 0]);
         } else if (animType === "fade-down") {
             var opFD = animProps.addProperty("ADBE Text Opacity");
             opFD.setValue(0);
             var posFD = animProps.addProperty("ADBE Text Position 3D");
-            posFD.setValue([0, -30, 0]);
+            posFD.setValue([0, -30 * ((animMode === "out") ? -1 : 1), 0]);
         } else if (animType === "fade-left") {
             var opFL = animProps.addProperty("ADBE Text Opacity");
             opFL.setValue(0);
             var posFL = animProps.addProperty("ADBE Text Position 3D");
-            posFL.setValue([40, 0, 0]);
+            posFL.setValue([40 * ((animMode === "out") ? -1 : 1), 0, 0]);
         } else if (animType === "fade-right") {
             var opFR = animProps.addProperty("ADBE Text Opacity");
             opFR.setValue(0);
             var posFR = animProps.addProperty("ADBE Text Position 3D");
-            posFR.setValue([-40, 0, 0]);
+            posFR.setValue([-40 * ((animMode === "out") ? -1 : 1), 0, 0]);
         } else if (animType === "scale-pop") {
             var scaleProp = animProps.addProperty("ADBE Text Scale 3D");
             scaleProp.setValue([0, 0, 100]);
