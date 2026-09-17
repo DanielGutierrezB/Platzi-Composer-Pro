@@ -2387,7 +2387,12 @@ function pcSplitText(mode) {
                         }
                     }
                 }
-                meas.remove();
+                try { meas.remove(); } catch(exMr) {}
+
+                // Si el texto tiene UNA sola unidad no hay nada que separar:
+                // saltarlo evita que un segundo clic sobre palabras ya
+                // separadas las duplique (cada palabra es 1 unidad).
+                if (units.length < 2) continue;
 
                 // Transform del original (asume sin rotación)
                 var tg = src.property("ADBE Transform Group");
@@ -2421,7 +2426,7 @@ function pcSplitText(mode) {
                             if (!dSels) continue;
                             for (var ds = 1; ds <= dSels.numProperties; ds++) {
                                 var startP = null;
-                                try { startP = dSels.property(ds).property("Start"); } catch(exSp) {}
+                                try { startP = _pcTextSelProp(dSels.property(ds), "ADBE Text Percent Start", "Start"); } catch(exSp) {}
                                 if (!startP || startP.numKeys < 2) continue;
                                 // Capturar segmentos consecutivos del barrido
                                 var segs = [];
@@ -2471,19 +2476,34 @@ function pcSplitText(mode) {
                         if (pCur.length > 2) pFix.push(pCur[2]);
                         dtg.property("ADBE Position").setValue(pFix);
                     } catch(exA) {}
+                    // Deseleccionar la capa nueva: si quedara seleccionada,
+                    // otro clic en Separar la volvería a "separar" (duplicar).
+                    try { dup.selected = false; } catch(exSel2) {}
                     made++;
                 }
                 src.enabled = false; // apagar el original (queda por si acaso)
+                try { src.selected = false; } catch(exSel3) {}
             } catch(exLayer) {}
         }
 
         app.endUndoGroup();
-        if (!made) return JSON.stringify({ error: "No se pudo separar el texto." });
+        if (!made) return JSON.stringify({ error: "No se pudo separar el texto (¿ya estaba separado en unidades de 1?)." });
         return JSON.stringify({ success: true, layers: made });
     } catch(e) { app.endUndoGroup(); return JSON.stringify({ error: e.toString() }); }
 }
 
 // ─── TEXT HELPER ────────────────────────────────────────────────
+
+// Lookup a prueba de idioma/versión para propiedades del Range Selector:
+// primero matchName, después display name como fallback. En AEs con otro
+// idioma o build, property("Start") por display name devuelve null y las
+// animaciones fallaban.
+function _pcTextSelProp(grp, matchN, dispN) {
+    var p = null;
+    try { p = grp.property(matchN); } catch(e) {}
+    if (!p) { try { p = grp.property(dispN); } catch(e2) {} }
+    return p;
+}
 
 function pcTextHelper(animType, mode, animMode, durationFrames, enableGlow, easeOut, easeIn, boxAnimFrames, easeType, ex1, ey1, ex2, ey2) {
     _pcSetGlobalEase(easeType, ex1, ey1, ex2, ey2);
@@ -2547,9 +2567,12 @@ function pcTextHelper(animType, mode, animMode, durationFrames, enableGlow, ease
         var advanced = rangeSel.property("ADBE Text Range Advanced");
 
         // Set range selector to animate character by character
-        // Use property("Start") and property("End") by display name
-        var rangeStart = rangeSel.property("Start");
-        var rangeEnd = rangeSel.property("End");
+        var rangeStart = _pcTextSelProp(rangeSel, "ADBE Text Percent Start", "Start");
+        var rangeEnd = _pcTextSelProp(rangeSel, "ADBE Text Percent End", "End");
+        if (!rangeStart) {
+            app.endUndoGroup();
+            return JSON.stringify({ error: "No se encontró el Range Selector Start en este AE (reporta versión/idioma)." });
+        }
 
         // Animation duration in frames
         var fps = comp.frameRate;
@@ -2563,7 +2586,7 @@ function pcTextHelper(animType, mode, animMode, durationFrames, enableGlow, ease
         if (mode === "line") basedOnVal = 4;
         // Typewriter always char-by-char
         if (animType === "typewriter") basedOnVal = 1;
-        try { advanced.property("Based On").setValue(basedOnVal); } catch(ex) {}
+        try { _pcTextSelProp(advanced, "ADBE Text Range Type2", "Based On").setValue(basedOnVal); } catch(ex) {}
 
         // Animate based on animMode (in, out, inout)
         if (animMode === "in" || animMode === "inout") {
@@ -2647,10 +2670,10 @@ function pcTextHelper(animType, mode, animMode, durationFrames, enableGlow, ease
                 var sel2 = anim2.property("ADBE Text Selectors");
                 var range2 = sel2.addProperty("ADBE Text Selector");
                 var adv2 = range2.property("ADBE Text Range Advanced");
-                try { adv2.property("Based On").setValue(basedOnVal); } catch(exA2) {}
+                try { _pcTextSelProp(adv2, "ADBE Text Range Type2", "Based On").setValue(basedOnVal); } catch(exA2) {}
                 var pos2 = anim2Props.addProperty("ADBE Text Position 3D");
                 pos2.setValue([0, 12, 0]);
-                var start2 = range2.property("Start");
+                var start2 = _pcTextSelProp(range2, "ADBE Text Percent Start", "Start");
                 var reboteDelay = Math.max(2 / fps, totalDur * 0.3);
                 var kr1 = start2.addKey(t0 + reboteDelay); start2.setValueAtKey(kr1, 0);
                 var kr2 = start2.addKey(t1 + reboteDelay); start2.setValueAtKey(kr2, 100);
