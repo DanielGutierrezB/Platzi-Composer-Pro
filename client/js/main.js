@@ -914,14 +914,45 @@
         // porque location.reload() borra actionLog en memoria).
         var updateHistory = [];
         try { updateHistory = JSON.parse(localStorage.getItem("pc_update_log") || "[]"); } catch(_) {}
-        var full = updateHistory.length > 0
-            ? [{ action: "updateHistory", entries: updateHistory }].concat(actionLog)
-            : actionLog;
-        if (full.length === 0) {
+        // Info del entorno al inicio: clave para depurar máquinas ajenas.
+        var env = {
+            action: "env",
+            version: LOCAL_VERSION,
+            userAgent: (navigator && navigator.userAgent) || "",
+            platform: (navigator && navigator.platform) || ""
+        };
+        var full = [env];
+        if (updateHistory.length > 0) full.push({ action: "updateHistory", entries: updateHistory });
+        full = full.concat(actionLog);
+        if (actionLog.length === 0 && updateHistory.length === 0) {
             showToast("No hay acciones registradas todavía.", "info");
             return;
         }
         var payload = JSON.stringify(full);
+
+        // 1) Escribir DIRECTO desde el panel con Node (fs): no depende del
+        //    host de AE — que es justo lo que suele estar caído cuando más
+        //    se necesita el log. Además evita el límite de tamaño de
+        //    evalScript con logs grandes.
+        try {
+            var fs = require("fs");
+            var os = require("os");
+            var path = require("path");
+            var dir = path.join(os.homedir(), "Downloads");
+            try { if (!fs.existsSync(dir)) dir = os.homedir(); } catch(_) { dir = os.homedir(); }
+            var now = new Date();
+            var pad = function(n) { return n < 10 ? "0" + n : "" + n; };
+            var fname = "PlatziComposerPro_log_" + now.getFullYear() + "-" + pad(now.getMonth() + 1) + "-" + pad(now.getDate()) +
+                "_" + pad(now.getHours()) + pad(now.getMinutes()) + pad(now.getSeconds()) + ".json";
+            var fullPath = path.join(dir, fname);
+            fs.writeFileSync(fullPath, payload, "utf8");
+            showToast("Log guardado en " + fullPath, "success");
+            return;
+        } catch(eNode) {
+            logAction("saveLog-node-failed", { error: eNode.message });
+        }
+
+        // 2) Fallback: vía host de AE (método anterior)
         var escaped = escExtend(payload);
         csInterface.evalScript('saveLogToFile("' + escaped + '")', function(result) {
             try {
@@ -929,7 +960,7 @@
                 if (data.error) { showToast("Error guardando log: " + data.error, "error"); return; }
                 showToast("Log guardado en " + (data.path || "Desktop"), "success");
             } catch(e) {
-                showToast("Error al guardar log.", "error");
+                showToast("Error al guardar log (host caído y Node no disponible).", "error");
             }
         });
     }
